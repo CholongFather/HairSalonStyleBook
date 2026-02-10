@@ -6,7 +6,7 @@
     <Header />
     <RibbonDivider />
     <main class="salon-content">
-        <div class="page-flip-container">
+        <div class="page-slide-container">
             <div class="page-transition @_animClass">
                 @Body
             </div>
@@ -30,7 +30,7 @@
         await InvokeAsync(StateHasChanged);
 
         // 짧은 딜레이 후 들어오는 애니메이션
-        await Task.Delay(300);
+        await Task.Delay(250);
         _animClass = "page-enter";
         await InvokeAsync(StateHasChanged);
     }
@@ -42,56 +42,47 @@
 }
 
 <style>
-    .page-flip-container {
-        perspective: 1200px;
+    .page-slide-container {
         overflow: hidden;
     }
 
     .page-transition {
         animation-fill-mode: both;
-        animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
-        transform-origin: left center;
+        animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
         position: relative;
     }
 
-    /* 페이지 들어옴 - 책장 넘기듯 오른쪽에서 펼침 */
+    /* 페이지 들어옴 - 오른쪽에서 슬라이드 인 */
     .page-enter {
-        animation-name: pageFlipIn;
-        animation-duration: 0.5s;
+        animation-name: slideIn;
+        animation-duration: 0.35s;
     }
 
-    /* 페이지 나감 - 왼쪽으로 접힘 */
+    /* 페이지 나감 - 왼쪽으로 슬라이드 아웃 */
     .page-exit {
-        animation-name: pageFlipOut;
-        animation-duration: 0.3s;
+        animation-name: slideOut;
+        animation-duration: 0.25s;
     }
 
-    @@keyframes pageFlipIn {
+    @@keyframes slideIn {
         0% {
             opacity: 0;
-            transform: rotateY(-45deg) scale(0.95);
-            box-shadow: -20px 0 40px rgba(0, 0, 0, 0.15);
-        }
-        40% {
-            opacity: 1;
+            transform: translateX(60px);
         }
         100% {
             opacity: 1;
-            transform: rotateY(0deg) scale(1);
-            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            transform: translateX(0);
         }
     }
 
-    @@keyframes pageFlipOut {
+    @@keyframes slideOut {
         0% {
             opacity: 1;
-            transform: rotateY(0deg) scale(1);
-            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            transform: translateX(0);
         }
         100% {
             opacity: 0;
-            transform: rotateY(20deg) scale(0.95);
-            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+            transform: translateX(-60px);
         }
     }
 </style>
