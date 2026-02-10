@@ -1,6 +1,6 @@
 @inject IJSRuntime JS
 
-<div id="@_carouselId" class="carousel slide salon-carousel" data-bs-ride="false">
+<div id="@_carouselId" class="carousel slide salon-carousel" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
     @if (ImageUrls.Count > 1)
     {
         <div class="carousel-indicators">
@@ -40,6 +40,9 @@
         <button class="carousel-control-next" type="button" data-bs-target="#@_carouselId" data-bs-slide="next">
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
         </button>
+        <div class="carousel-counter">
+            <span class="carousel-counter-current">1</span> / @ImageUrls.Count
+        </div>
     }
 </div>
 
@@ -47,6 +50,46 @@
     [Parameter] public List<string> ImageUrls { get; set; } = new();
 
     private string _carouselId = $"carousel-{Guid.NewGuid():N}"[..16];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ImageUrls.Count > 1)
+        {
+            // Bootstrap Carousel JS 초기화 + 스와이프 활성화
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    var el = document.getElementById('{_carouselId}');
+                    if (!el) return;
+                    new bootstrap.Carousel(el, {{ touch: true, interval: false }});
+
+                    // 슬라이드 카운터 업데이트
+                    el.addEventListener('slid.bs.carousel', function(e) {{
+                        var counter = el.querySelector('.carousel-counter-current');
+                        if (counter) counter.textContent = e.to + 1;
+                    }});
+
+                    // 커스텀 터치 스와이프 (더 민감하게)
+                    var startX = 0, startY = 0, moving = false;
+                    el.addEventListener('touchstart', function(e) {{
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                        moving = true;
+                    }}, {{ passive: true }});
+                    el.addEventListener('touchend', function(e) {{
+                        if (!moving) return;
+                        moving = false;
+                        var diffX = e.changedTouches[0].clientX - startX;
+                        var diffY = e.changedTouches[0].clientY - startY;
+                        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {{
+                            var inst = bootstrap.Carousel.getInstance(el);
+                            if (diffX < 0) inst.next();
+                            else inst.prev();
+                        }}
+                    }}, {{ passive: true }});
+                }})();
+            ");
+        }
+    }
 }
 
 <style>
@@ -70,6 +113,20 @@
 
     .salon-carousel .carousel-indicators button {
         background-color: var(--salon-black);
+    }
+
+    .carousel-counter {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        font-size: 0.75rem;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-family: var(--font-serif);
+        letter-spacing: 0.05em;
+        z-index: 5;
     }
 
     .carousel-placeholder {
