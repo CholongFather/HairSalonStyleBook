@@ -15,14 +15,14 @@
             <a href="admin/edit" class="btn btn-salon">
                 <i class="bi bi-plus-lg"></i> 새 스타일
             </a>
-            @if (!_styles.Any() && !_loading)
+            @if (!_loading)
             {
                 <button class="btn btn-salon-outline" @onclick="SeedInitialData" disabled="@_seeding">
                     @if (_seeding)
                     {
                         <span class="spinner-border spinner-border-sm me-1"></span>
                     }
-                    <i class="bi bi-database-add"></i> 초기 데이터 생성
+                    <i class="bi bi-database-add"></i> @(_styles.Any() ? "데이터 초기화" : "초기 데이터 생성")
                 </button>
             }
             <a href="admin/audit" class="btn btn-salon-outline">
@@ -125,6 +125,14 @@
         _seeding = true;
         StateHasChanged();
 
+        // 기존 데이터 전부 삭제
+        foreach (var existing in _styles)
+        {
+            await StyleService.DeleteAsync(existing.Id);
+            await Task.Delay(50);
+        }
+
+        // 새 초기 데이터 생성
         var styles = GetInitialStyles();
         foreach (var style in styles)
         {
@@ -135,7 +143,7 @@
         _styles = await StyleService.GetAllAsync();
         _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
         _seeding = false;
-        await AuditService.LogAsync("Seed", "", "", $"초기 데이터 {styles.Count}건 생성");
+        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: 기존 삭제 후 {styles.Count}건 생성");
     }
 
     private static List<StylePost> GetInitialStyles()
