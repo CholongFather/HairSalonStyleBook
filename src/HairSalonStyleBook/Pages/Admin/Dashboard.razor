@@ -37,8 +37,12 @@
                         @if (_seeding)
                         {
                             <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>@_seedProgress / @_seedTotal</span>
                         }
-                        <i class="bi bi-database-add"></i> @(_styles.Any() ? "데이터 초기화" : "초기 데이터 생성")
+                        else
+                        {
+                            <i class="bi bi-database-add"></i> @(_styles.Any() ? "데이터 초기화" : "초기 데이터 생성")
+                        }
                     </button>
                 }
                 <a href="admin/audit" class="btn btn-salon-outline">
@@ -200,6 +204,8 @@
     private List<StylePost> _styles = new();
     private bool _loading = true;
     private bool _seeding;
+    private int _seedProgress;
+    private int _seedTotal;
     private int _adminTab;
 
     // 쓰레기 배출 스케줄
@@ -302,21 +308,31 @@
     private async Task SeedInitialData()
     {
         _seeding = true;
+        _seedProgress = 0;
         StateHasChanged();
 
         // 기존 데이터 전부 삭제
+        _seedTotal = _styles.Count;
         foreach (var existing in _styles)
         {
             await StyleService.DeleteAsync(existing.Id);
-            await Task.Delay(50);
+            _seedProgress++;
+            if (_seedProgress % 10 == 0) StateHasChanged();
+            await Task.Delay(30);
         }
 
         // 새 초기 데이터 생성
         var styles = GetInitialStyles();
+        _seedProgress = 0;
+        _seedTotal = styles.Count;
+        StateHasChanged();
+
         foreach (var style in styles)
         {
             await StyleService.CreateAsync(style);
-            await Task.Delay(100); // Firestore 과부하 방지
+            _seedProgress++;
+            if (_seedProgress % 5 == 0) StateHasChanged();
+            await Task.Delay(50); // Firestore 과부하 방지
         }
 
         _styles = await StyleService.GetAllAsync();

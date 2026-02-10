@@ -33,13 +33,28 @@ public class FirestoreStyleService : IStyleService
     {
         try
         {
-            var response = await _http.GetAsync($"{_baseUrl}/styles?key={_apiKey}");
-            if (!response.IsSuccessStatusCode)
-                return new List<StylePost>();
+            var allDocs = new List<FirestoreDocument>();
+            string? pageToken = null;
 
-            var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
-            return json?.Documents?.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList()
-                   ?? new List<StylePost>();
+            // Firestore REST API 페이지네이션 (기본 100건 제한)
+            do
+            {
+                var url = $"{_baseUrl}/styles?key={_apiKey}&pageSize=300";
+                if (!string.IsNullOrEmpty(pageToken))
+                    url += $"&pageToken={pageToken}";
+
+                var response = await _http.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                    break;
+
+                var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
+                if (json?.Documents != null)
+                    allDocs.AddRange(json.Documents);
+
+                pageToken = json?.NextPageToken;
+            } while (!string.IsNullOrEmpty(pageToken));
+
+            return allDocs.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList();
         }
         catch
         {
@@ -203,6 +218,7 @@ public class FirestoreStyleService : IStyleService
 public class FirestoreListResponse
 {
     public List<FirestoreDocument>? Documents { get; set; }
+    public string? NextPageToken { get; set; }
 }
 
 public class FirestoreDocument
