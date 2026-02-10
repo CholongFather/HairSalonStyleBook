@@ -5,11 +5,35 @@
 
 <PageTitle>@(_style?.Title ?? "스타일 상세") - 늘-오던 헤어살롱</PageTitle>
 
-<div class="container salon-detail-page">
-    <!-- 뒤로가기 -->
-    <button class="btn btn-back" @onclick="GoBack">
-        <i class="bi bi-chevron-left"></i> 목록으로
-    </button>
+<div class="container salon-detail-page"
+     @ontouchstart="OnTouchStart"
+     @ontouchmove="OnTouchMove"
+     @ontouchmove:preventDefault="_swiping"
+     @ontouchend="OnTouchEnd">
+    <!-- 뒤로가기 + 이전/다음 -->
+    <div class="detail-nav-bar">
+        <button class="btn btn-back" @onclick="GoBack">
+            <i class="bi bi-chevron-left"></i> 목록
+        </button>
+        <div class="detail-nav-arrows">
+            @if (_prevId != null)
+            {
+                <button class="btn btn-nav-arrow" @onclick="GoPrev" title="이전 스타일">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+            }
+            @if (_styleIndex >= 0 && _totalCount > 0)
+            {
+                <span class="detail-nav-counter">@(_styleIndex + 1) / @_totalCount</span>
+            }
+            @if (_nextId != null)
+            {
+                <button class="btn btn-nav-arrow" @onclick="GoNext" title="다음 스타일">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            }
+        </div>
+    </div>
 
     @if (_loading)
     {
@@ -143,10 +167,36 @@
     private StylePost? _style;
     private bool _loading = true;
 
+    // 이전/다음 네비게이션
+    private List<StylePost> _allStyles = new();
+    private string? _prevId;
+    private string? _nextId;
+    private int _styleIndex = -1;
+    private int _totalCount;
+
+    // 스와이프
+    private double _touchStartX;
+    private double _touchStartY;
+    private double _touchCurrentX;
+    private bool _swiping;
+
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        _style = await StyleService.GetByIdAsync(Id);
+
+        // 캐시에서 전체 목록 로드 (즉시 반환)
+        _allStyles = await StyleService.GetAllAsync();
+        _allStyles = _allStyles.Where(s => s.IsPublished).OrderByDescending(s => s.CreatedAt).ToList();
+        _totalCount = _allStyles.Count;
+
+        // 현재 스타일
+        _style = _allStyles.FirstOrDefault(s => s.Id == Id);
+        _styleIndex = _style != null ? _allStyles.IndexOf(_style) : -1;
+
+        // 이전/다음 ID 설정
+        _prevId = _styleIndex > 0 ? _allStyles[_styleIndex - 1].Id : null;
+        _nextId = _styleIndex >= 0 && _styleIndex < _allStyles.Count - 1 ? _allStyles[_styleIndex + 1].Id : null;
+
         _loading = false;
     }
 
@@ -164,9 +214,41 @@
         _ => 0
     };
 
-    private void GoBack()
+    private void GoBack() => Nav.NavigateTo("");
+    private void GoPrev() { if (_prevId != null) Nav.NavigateTo($"style/{_prevId}"); }
+    private void GoNext() { if (_nextId != null) Nav.NavigateTo($"style/{_nextId}"); }
+
+    // 스와이프 (임계값 100px로 예민하지 않게)
+    private void OnTouchStart(TouchEventArgs e)
     {
-        Nav.NavigateTo("");
+        _touchStartX = e.ChangedTouches[0].ClientX;
+        _touchStartY = e.ChangedTouches[0].ClientY;
+        _touchCurrentX = _touchStartX;
+        _swiping = false;
+    }
+
+    private void OnTouchMove(TouchEventArgs e)
+    {
+        _touchCurrentX = e.ChangedTouches[0].ClientX;
+        var diffX = Math.Abs(_touchStartX - _touchCurrentX);
+        var diffY = Math.Abs(_touchStartY - e.ChangedTouches[0].ClientY);
+        // 수평 움직임이 수직보다 클 때만 스와이프로 판단
+        if (diffX > 30 && diffX > diffY * 1.5)
+            _swiping = true;
+    }
+
+    private void OnTouchEnd(TouchEventArgs e)
+    {
+        if (!_swiping) return;
+        _swiping = false;
+
+        var diff = _touchStartX - _touchCurrentX;
+        if (Math.Abs(diff) < 100) return; // 100px 이상이어야 동작
+
+        if (diff > 0 && _nextId != null)
+            GoNext(); // 왼쪽 스와이프 → 다음
+        else if (diff < 0 && _prevId != null)
+            GoPrev(); // 오른쪽 스와이프 → 이전
     }
 }
 
@@ -176,7 +258,14 @@
         padding: 0.5rem 1rem 2rem;
     }
 
-    /* 뒤로가기 */
+    /* 네비게이션 바 */
+    .detail-nav-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.3rem;
+    }
+
     .btn-back {
         font-family: var(--font-serif);
         font-size: 0.8rem;
@@ -184,7 +273,6 @@
         background: none;
         border: none;
         padding: 0.6rem 0;
-        margin-bottom: 0.3rem;
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
@@ -203,6 +291,41 @@
 
     .btn-back:hover i {
         transform: translateX(-2px);
+    }
+
+    .detail-nav-arrows {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .btn-nav-arrow {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid var(--salon-light-gray);
+        background: var(--salon-white);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--salon-gray);
+        font-size: 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .btn-nav-arrow:hover {
+        border-color: var(--salon-green);
+        color: var(--salon-green);
+    }
+
+    .detail-nav-counter {
+        font-family: var(--font-serif);
+        font-size: 0.7rem;
+        color: var(--salon-gray);
+        letter-spacing: 0.05em;
+        min-width: 3rem;
+        text-align: center;
     }
 
     /* 제목 영역 */

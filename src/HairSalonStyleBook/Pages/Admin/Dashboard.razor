@@ -3,6 +3,7 @@
 @inject IStyleService StyleService
 @inject IAuditService AuditService
 @inject IAuthService AuthService
+@inject IShopConfigService ShopConfigService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -123,6 +124,51 @@
             </div>
         </div>
 
+        <!-- WiFi / 계좌 정보 편집 -->
+        <div class="shop-section">
+            <div class="shop-section-header">
+                <i class="bi bi-wifi"></i>
+                <h3>WiFi / 계좌 정보</h3>
+                @if (_shopSaved)
+                {
+                    <span class="badge bg-success ms-2">저장됨</span>
+                }
+            </div>
+            <div class="shop-edit-grid">
+                <div class="shop-edit-group">
+                    <label class="form-label">WiFi 5G 이름</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName5G" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">WiFi 2.4G 이름</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName24G" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">WiFi 비밀번호</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiPassword" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">은행</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.BankName" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">계좌번호</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountNumber" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">예금주</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountHolder" />
+                </div>
+            </div>
+            <button class="btn btn-salon mt-2" @onclick="SaveShopConfig" disabled="@_shopSaving">
+                @if (_shopSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-check-lg"></i> 저장
+            </button>
+        </div>
+
         <!-- 쓰레기 배출일 안내 -->
         <div class="shop-section">
             <div class="shop-section-header">
@@ -208,6 +254,11 @@
     private int _seedTotal;
     private int _adminTab;
 
+    // 매장 설정
+    private ShopConfig _shopConfig = new();
+    private bool _shopSaving;
+    private bool _shopSaved;
+
     // 쓰레기 배출 스케줄
     private readonly List<TrashScheduleItem> _trashSchedule = new()
     {
@@ -286,9 +337,26 @@
     {
         _loading = true;
         InitChecklist();
-        _styles = await StyleService.GetAllAsync();
-        _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
+        var stylesTask = StyleService.GetAllAsync();
+        var shopTask = ShopConfigService.GetAsync();
+        await Task.WhenAll(stylesTask, shopTask);
+        _styles = stylesTask.Result.OrderByDescending(s => s.CreatedAt).ToList();
+        _shopConfig = shopTask.Result;
         _loading = false;
+    }
+
+    private async Task SaveShopConfig()
+    {
+        _shopSaving = true;
+        _shopSaved = false;
+        StateHasChanged();
+        await ShopConfigService.SaveAsync(_shopConfig);
+        _shopSaving = false;
+        _shopSaved = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _shopSaved = false;
+        StateHasChanged();
     }
 
     private async Task DeleteStyle(StylePost style)
@@ -2573,6 +2641,18 @@
         font-size: 0.7rem;
         color: var(--salon-gray);
         margin-left: auto;
+    }
+
+    .shop-edit-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+    }
+
+    .shop-edit-group label {
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        margin-bottom: 0.15rem;
     }
 
     .trash-schedule {

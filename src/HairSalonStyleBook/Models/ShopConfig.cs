@@ -1,0 +1,22 @@
+namespace HairSalonStyleBook.Models;
+
+/// <summary>
+/// 매장 설정 (WiFi, 계좌 정보)
+/// </summary>
+public class ShopConfig
+{
+    // WiFi
+    public string WifiName5G { get; set; } = "U+NetAFC8_5G";
+    public string WifiName24G { get; set; } = "U+NetAFC8";
+    public string WifiPassword { get; set; } = "DE01K7#0E5";
+
+    // 계좌
+    public string BankName { get; set; } = "우리은행";
+    public string AccountNumber { get; set; } = "-";
+    public string AccountHolder { get; set; } = "정*경";
+
+    // QR 코드 URL 자동 생성
+    public string Wifi5GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName5G};P:{WifiPassword};;")}";
+    public string Wifi24GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName24G};P:{WifiPassword};;")}";
+    public string AccountQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"{BankName} {AccountHolder}")}";
+}
