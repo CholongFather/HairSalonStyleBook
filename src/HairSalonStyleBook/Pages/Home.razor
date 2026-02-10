@@ -6,11 +6,31 @@
 <PageTitle>늘-오던 헤어살롱</PageTitle>
 
 <div class="container salon-list-page">
+    <!-- 성별 토글 -->
+    <div class="gender-toggle">
+        <button class="gender-btn @(_selectedGender == Gender.여성 ? "active female" : "")"
+                @onclick="() => OnGenderChanged(Gender.여성)">
+            <i class="bi bi-gender-female"></i> 여성
+        </button>
+        <button class="gender-btn @(_selectedGender == Gender.남성 ? "active male" : "")"
+                @onclick="() => OnGenderChanged(Gender.남성)">
+            <i class="bi bi-gender-male"></i> 남성
+        </button>
+    </div>
+
     <!-- 카테고리 메뉴 -->
     <CategoryMenu SelectedCategory="_selectedCategory" OnCategorySelected="OnCategoryChanged" />
 
     <!-- 검색바 -->
     <SearchBar SearchText="@_searchText" OnSearch="OnSearch" />
+
+    <!-- 결과 카운트 -->
+    @if (!_loading && _filteredStyles.Any())
+    {
+        <div class="result-count">
+            <span>@_filteredStyles.Count</span>개의 스타일
+        </div>
+    }
 
     <!-- 스타일 카드 그리드 -->
     @if (_loading)
@@ -28,9 +48,12 @@
     }
     else if (!_pagedStyles.Any())
     {
-        <div class="text-center py-5">
-            <i class="bi bi-inbox" style="font-size: 2rem; color: var(--salon-light-gray);"></i>
-            <p class="text-muted mt-2">등록된 스타일이 없습니다.</p>
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="bi bi-scissors"></i>
+            </div>
+            <p class="empty-text">등록된 스타일이 없습니다</p>
+            <p class="empty-sub">새로운 스타일이 곧 업데이트 됩니다</p>
         </div>
     }
     else
@@ -54,6 +77,7 @@
     private List<StylePost> _allStyles = new();
     private List<StylePost> _filteredStyles = new();
     private List<StylePost> _pagedStyles = new();
+    private Gender _selectedGender = Gender.여성;
     private StyleCategory _selectedCategory = StyleCategory.전체;
     private string _searchText = "";
     private int _currentPage = 1;
@@ -63,7 +87,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // URL 쿼리에서 검색어 파싱
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
         if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("search", out var searchValue))
         {
@@ -84,7 +107,8 @@
 
     private void ApplyFilters()
     {
-        _filteredStyles = _allStyles;
+        // 성별 필터
+        _filteredStyles = _allStyles.Where(s => s.Gender == _selectedGender).ToList();
 
         // 카테고리 필터
         if (_selectedCategory != StyleCategory.전체)
@@ -102,10 +126,16 @@
             ).ToList();
         }
 
-        // 페이지네이션 계산
         _totalPages = Math.Max(1, (int)Math.Ceiling(_filteredStyles.Count / (double)PageSize));
         _currentPage = Math.Clamp(_currentPage, 1, _totalPages);
         _pagedStyles = _filteredStyles.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void OnGenderChanged(Gender gender)
+    {
+        _selectedGender = gender;
+        _currentPage = 1;
+        ApplyFilters();
     }
 
     private Task OnCategoryChanged(StyleCategory category)
@@ -138,6 +168,105 @@
         padding-top: 0.5rem;
     }
 
+    /* 성별 토글 */
+    .gender-toggle {
+        display: flex;
+        justify-content: center;
+        gap: 0;
+        padding: 1rem 0 0.3rem;
+    }
+
+    .gender-btn {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        padding: 0.5rem 2rem;
+        border: 1.5px solid var(--salon-light-gray);
+        background: var(--salon-white);
+        color: var(--salon-gray);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        letter-spacing: 0.08em;
+        font-weight: 400;
+    }
+
+    .gender-btn:first-child {
+        border-radius: 20px 0 0 20px;
+        border-right: none;
+    }
+
+    .gender-btn:last-child {
+        border-radius: 0 20px 20px 0;
+    }
+
+    .gender-btn i {
+        font-size: 0.9rem;
+        margin-right: 0.2rem;
+    }
+
+    .gender-btn.active.female {
+        background: linear-gradient(135deg, var(--salon-rose) 0%, var(--salon-rose-light) 100%);
+        color: #fff;
+        border-color: var(--salon-rose);
+        font-weight: 700;
+    }
+
+    .gender-btn.active.male {
+        background: linear-gradient(135deg, #6b9bd2 0%, #a3c4e8 100%);
+        color: #fff;
+        border-color: #6b9bd2;
+        font-weight: 700;
+    }
+
+    /* 결과 카운트 */
+    .result-count {
+        text-align: center;
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        padding-bottom: 0.5rem;
+    }
+
+    .result-count span {
+        color: var(--salon-green);
+        font-weight: 700;
+    }
+
+    /* 빈 상태 */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 1rem;
+        background: var(--salon-light-gray);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .empty-icon i {
+        font-size: 1.5rem;
+        color: var(--salon-gray);
+    }
+
+    .empty-text {
+        font-family: var(--font-serif);
+        font-size: 0.9rem;
+        color: var(--salon-dark);
+        margin-bottom: 0.3rem;
+    }
+
+    .empty-sub {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+    }
+
+    /* 카드 그리드 */
     .style-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -147,7 +276,13 @@
 
     @@media (max-width: 400px) {
         .style-grid {
-            gap: 0.5rem;
+            gap: 0.75rem;
+            padding: 0 0.25rem;
+        }
+
+        .gender-btn {
+            padding: 0.4rem 1.5rem;
+            font-size: 0.8rem;
         }
     }
 </style>

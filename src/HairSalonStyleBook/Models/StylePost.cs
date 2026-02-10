@@ -9,6 +9,7 @@ public class StylePost
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public StyleCategory Category { get; set; }
+    public Gender Gender { get; set; } = Gender.여성;
 
     /// <summary>
     /// 이미지 URL 목록 (Firebase Storage URL)

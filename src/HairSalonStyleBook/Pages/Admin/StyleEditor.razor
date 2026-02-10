@@ -24,7 +24,15 @@
             <InputText @bind-Value="_style.Title" class="form-control editor-input" placeholder="스타일 제목" />
         </div>
 
-        <!-- 카테고리 -->
+        <!-- 성별 / 카테고리 -->
+        <div class="mb-3">
+            <label class="form-label">성별</label>
+            <InputSelect @bind-Value="_style.Gender" class="form-select editor-input">
+                <option value="@Gender.여성">여성</option>
+                <option value="@Gender.남성">남성</option>
+            </InputSelect>
+        </div>
+
         <div class="mb-3">
             <label class="form-label">카테고리</label>
             <InputSelect @bind-Value="_style.Category" class="form-select editor-input">
