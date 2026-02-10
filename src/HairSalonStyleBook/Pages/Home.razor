@@ -150,15 +150,15 @@
                         <div class="info-card-divider"></div>
                         <div class="info-row">
                             <span class="info-label">은행</span>
-                            <span class="info-value">카카오뱅크</span>
+                            <span class="info-value">우리은행</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">계좌번호</span>
-                            <span class="info-value info-pw">3333-00-0000000</span>
+                            <span class="info-value info-pw">-</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">예금주</span>
-                            <span class="info-value">늘-오던 헤어살롱</span>
+                            <span class="info-value">정*경</span>
                         </div>
                         <div class="qr-section">
                             <p class="qr-label">QR 코드로 간편 이체</p>
@@ -234,7 +234,7 @@
         $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("WIFI:T:WPA;S:U+NetAFC8_5G;P:DE01K7#0E5;;")}";
 
     private static string AccountQrUrl =>
-        $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("카카오뱅크 3333-00-0000000 늘-오던 헤어살롱")}";
+        $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("우리은행 정*경")}";
 
     private string QrScaleStyle =>
         $"transform: scale({_qrScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)})";
