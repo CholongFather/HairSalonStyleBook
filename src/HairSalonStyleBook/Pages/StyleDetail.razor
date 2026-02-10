@@ -50,15 +50,17 @@
         <!-- 상세 설명 -->
         @if (!string.IsNullOrEmpty(_style.Description))
         {
-            <div class="detail-section">
+            <div class="detail-section detail-desc-section">
                 <div class="detail-description">
                     @((MarkupString)_style.Description)
                 </div>
             </div>
         }
 
-        <!-- 이미지 캐러셀 -->
-        <ImageCarousel ImageUrls="_style.ImageUrls" />
+        <!-- 이미지 캐러셀 (설명 바로 아래) -->
+        <div class="detail-carousel-wrap">
+            <ImageCarousel ImageUrls="_style.ImageUrls" />
+        </div>
 
         <!-- 해시태그 -->
         @if (_style.Hashtags.Any())
@@ -209,6 +211,15 @@
         border-top: 1px solid rgba(232, 227, 220, 0.5);
     }
 
+    .detail-desc-section {
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .detail-carousel-wrap {
+        margin-top: 0.3rem;
+    }
+
     /* 상세 설명 */
     .detail-description {
         font-family: var(--font-serif);
@@ -217,6 +228,7 @@
         color: var(--salon-dark);
         padding: 0.8rem 0.2rem 0.5rem;
         word-break: keep-all;
+        min-height: 120px;
     }
 
     .detail-description p {
