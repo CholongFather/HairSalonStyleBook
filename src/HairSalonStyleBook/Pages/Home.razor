@@ -868,10 +868,11 @@
         color: var(--salon-gray);
     }
 
-    /* 스와이프 영역 */
+    /* 스와이프 영역 - 3D 공간 */
     .swipe-area {
         overflow: hidden;
         touch-action: pan-y pinch-zoom;
+        perspective: 1800px;
     }
 
     /* 카드 그리드 */
@@ -880,49 +881,60 @@
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         padding: 0 0.5rem;
+        backface-visibility: hidden;
     }
 
+    /* 다음 페이지: 오른쪽에서 책등(왼쪽)을 축으로 펼쳐지듯 */
     .style-grid.slide-left {
-        animation: pageFlipNext 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+        animation: pageFlipNext 0.6s cubic-bezier(0.33, 1, 0.68, 1);
         transform-origin: left center;
     }
 
+    /* 이전 페이지: 왼쪽에서 오른쪽 축으로 펼쳐지듯 */
     .style-grid.slide-right {
-        animation: pageFlipPrev 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+        animation: pageFlipPrev 0.6s cubic-bezier(0.33, 1, 0.68, 1);
         transform-origin: right center;
     }
 
     @@keyframes pageFlipNext {
         0% {
-            transform: perspective(1200px) rotateY(-60deg) scale(0.88);
+            transform: rotateY(-150deg);
             opacity: 0;
-            filter: brightness(0.6);
+            box-shadow: inset 60px 0 40px rgba(0,0,0,0.25);
         }
-        50% {
-            opacity: 0.7;
-            filter: brightness(0.85);
+        30% {
+            opacity: 0.4;
+        }
+        60% {
+            transform: rotateY(-30deg);
+            opacity: 0.85;
+            box-shadow: inset 20px 0 30px rgba(0,0,0,0.12);
         }
         100% {
-            transform: perspective(1200px) rotateY(0deg) scale(1);
+            transform: rotateY(0deg);
             opacity: 1;
-            filter: brightness(1);
+            box-shadow: none;
         }
     }
 
     @@keyframes pageFlipPrev {
         0% {
-            transform: perspective(1200px) rotateY(60deg) scale(0.88);
+            transform: rotateY(150deg);
             opacity: 0;
-            filter: brightness(0.6);
+            box-shadow: inset -60px 0 40px rgba(0,0,0,0.25);
         }
-        50% {
-            opacity: 0.7;
-            filter: brightness(0.85);
+        30% {
+            opacity: 0.4;
+        }
+        60% {
+            transform: rotateY(30deg);
+            opacity: 0.85;
+            box-shadow: inset -20px 0 30px rgba(0,0,0,0.12);
         }
         100% {
-            transform: perspective(1200px) rotateY(0deg) scale(1);
+            transform: rotateY(0deg);
             opacity: 1;
-            filter: brightness(1);
+            box-shadow: none;
         }
     }
 
