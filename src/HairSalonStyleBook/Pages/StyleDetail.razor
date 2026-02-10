@@ -45,7 +45,7 @@
         @if (!string.IsNullOrEmpty(_style.Description))
         {
             <div class="detail-description">
-                @((MarkupString)_style.Description.Replace("\n", "<br/>"))
+                @((MarkupString)_style.Description)
             </div>
         }
 

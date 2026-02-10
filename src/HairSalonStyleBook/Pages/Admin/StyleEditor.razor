@@ -37,7 +37,7 @@
         <!-- 상세 설명 -->
         <div class="mb-3">
             <label class="form-label">상세 설명</label>
-            <InputTextArea @bind-Value="_style.Description" class="form-control editor-input" rows="5" placeholder="스타일에 대한 설명을 작성하세요" />
+            <RichTextEditor @bind-Value="_style.Description" />
         </div>
 
         <!-- 이미지 업로드 -->

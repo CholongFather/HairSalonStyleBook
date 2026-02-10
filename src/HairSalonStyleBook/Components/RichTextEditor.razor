@@ -1,0 +1,179 @@
+@inject IJSRuntime JS
+
+<div class="rich-editor">
+    <div class="rich-toolbar">
+        <button type="button" class="toolbar-btn" title="굵게" @onclick='() => ExecCommand("bold")'>
+            <i class="bi bi-type-bold"></i>
+        </button>
+        <button type="button" class="toolbar-btn" title="기울임" @onclick='() => ExecCommand("italic")'>
+            <i class="bi bi-type-italic"></i>
+        </button>
+        <button type="button" class="toolbar-btn" title="밑줄" @onclick='() => ExecCommand("underline")'>
+            <i class="bi bi-type-underline"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" class="toolbar-btn" title="소제목" @onclick="InsertHeading">
+            <i class="bi bi-type-h2"></i>
+        </button>
+        <button type="button" class="toolbar-btn" title="구분선" @onclick='() => ExecCommand("insertHorizontalRule")'>
+            <i class="bi bi-dash-lg"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" class="toolbar-btn" title="글머리 기호" @onclick='() => ExecCommand("insertUnorderedList")'>
+            <i class="bi bi-list-ul"></i>
+        </button>
+        <button type="button" class="toolbar-btn" title="번호 목록" @onclick='() => ExecCommand("insertOrderedList")'>
+            <i class="bi bi-list-ol"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" class="toolbar-btn" title="서식 제거" @onclick='() => ExecCommand("removeFormat")'>
+            <i class="bi bi-eraser"></i>
+        </button>
+    </div>
+    <div id="@_editorId"
+         class="rich-content"
+         contenteditable="true"
+         @onfocusout="OnContentChanged">
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private string _editorId = $"editor-{Guid.NewGuid():N}"[..14];
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 초기 HTML 설정
+            await JS.InvokeVoidAsync("eval",
+                $"document.getElementById('{_editorId}').innerHTML = {System.Text.Json.JsonSerializer.Serialize(Value ?? "")};");
+            _initialized = true;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // 외부에서 Value가 변경된 경우 (예: 수정 모드 진입)
+        if (_initialized)
+        {
+            var currentHtml = await JS.InvokeAsync<string>("eval",
+                $"document.getElementById('{_editorId}').innerHTML");
+            if (currentHtml != Value)
+            {
+                await JS.InvokeVoidAsync("eval",
+                    $"document.getElementById('{_editorId}').innerHTML = {System.Text.Json.JsonSerializer.Serialize(Value ?? "")};");
+            }
+        }
+    }
+
+    private async Task ExecCommand(string command)
+    {
+        await JS.InvokeVoidAsync("eval",
+            $"document.getElementById('{_editorId}').focus(); document.execCommand('{command}', false, null);");
+    }
+
+    private async Task InsertHeading()
+    {
+        await JS.InvokeVoidAsync("eval",
+            $"document.getElementById('{_editorId}').focus(); document.execCommand('formatBlock', false, 'h3');");
+    }
+
+    private async Task OnContentChanged()
+    {
+        var html = await JS.InvokeAsync<string>("eval",
+            $"document.getElementById('{_editorId}').innerHTML");
+        if (html != Value)
+        {
+            await ValueChanged.InvokeAsync(html);
+        }
+    }
+}
+
+<style>
+    .rich-editor {
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .rich-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0.4rem 0.5rem;
+        background: #f8f8f6;
+        border-bottom: 1px solid var(--salon-light-gray);
+        flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 0.3rem 0.5rem;
+        cursor: pointer;
+        color: var(--salon-dark, #333);
+        font-size: 0.9rem;
+        line-height: 1;
+        transition: all 0.15s ease;
+    }
+
+    .toolbar-btn:hover {
+        background: rgba(123, 163, 131, 0.15);
+        border-color: var(--salon-green);
+        color: var(--salon-green);
+    }
+
+    .toolbar-btn:active {
+        background: rgba(123, 163, 131, 0.3);
+    }
+
+    .toolbar-divider {
+        width: 1px;
+        height: 1.2rem;
+        background: var(--salon-light-gray);
+        margin: 0 0.3rem;
+    }
+
+    .rich-content {
+        min-height: 180px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 0.75rem;
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        line-height: 1.8;
+        color: var(--salon-dark, #333);
+        outline: none;
+    }
+
+    .rich-content:focus {
+        box-shadow: inset 0 0 0 2px rgba(123, 163, 131, 0.15);
+    }
+
+    .rich-content h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        color: var(--salon-black);
+    }
+
+    .rich-content ul, .rich-content ol {
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+    }
+
+    .rich-content hr {
+        border: none;
+        border-top: 1px solid var(--salon-light-gray);
+        margin: 0.75rem 0;
+    }
+
+    .rich-content b, .rich-content strong {
+        font-weight: 700;
+    }
+</style>
