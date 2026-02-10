@@ -4,7 +4,9 @@
     <div class="style-card-image">
         @if (!string.IsNullOrEmpty(Style.ThumbnailUrl))
         {
-            <img src="@Style.ThumbnailUrl" alt="@Style.Title" loading="lazy" onerror="this.onerror=null;this.src='images/default-style.svg'" />
+            <img src="@Style.ThumbnailUrl" alt="@Style.Title" loading="lazy"
+                 onload="this.classList.add('loaded')"
+                 onerror="this.onerror=null;this.src='images/default-style.svg'" />
         }
         else
         {
@@ -69,13 +71,25 @@
         aspect-ratio: 3 / 4;
         overflow: hidden;
         background: linear-gradient(135deg, #f0ebe0 0%, #e8e3d8 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    @@keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 
     .style-card-image img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        opacity: 0;
+        transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .style-card-image img.loaded {
+        opacity: 1;
     }
 
     .style-card:hover .style-card-image img {
