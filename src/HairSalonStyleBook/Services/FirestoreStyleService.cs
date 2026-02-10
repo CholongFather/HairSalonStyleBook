@@ -21,6 +21,9 @@ public class FirestoreStyleService : IStyleService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    // 메모리 캐시 (정적 데이터이므로 첫 로드 후 재사용)
+    private List<StylePost>? _cache;
+
     public FirestoreStyleService(HttpClient http, IConfiguration config)
     {
         _http = http;
@@ -31,6 +34,10 @@ public class FirestoreStyleService : IStyleService
 
     public async Task<List<StylePost>> GetAllAsync()
     {
+        // 캐시가 있으면 바로 반환 (API 호출 없음)
+        if (_cache != null)
+            return _cache.ToList();
+
         try
         {
             var allDocs = new List<FirestoreDocument>();
@@ -54,7 +61,8 @@ public class FirestoreStyleService : IStyleService
                 pageToken = json?.NextPageToken;
             } while (!string.IsNullOrEmpty(pageToken));
 
-            return allDocs.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList();
+            _cache = allDocs.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList();
+            return _cache.ToList();
         }
         catch
         {
@@ -85,6 +93,10 @@ public class FirestoreStyleService : IStyleService
 
     public async Task<StylePost?> GetByIdAsync(string id)
     {
+        // 캐시에서 먼저 찾기
+        if (_cache != null)
+            return _cache.FirstOrDefault(s => s.Id == id);
+
         try
         {
             var response = await _http.GetAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
@@ -110,6 +122,7 @@ public class FirestoreStyleService : IStyleService
         var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
 
         await _http.PostAsync($"{_baseUrl}/styles?documentId={style.Id}&key={_apiKey}", content);
+        InvalidateCache();
         return style;
     }
 
@@ -121,13 +134,20 @@ public class FirestoreStyleService : IStyleService
         var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
 
         await _http.PatchAsync($"{_baseUrl}/styles/{style.Id}?key={_apiKey}", content);
+        InvalidateCache();
         return style;
     }
 
     public async Task DeleteAsync(string id)
     {
         await _http.DeleteAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
+        InvalidateCache();
     }
+
+    /// <summary>
+    /// 캐시 무효화 (관리자 작업 후 호출)
+    /// </summary>
+    public void InvalidateCache() => _cache = null;
 
     #region Firestore 매핑
 
