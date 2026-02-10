@@ -17,6 +17,32 @@ public class StylePost
     public List<string> ImageUrls { get; set; } = new();
     public List<string> Hashtags { get; set; } = new();
     public List<string> RelatedPostIds { get; set; } = new();
+
+    /// <summary>
+    /// 스타일링 팁 (한줄 요약)
+    /// </summary>
+    public string StylingTip { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 관리 난이도: "쉬움" / "보통" / "어려움"
+    /// </summary>
+    public string MaintenanceLevel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 유지 기간 (예: "2~3개월")
+    /// </summary>
+    public string Duration { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 추천 얼굴형 (예: "둥근형", "긴형", "각진형")
+    /// </summary>
+    public List<string> RecommendedFaceShapes { get; set; } = new();
+
+    /// <summary>
+    /// 추천 모질 (예: "직모", "곱슬", "가는모")
+    /// </summary>
+    public List<string> RecommendedHairTypes { get; set; } = new();
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = "admin";

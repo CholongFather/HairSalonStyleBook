@@ -58,7 +58,65 @@
             </div>
         }
 
-        <!-- 이미지 캐러셀 (설명 바로 아래) -->
+        <!-- 한눈에 보기 -->
+        @if (HasQuickInfo)
+        {
+            <div class="quick-info-card">
+                <div class="quick-info-header">
+                    <i class="bi bi-lightbulb"></i>
+                    <span>한눈에 보기</span>
+                </div>
+                <div class="quick-info-body">
+                    @if (!string.IsNullOrEmpty(_style.MaintenanceLevel))
+                    {
+                        <div class="quick-info-row">
+                            <span class="quick-info-label">관리 난이도</span>
+                            <span class="quick-info-value">
+                                @for (int i = 0; i < MaintenanceDots; i++)
+                                {
+                                    <i class="bi bi-circle-fill quick-dot active"></i>
+                                }
+                                @for (int i = MaintenanceDots; i < 3; i++)
+                                {
+                                    <i class="bi bi-circle quick-dot"></i>
+                                }
+                                <span class="quick-dot-label">@_style.MaintenanceLevel</span>
+                            </span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_style.Duration))
+                    {
+                        <div class="quick-info-row">
+                            <span class="quick-info-label">유지 기간</span>
+                            <span class="quick-info-value">@_style.Duration</span>
+                        </div>
+                    }
+                    @if (_style.RecommendedFaceShapes.Any())
+                    {
+                        <div class="quick-info-row">
+                            <span class="quick-info-label">추천 얼굴형</span>
+                            <span class="quick-info-value">@string.Join(" · ", _style.RecommendedFaceShapes)</span>
+                        </div>
+                    }
+                    @if (_style.RecommendedHairTypes.Any())
+                    {
+                        <div class="quick-info-row">
+                            <span class="quick-info-label">추천 모질</span>
+                            <span class="quick-info-value">@string.Join(" · ", _style.RecommendedHairTypes)</span>
+                        </div>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(_style.StylingTip))
+                {
+                    <div class="quick-info-tip">
+                        <i class="bi bi-magic"></i>
+                        <span>@_style.StylingTip</span>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- 이미지 캐러셀 -->
         <div class="detail-carousel-wrap">
             <ImageCarousel ImageUrls="_style.ImageUrls" />
         </div>
@@ -91,6 +149,20 @@
         _style = await StyleService.GetByIdAsync(Id);
         _loading = false;
     }
+
+    private bool HasQuickInfo => _style != null && (
+        !string.IsNullOrEmpty(_style.MaintenanceLevel) ||
+        !string.IsNullOrEmpty(_style.Duration) ||
+        _style.RecommendedFaceShapes.Any() ||
+        _style.RecommendedHairTypes.Any());
+
+    private int MaintenanceDots => _style?.MaintenanceLevel switch
+    {
+        "쉬움" => 1,
+        "보통" => 2,
+        "어려움" => 3,
+        _ => 0
+    };
 
     private void GoBack()
     {
@@ -254,6 +326,102 @@
         align-items: center;
     }
 
+    /* 한눈에 보기 카드 */
+    .quick-info-card {
+        background: var(--salon-bg);
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 12px;
+        margin: 0.8rem 0;
+        overflow: hidden;
+    }
+
+    .quick-info-header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.6rem 1rem;
+        background: rgba(123, 163, 131, 0.08);
+        border-bottom: 1px solid var(--salon-light-gray);
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--salon-dark);
+    }
+
+    .quick-info-header i {
+        color: var(--salon-green);
+        font-size: 0.85rem;
+    }
+
+    .quick-info-body {
+        padding: 0.6rem 1rem;
+    }
+
+    .quick-info-row {
+        display: flex;
+        align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid rgba(232, 227, 220, 0.3);
+    }
+
+    .quick-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .quick-info-label {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        min-width: 80px;
+        flex-shrink: 0;
+    }
+
+    .quick-info-value {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        color: var(--salon-dark);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+        flex-wrap: wrap;
+    }
+
+    .quick-dot {
+        font-size: 0.5rem;
+        color: var(--salon-light-gray);
+    }
+
+    .quick-dot.active {
+        color: var(--salon-green);
+    }
+
+    .quick-dot-label {
+        font-size: 0.75rem;
+        margin-left: 0.3rem;
+        font-weight: 600;
+    }
+
+    .quick-info-tip {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.4rem;
+        padding: 0.6rem 1rem;
+        background: rgba(123, 163, 131, 0.05);
+        border-top: 1px solid var(--salon-light-gray);
+        font-family: var(--font-serif);
+        font-size: 0.78rem;
+        color: var(--salon-dark);
+        line-height: 1.6;
+    }
+
+    .quick-info-tip i {
+        color: var(--salon-green);
+        font-size: 0.8rem;
+        margin-top: 0.15rem;
+        flex-shrink: 0;
+    }
+
     @@media (max-width: 576px) {
         .detail-title {
             font-size: 1.2rem;
@@ -262,6 +430,15 @@
         .detail-description {
             font-size: 0.84rem;
             line-height: 1.85;
+        }
+
+        .quick-info-label {
+            min-width: 70px;
+            font-size: 0.72rem;
+        }
+
+        .quick-info-value {
+            font-size: 0.75rem;
         }
     }
 </style>
