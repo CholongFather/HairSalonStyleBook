@@ -65,16 +65,25 @@
                 }
                 else
                 {
-                    <div class="style-grid">
-                        @foreach (var style in _pagedStyles)
-                        {
-                            <StyleCard Style="style" />
-                        }
+                    <div class="swipe-area"
+                         @ontouchstart="OnTouchStart"
+                         @ontouchmove="OnTouchMove"
+                         @ontouchmove:preventDefault="_swiping"
+                         @ontouchend="OnTouchEnd">
+                        <div class="style-grid @_slideClass" @key="_pageKey">
+                            @foreach (var style in _pagedStyles)
+                            {
+                                <StyleCard Style="style" />
+                            }
+                        </div>
                     </div>
 
-                    <!-- 페이지네이션 -->
+                    <!-- 페이지 인디케이터 -->
                     @if (_totalPages > 1)
                     {
+                        <div class="page-indicator">
+                            <span class="page-indicator-text">@_currentPage / @_totalPages</span>
+                        </div>
                         <Pagination CurrentPage="_currentPage" TotalPages="_totalPages" OnPageChanged="OnPageChanged" />
                     }
                 }
@@ -104,12 +113,16 @@
                         <h3 class="info-card-title">WiFi 정보</h3>
                         <div class="info-card-divider"></div>
                         <div class="info-row">
-                            <span class="info-label">네트워크</span>
-                            <span class="info-value">NuelOdeon_5G</span>
+                            <span class="info-label">5G</span>
+                            <span class="info-value">U+NetAFC8_5G</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">2.4G</span>
+                            <span class="info-value">U+NetAFC8</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">비밀번호</span>
-                            <span class="info-value info-pw">nuelodon2024</span>
+                            <span class="info-value info-pw">DE01K7#0E5</span>
                         </div>
                         <div class="qr-section">
                             <p class="qr-label">QR 코드로 간편 연결</p>
@@ -204,6 +217,13 @@
     private int _activeTab;
     private int _shopTab;
 
+    // 페이지 슬라이드 & 스와이프
+    private string _slideClass = "";
+    private int _pageKey;
+    private double _touchStartX;
+    private double _touchCurrentX;
+    private bool _swiping;
+
     // QR 오버레이
     private bool _showQrOverlay;
     private string _overlayQrUrl = "";
@@ -211,7 +231,7 @@
 
     // QR 코드 URL (api.qrserver.com 사용)
     private static string WifiQrUrl =>
-        $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("WIFI:T:WPA;S:NuelOdeon_5G;P:nuelodon2024;;")}";
+        $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("WIFI:T:WPA;S:U+NetAFC8_5G;P:DE01K7#0E5;;")}";
 
     private static string AccountQrUrl =>
         $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("카카오뱅크 3333-00-0000000 늘-오던 헤어살롱")}";
@@ -327,8 +347,41 @@
 
     private Task OnPageChanged(int page)
     {
+        if (page == _currentPage) return Task.CompletedTask;
+        _slideClass = page > _currentPage ? "slide-left" : "slide-right";
+        _pageKey++;
         _currentPage = page;
         ApplyFilters();
+        return Task.CompletedTask;
+    }
+
+    // 스와이프 이벤트
+    private void OnTouchStart(TouchEventArgs e)
+    {
+        _touchStartX = e.ChangedTouches[0].ClientX;
+        _touchCurrentX = _touchStartX;
+        _swiping = false;
+    }
+
+    private void OnTouchMove(TouchEventArgs e)
+    {
+        _touchCurrentX = e.ChangedTouches[0].ClientX;
+        var diff = Math.Abs(_touchStartX - _touchCurrentX);
+        if (diff > 20) _swiping = true;
+    }
+
+    private Task OnTouchEnd(TouchEventArgs e)
+    {
+        var diff = _touchStartX - _touchCurrentX;
+        _swiping = false;
+
+        if (Math.Abs(diff) < 60) return Task.CompletedTask;
+
+        if (diff > 0 && _currentPage < _totalPages)
+            return OnPageChanged(_currentPage + 1); // 왼쪽 스와이프 → 다음 페이지
+        if (diff < 0 && _currentPage > 1)
+            return OnPageChanged(_currentPage - 1); // 오른쪽 스와이프 → 이전 페이지
+
         return Task.CompletedTask;
     }
 
@@ -769,12 +822,49 @@
         color: var(--salon-gray);
     }
 
+    /* 스와이프 영역 */
+    .swipe-area {
+        overflow: hidden;
+        touch-action: pan-y pinch-zoom;
+    }
+
     /* 카드 그리드 */
     .style-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         padding: 0 0.5rem;
+    }
+
+    .style-grid.slide-left {
+        animation: slideFromRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .style-grid.slide-right {
+        animation: slideFromLeft 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    @@keyframes slideFromRight {
+        from { transform: translateX(40%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @@keyframes slideFromLeft {
+        from { transform: translateX(-40%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* 페이지 인디케이터 */
+    .page-indicator {
+        text-align: center;
+        padding: 1rem 0 0;
+    }
+
+    .page-indicator-text {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        letter-spacing: 0.1em;
     }
 
     @@media (max-width: 576px) {
