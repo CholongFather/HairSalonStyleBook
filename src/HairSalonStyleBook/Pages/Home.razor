@@ -126,12 +126,23 @@
                         </div>
                         <div class="qr-section">
                             <p class="qr-label">QR 코드로 간편 연결</p>
-                            <div class="qr-wrapper" @onclick="() => OpenQr(WifiQrUrl)">
-                                <img src="@WifiQrUrl" alt="WiFi QR Code" class="qr-image" loading="lazy" />
-                                <span class="qr-tap-hint">
-                                    <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
-                                </span>
+                            <div class="qr-dual">
+                                <div class="qr-dual-item">
+                                    <span class="qr-dual-label">5G</span>
+                                    <div class="qr-wrapper" @onclick="() => OpenQr(Wifi5GQrUrl)">
+                                        <img src="@Wifi5GQrUrl" alt="5G WiFi QR" class="qr-image-sm" loading="lazy" />
+                                    </div>
+                                </div>
+                                <div class="qr-dual-item">
+                                    <span class="qr-dual-label">2.4G</span>
+                                    <div class="qr-wrapper" @onclick="() => OpenQr(Wifi24GQrUrl)">
+                                        <img src="@Wifi24GQrUrl" alt="2.4G WiFi QR" class="qr-image-sm" loading="lazy" />
+                                    </div>
+                                </div>
                             </div>
+                            <span class="qr-tap-hint">
+                                <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
+                            </span>
                         </div>
                         <p class="info-note">
                             <i class="bi bi-info-circle"></i>
@@ -230,8 +241,11 @@
     private double _qrScale = 1.0;
 
     // QR 코드 URL (api.qrserver.com 사용)
-    private static string WifiQrUrl =>
+    private static string Wifi5GQrUrl =>
         $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("WIFI:T:WPA;S:U+NetAFC8_5G;P:DE01K7#0E5;;")}";
+
+    private static string Wifi24GQrUrl =>
+        $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("WIFI:T:WPA;S:U+NetAFC8;P:DE01K7#0E5;;")}";
 
     private static string AccountQrUrl =>
         $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("우리은행 정*경")}";
@@ -664,6 +678,40 @@
         background: #fff;
     }
 
+    .qr-dual {
+        display: flex;
+        justify-content: center;
+        gap: 1.2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .qr-dual-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .qr-dual-label {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--salon-dark);
+        background: rgba(123, 163, 131, 0.1);
+        padding: 2px 12px;
+        border-radius: 10px;
+        letter-spacing: 0.03em;
+    }
+
+    .qr-image-sm {
+        width: 130px;
+        height: 130px;
+        border-radius: 10px;
+        border: 1px solid var(--salon-light-gray);
+        padding: 6px;
+        background: #fff;
+    }
+
     .qr-tap-hint {
         font-family: var(--font-serif);
         font-size: 0.65rem;
@@ -890,6 +938,15 @@
         .qr-image {
             width: 160px;
             height: 160px;
+        }
+
+        .qr-image-sm {
+            width: 110px;
+            height: 110px;
+        }
+
+        .qr-dual {
+            gap: 0.8rem;
         }
 
         .qr-overlay-img {
