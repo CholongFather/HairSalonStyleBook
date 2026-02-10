@@ -55,7 +55,6 @@
     {
         if (firstRender && ImageUrls.Count > 1)
         {
-            // Bootstrap Carousel JS 초기화 + 스와이프 활성화
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
                     var el = document.getElementById('{_carouselId}');
@@ -68,7 +67,7 @@
                         if (counter) counter.textContent = e.to + 1;
                     }});
 
-                    // 커스텀 터치 스와이프 (더 민감하게)
+                    // 커스텀 터치 스와이프
                     var startX = 0, startY = 0, moving = false;
                     el.addEventListener('touchstart', function(e) {{
                         startX = e.touches[0].clientX;
@@ -95,8 +94,11 @@
 <style>
     .salon-carousel {
         max-width: 600px;
-        margin: 1.5rem auto;
-        background: #f5f5f5;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #f0ebe0;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     }
 
     .salon-carousel .carousel-item img {
@@ -104,26 +106,58 @@
         object-fit: cover;
     }
 
+    .salon-carousel .carousel-control-prev,
+    .salon-carousel .carousel-control-next {
+        width: 36px;
+        height: 36px;
+        top: 50%;
+        transform: translateY(-50%);
+        bottom: auto;
+        opacity: 0.7;
+    }
+
+    .salon-carousel .carousel-control-prev {
+        left: 8px;
+    }
+
+    .salon-carousel .carousel-control-next {
+        right: 8px;
+    }
+
     .salon-carousel .carousel-control-prev-icon,
     .salon-carousel .carousel-control-next-icon {
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.45);
         border-radius: 50%;
-        padding: 1rem;
+        padding: 0.9rem;
+        background-size: 50%;
+    }
+
+    .salon-carousel .carousel-indicators {
+        margin-bottom: 0.5rem;
     }
 
     .salon-carousel .carousel-indicators button {
-        background-color: var(--salon-black);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.6);
+        border: none;
+        margin: 0 3px;
+    }
+
+    .salon-carousel .carousel-indicators button.active {
+        background-color: #fff;
     }
 
     .carousel-counter {
         position: absolute;
-        bottom: 12px;
-        right: 12px;
-        background: rgba(0, 0, 0, 0.5);
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.45);
         color: #fff;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         padding: 2px 10px;
-        border-radius: 12px;
+        border-radius: 10px;
         font-family: var(--font-serif);
         letter-spacing: 0.05em;
         z-index: 5;

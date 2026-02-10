@@ -24,22 +24,26 @@
             <InputText @bind-Value="_style.Title" class="form-control editor-input" placeholder="스타일 제목" />
         </div>
 
-        <!-- 성별 / 카테고리 -->
-        <div class="mb-3">
-            <label class="form-label">성별</label>
-            <InputSelect @bind-Value="_style.Gender" class="form-select editor-input">
-                <option value="@Gender.여성">여성</option>
-                <option value="@Gender.남성">남성</option>
-            </InputSelect>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">카테고리</label>
-            <InputSelect @bind-Value="_style.Category" class="form-select editor-input">
-                <option value="@StyleCategory.커트">커트</option>
-                <option value="@StyleCategory.펌">펌</option>
-                <option value="@StyleCategory.염색">염색</option>
-            </InputSelect>
+        <!-- 카테고리 & 시술 -->
+        <div class="row mb-3">
+            <div class="col-7">
+                <label class="form-label">카테고리</label>
+                <InputSelect @bind-Value="_style.Category" class="form-select editor-input">
+                    <option value="@StyleCategory.남성">남성</option>
+                    <option value="@StyleCategory.여성숏">여성 숏</option>
+                    <option value="@StyleCategory.여성단발">여성 단발</option>
+                    <option value="@StyleCategory.여성미디움">여성 미디움</option>
+                    <option value="@StyleCategory.여성롱">여성 롱</option>
+                </InputSelect>
+            </div>
+            <div class="col-5">
+                <label class="form-label">시술</label>
+                <InputSelect @bind-Value="_style.Service" class="form-select editor-input">
+                    <option value="@ServiceType.커트">커트</option>
+                    <option value="@ServiceType.펌">펌</option>
+                    <option value="@ServiceType.염색">염색</option>
+                </InputSelect>
+            </div>
         </div>
 
         <!-- 상세 설명 -->

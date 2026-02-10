@@ -6,18 +6,6 @@
 <PageTitle>늘-오던 헤어살롱</PageTitle>
 
 <div class="container salon-list-page">
-    <!-- 성별 토글 -->
-    <div class="gender-toggle">
-        <button class="gender-btn @(_selectedGender == Gender.여성 ? "active female" : "")"
-                @onclick="() => OnGenderChanged(Gender.여성)">
-            <i class="bi bi-gender-female"></i> 여성
-        </button>
-        <button class="gender-btn @(_selectedGender == Gender.남성 ? "active male" : "")"
-                @onclick="() => OnGenderChanged(Gender.남성)">
-            <i class="bi bi-gender-male"></i> 남성
-        </button>
-    </div>
-
     <!-- 카테고리 메뉴 -->
     <CategoryMenu SelectedCategory="_selectedCategory" OnCategorySelected="OnCategoryChanged" />
 
@@ -77,7 +65,6 @@
     private List<StylePost> _allStyles = new();
     private List<StylePost> _filteredStyles = new();
     private List<StylePost> _pagedStyles = new();
-    private Gender _selectedGender = Gender.여성;
     private StyleCategory _selectedCategory = StyleCategory.전체;
     private string _searchText = "";
     private int _currentPage = 1;
@@ -107,8 +94,7 @@
 
     private void ApplyFilters()
     {
-        // 성별 필터
-        _filteredStyles = _allStyles.Where(s => s.Gender == _selectedGender).ToList();
+        _filteredStyles = _allStyles;
 
         // 카테고리 필터
         if (_selectedCategory != StyleCategory.전체)
@@ -116,26 +102,21 @@
             _filteredStyles = _filteredStyles.Where(s => s.Category == _selectedCategory).ToList();
         }
 
-        // 검색 필터
+        // 검색 필터 (AND) - 초성 검색 지원
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             var lower = _searchText.ToLower();
+            var isChosung = IsChosungOnly(_searchText);
             _filteredStyles = _filteredStyles.Where(s =>
                 s.Title.ToLower().Contains(lower) ||
-                s.Hashtags.Any(h => h.ToLower().Contains(lower))
+                s.Hashtags.Any(h => h.ToLower().Contains(lower)) ||
+                (isChosung && MatchChosung(s.Title, _searchText))
             ).ToList();
         }
 
         _totalPages = Math.Max(1, (int)Math.Ceiling(_filteredStyles.Count / (double)PageSize));
         _currentPage = Math.Clamp(_currentPage, 1, _totalPages);
         _pagedStyles = _filteredStyles.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
-    }
-
-    private void OnGenderChanged(Gender gender)
-    {
-        _selectedGender = gender;
-        _currentPage = 1;
-        ApplyFilters();
     }
 
     private Task OnCategoryChanged(StyleCategory category)
@@ -160,61 +141,42 @@
         ApplyFilters();
         return Task.CompletedTask;
     }
+
+    // 한글 초성 검색
+    private static readonly char[] Chosungs =
+        { 'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ' };
+
+    private static bool IsChosungOnly(string text) =>
+        text.Length > 0 && text.All(c => Array.IndexOf(Chosungs, c) >= 0);
+
+    private static char GetChosung(char ch)
+    {
+        if (ch < 0xAC00 || ch > 0xD7A3) return ch;
+        return Chosungs[(ch - 0xAC00) / 588];
+    }
+
+    private static bool MatchChosung(string text, string pattern)
+    {
+        if (pattern.Length == 0) return false;
+        var textChosungs = text.Select(GetChosung).ToArray();
+        var patternArr = pattern.ToCharArray();
+        for (int i = 0; i <= textChosungs.Length - patternArr.Length; i++)
+        {
+            bool match = true;
+            for (int j = 0; j < patternArr.Length; j++)
+            {
+                if (textChosungs[i + j] != patternArr[j]) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
 }
 
 <style>
     .salon-list-page {
         max-width: 700px;
         padding-top: 0.5rem;
-    }
-
-    /* 성별 토글 */
-    .gender-toggle {
-        display: flex;
-        justify-content: center;
-        gap: 0;
-        padding: 1rem 0 0.3rem;
-    }
-
-    .gender-btn {
-        font-family: var(--font-serif);
-        font-size: 0.85rem;
-        padding: 0.5rem 2rem;
-        border: 1.5px solid var(--salon-light-gray);
-        background: var(--salon-white);
-        color: var(--salon-gray);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        letter-spacing: 0.08em;
-        font-weight: 400;
-    }
-
-    .gender-btn:first-child {
-        border-radius: 20px 0 0 20px;
-        border-right: none;
-    }
-
-    .gender-btn:last-child {
-        border-radius: 0 20px 20px 0;
-    }
-
-    .gender-btn i {
-        font-size: 0.9rem;
-        margin-right: 0.2rem;
-    }
-
-    .gender-btn.active.female {
-        background: linear-gradient(135deg, var(--salon-rose) 0%, var(--salon-rose-light) 100%);
-        color: #fff;
-        border-color: var(--salon-rose);
-        font-weight: 700;
-    }
-
-    .gender-btn.active.male {
-        background: linear-gradient(135deg, #6b9bd2 0%, #a3c4e8 100%);
-        color: #fff;
-        border-color: #6b9bd2;
-        font-weight: 700;
     }
 
     /* 결과 카운트 */
@@ -278,11 +240,6 @@
         .style-grid {
             gap: 0.75rem;
             padding: 0 0.25rem;
-        }
-
-        .gender-btn {
-            padding: 0.4rem 1.5rem;
-            font-size: 0.8rem;
         }
     }
 </style>

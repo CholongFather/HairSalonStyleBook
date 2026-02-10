@@ -3,9 +3,9 @@
 <div class="category-menu">
     @foreach (var category in _categories)
     {
-        <button class="btn category-btn @(SelectedCategory == category ? "active" : "")"
+        <button class="btn category-btn @(SelectedCategory == category ? "active" : "") @GetColorClass(category)"
                 @onclick="() => OnCategorySelected.InvokeAsync(category)">
-            @GetCategoryLabel(category)
+            @category.ToDisplayName()
         </button>
     }
 </div>
@@ -14,14 +14,20 @@
     [Parameter] public StyleCategory SelectedCategory { get; set; } = StyleCategory.전체;
     [Parameter] public EventCallback<StyleCategory> OnCategorySelected { get; set; }
 
-    private readonly StyleCategory[] _categories = { StyleCategory.전체, StyleCategory.커트, StyleCategory.펌, StyleCategory.염색 };
-
-    private static string GetCategoryLabel(StyleCategory category) => category switch
+    private readonly StyleCategory[] _categories =
     {
-        StyleCategory.전체 => "전체",
-        StyleCategory.커트 => "커트",
-        StyleCategory.펌 => "펌",
-        StyleCategory.염색 => "염색",
+        StyleCategory.전체,
+        StyleCategory.남성,
+        StyleCategory.여성숏,
+        StyleCategory.여성단발,
+        StyleCategory.여성미디움,
+        StyleCategory.여성롱
+    };
+
+    private static string GetColorClass(StyleCategory category) => category switch
+    {
+        StyleCategory.남성 => "cat-male",
+        _ when category.IsFemale() => "cat-female",
         _ => ""
     };
 }
@@ -30,20 +36,21 @@
     .category-menu {
         display: flex;
         justify-content: center;
-        gap: 0.5rem;
-        padding: 1rem 0;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0.8rem 0.5rem;
     }
 
     .category-btn {
         font-family: var(--font-serif);
-        font-size: 0.9rem;
-        padding: 0.4rem 1.2rem;
+        font-size: 0.82rem;
+        padding: 0.35rem 1rem;
         border: 1px solid var(--salon-light-gray);
         background: var(--salon-white);
         color: var(--salon-black);
         border-radius: 20px;
         transition: all 0.3s ease;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.03em;
     }
 
     .category-btn:hover {
@@ -53,14 +60,24 @@
 
     .category-btn.active {
         background-color: var(--salon-green);
-        color: var(--salon-white);
+        color: #fff;
         border-color: var(--salon-green);
+    }
+
+    .category-btn.cat-male.active {
+        background: linear-gradient(135deg, #6b9bd2 0%, #a3c4e8 100%);
+        border-color: #6b9bd2;
+    }
+
+    .category-btn.cat-female.active {
+        background: linear-gradient(135deg, var(--salon-rose) 0%, var(--salon-rose-light) 100%);
+        border-color: var(--salon-rose);
     }
 
     @@media (max-width: 576px) {
         .category-btn {
-            font-size: 0.8rem;
-            padding: 0.35rem 0.8rem;
+            font-size: 0.75rem;
+            padding: 0.3rem 0.7rem;
         }
     }
 </style>

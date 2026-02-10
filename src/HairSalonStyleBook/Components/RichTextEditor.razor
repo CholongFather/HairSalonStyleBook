@@ -29,7 +29,46 @@
         <button type="button" class="toolbar-btn" title="서식 제거" @onclick='() => ExecCommand("removeFormat")'>
             <i class="bi bi-eraser"></i>
         </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" class="toolbar-btn toolbar-icon-toggle @(_showIconPalette ? "active" : "")" title="아이콘 삽입" @onclick="ToggleIconPalette">
+            <i class="bi bi-scissors"></i> <small>▾</small>
+        </button>
     </div>
+    @if (_showIconPalette)
+    {
+        <div class="icon-palette">
+            <div class="icon-palette-group">
+                <span class="icon-palette-label">시술</span>
+                <button type="button" class="icon-btn" title="가위" @onclick='() => InsertIcon("✂️")'>✂️</button>
+                <button type="button" class="icon-btn" title="헤어컷" @onclick='() => InsertIcon("💇‍♀️")'>💇‍♀️</button>
+                <button type="button" class="icon-btn" title="이발소" @onclick='() => InsertIcon("💈")'>💈</button>
+                <button type="button" class="icon-btn" title="빗" @onclick='() => InsertIcon("🪮")'>🪮</button>
+                <button type="button" class="icon-btn" title="헤드스파" @onclick='() => InsertIcon("💆‍♀️")'>💆‍♀️</button>
+                <button type="button" class="icon-btn" title="물방울" @onclick='() => InsertIcon("💧")'>💧</button>
+                <button type="button" class="icon-btn" title="팔레트" @onclick='() => InsertIcon("🎨")'>🎨</button>
+            </div>
+            <div class="icon-palette-group">
+                <span class="icon-palette-label">장식</span>
+                <button type="button" class="icon-btn" title="반짝이" @onclick='() => InsertIcon("✨")'>✨</button>
+                <button type="button" class="icon-btn" title="별" @onclick='() => InsertIcon("⭐")'>⭐</button>
+                <button type="button" class="icon-btn" title="하트" @onclick='() => InsertIcon("💖")'>💖</button>
+                <button type="button" class="icon-btn" title="꽃" @onclick='() => InsertIcon("🌸")'>🌸</button>
+                <button type="button" class="icon-btn" title="리본" @onclick='() => InsertIcon("🎀")'>🎀</button>
+                <button type="button" class="icon-btn" title="왕관" @onclick='() => InsertIcon("👑")'>👑</button>
+                <button type="button" class="icon-btn" title="보석" @onclick='() => InsertIcon("💎")'>💎</button>
+            </div>
+            <div class="icon-palette-group">
+                <span class="icon-palette-label">포인트</span>
+                <button type="button" class="icon-btn" title="체크" @onclick='() => InsertIcon("✅")'>✅</button>
+                <button type="button" class="icon-btn" title="포인트" @onclick='() => InsertIcon("👉")'>👉</button>
+                <button type="button" class="icon-btn" title="추천" @onclick='() => InsertIcon("👍")'>👍</button>
+                <button type="button" class="icon-btn" title="불꽃" @onclick='() => InsertIcon("🔥")'>🔥</button>
+                <button type="button" class="icon-btn" title="100점" @onclick='() => InsertIcon("💯")'>💯</button>
+                <button type="button" class="icon-btn" title="전구" @onclick='() => InsertIcon("💡")'>💡</button>
+                <button type="button" class="icon-btn" title="메모" @onclick='() => InsertIcon("📝")'>📝</button>
+            </div>
+        </div>
+    }
     <div id="@_editorId"
          class="rich-content"
          contenteditable="true"
@@ -80,6 +119,19 @@
     {
         await JS.InvokeVoidAsync("eval",
             $"document.getElementById('{_editorId}').focus(); document.execCommand('formatBlock', false, 'h3');");
+    }
+
+    private bool _showIconPalette;
+
+    private void ToggleIconPalette()
+    {
+        _showIconPalette = !_showIconPalette;
+    }
+
+    private async Task InsertIcon(string icon)
+    {
+        await JS.InvokeVoidAsync("eval",
+            $"document.getElementById('{_editorId}').focus(); document.execCommand('insertText', false, '{icon} ');");
     }
 
     private async Task OnContentChanged()
@@ -175,5 +227,63 @@
 
     .rich-content b, .rich-content strong {
         font-weight: 700;
+    }
+
+    /* 아이콘 팔레트 토글 */
+    .toolbar-icon-toggle.active {
+        background: rgba(123, 163, 131, 0.2);
+        border-color: var(--salon-green);
+        color: var(--salon-green);
+    }
+
+    .toolbar-icon-toggle small {
+        font-size: 0.55rem;
+        margin-left: -2px;
+    }
+
+    /* 아이콘 팔레트 */
+    .icon-palette {
+        padding: 0.5rem;
+        background: #fafaf8;
+        border-bottom: 1px solid var(--salon-light-gray);
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .icon-palette-group {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-wrap: wrap;
+    }
+
+    .icon-palette-label {
+        font-family: var(--font-serif);
+        font-size: 0.65rem;
+        color: var(--salon-gray);
+        min-width: 2.5rem;
+        font-weight: 600;
+    }
+
+    .icon-btn {
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 0.25rem 0.35rem;
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+        transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+        background: rgba(123, 163, 131, 0.12);
+        border-color: var(--salon-light-gray);
+        transform: scale(1.15);
+    }
+
+    .icon-btn:active {
+        transform: scale(0.95);
     }
 </style>

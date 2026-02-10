@@ -8,7 +8,7 @@
 <div class="container salon-detail-page">
     <!-- 뒤로가기 -->
     <button class="btn btn-back" @onclick="GoBack">
-        <i class="bi bi-arrow-left"></i> 목록으로
+        <i class="bi bi-chevron-left"></i> 목록
     </button>
 
     @if (_loading)
@@ -16,10 +16,9 @@
         <div class="skeleton-detail">
             <div class="skeleton skeleton-title mx-auto"></div>
             <div class="skeleton skeleton-text-sm mx-auto mb-3" style="width:30%"></div>
-            <div class="skeleton skeleton-image"></div>
             <div class="skeleton skeleton-text mt-3"></div>
             <div class="skeleton skeleton-text" style="width:90%"></div>
-            <div class="skeleton skeleton-text" style="width:60%"></div>
+            <div class="skeleton skeleton-image mt-3"></div>
         </div>
     }
     else if (_style == null)
@@ -33,13 +32,12 @@
     {
         <!-- 제목 -->
         <h1 class="detail-title">@_style.Title</h1>
-        <div class="detail-meta">
-            <span class="detail-category">@_style.Category</span>
-            <span class="detail-date">@_style.CreatedAt.ToString("yyyy.MM.dd")</span>
-        </div>
 
-        <!-- 이미지 캐러셀 -->
-        <ImageCarousel ImageUrls="_style.ImageUrls" />
+        <!-- 카테고리 & 시술 태그 -->
+        <div class="detail-tags">
+            <span class="detail-tag @(_style.Category.IsFemale() ? "tag-female" : "tag-male")">@_style.Category.ToFullName()</span>
+            <span class="detail-tag tag-service">@_style.Service</span>
+        </div>
 
         <!-- 상세 설명 -->
         @if (!string.IsNullOrEmpty(_style.Description))
@@ -48,6 +46,9 @@
                 @((MarkupString)_style.Description)
             </div>
         }
+
+        <!-- 이미지 캐러셀 -->
+        <ImageCarousel ImageUrls="_style.ImageUrls" />
 
         <!-- 해시태그 -->
         @if (_style.Hashtags.Any())
@@ -84,65 +85,108 @@
 
 <style>
     .salon-detail-page {
-        max-width: 700px;
-        padding-top: 0.5rem;
+        max-width: 640px;
+        padding: 0.5rem 1rem 2rem;
     }
 
+    /* 뒤로가기 */
     .btn-back {
         font-family: var(--font-serif);
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         color: var(--salon-gray);
         background: none;
         border: none;
-        padding: 0.5rem 0;
-        margin-bottom: 0.5rem;
+        padding: 0.6rem 0;
+        margin-bottom: 0.3rem;
+        transition: color 0.2s;
     }
 
     .btn-back:hover {
         color: var(--salon-black);
     }
 
+    .btn-back i {
+        font-size: 0.75rem;
+    }
+
+    /* 제목 */
     .detail-title {
         font-family: var(--font-serif);
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 900;
         color: var(--salon-black);
         text-align: center;
-        margin: 0.5rem 0;
+        margin: 0.3rem 0 0.6rem;
+        line-height: 1.5;
+        letter-spacing: -0.02em;
     }
 
-    .detail-meta {
-        text-align: center;
+    /* 카테고리 & 성별 태그 */
+    .detail-tags {
+        display: flex;
+        justify-content: center;
+        gap: 0.4rem;
         margin-bottom: 1rem;
     }
 
-    .detail-category {
-        font-size: 0.75rem;
-        background: var(--salon-green);
-        color: var(--salon-white);
-        padding: 2px 12px;
-        border-radius: 10px;
-        margin-right: 0.5rem;
+    .detail-tag {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        padding: 3px 14px;
+        border-radius: 12px;
         letter-spacing: 0.05em;
+        font-weight: 500;
     }
 
-    .detail-date {
-        font-size: 0.75rem;
-        color: var(--salon-gray);
+    .tag-female {
+        background: var(--salon-rose);
+        color: #fff;
     }
 
+    .tag-male {
+        background: #6b9bd2;
+        color: #fff;
+    }
+
+    .tag-service {
+        background: var(--salon-dark);
+        color: #fff;
+    }
+
+    /* 상세 설명 */
     .detail-description {
         font-family: var(--font-serif);
-        font-size: 0.9rem;
-        line-height: 1.8;
+        font-size: 0.88rem;
+        line-height: 1.9;
         color: var(--salon-dark);
-        padding: 1rem 0;
+        padding: 0.8rem 0.2rem 1rem;
+        word-break: keep-all;
+    }
+
+    .detail-description p {
+        margin-bottom: 0.6rem;
+    }
+
+    .detail-description h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 1rem 0 0.4rem;
+    }
+
+    .detail-description hr {
+        border: none;
         border-top: 1px solid var(--salon-light-gray);
+        margin: 1rem 0;
     }
 
     @@media (max-width: 576px) {
         .detail-title {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
+        }
+
+        .detail-description {
+            font-size: 0.84rem;
+            line-height: 1.8;
         }
     }
 </style>

@@ -36,22 +36,22 @@ public class SimpleAuthService : IAuthService
         if (role == null)
             return null;
 
-        await _js.InvokeVoidAsync("sessionStorage.setItem", AuthKey, "true");
-        await _js.InvokeVoidAsync("sessionStorage.setItem", RoleKey, role);
+        await _js.InvokeVoidAsync("localStorage.setItem", AuthKey, "true");
+        await _js.InvokeVoidAsync("localStorage.setItem", RoleKey, role);
         return role;
     }
 
     public async Task LogoutAsync()
     {
-        await _js.InvokeVoidAsync("sessionStorage.removeItem", AuthKey);
-        await _js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
+        await _js.InvokeVoidAsync("localStorage.removeItem", AuthKey);
+        await _js.InvokeVoidAsync("localStorage.removeItem", RoleKey);
     }
 
     public async Task<bool> IsAuthenticatedAsync()
     {
         try
         {
-            var value = await _js.InvokeAsync<string?>("sessionStorage.getItem", AuthKey);
+            var value = await _js.InvokeAsync<string?>("localStorage.getItem", AuthKey);
             return value == "true";
         }
         catch
@@ -64,7 +64,7 @@ public class SimpleAuthService : IAuthService
     {
         try
         {
-            return await _js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
+            return await _js.InvokeAsync<string?>("localStorage.getItem", RoleKey);
         }
         catch
         {

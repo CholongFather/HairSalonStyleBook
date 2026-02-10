@@ -8,8 +8,8 @@ public class StylePost
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public StyleCategory Category { get; set; }
-    public Gender Gender { get; set; } = Gender.여성;
+    public StyleCategory Category { get; set; } = StyleCategory.여성숏;
+    public ServiceType Service { get; set; } = ServiceType.커트;
 
     /// <summary>
     /// 이미지 URL 목록 (Firebase Storage URL)
