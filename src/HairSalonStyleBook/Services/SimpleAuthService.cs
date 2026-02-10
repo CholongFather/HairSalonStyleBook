@@ -43,8 +43,30 @@ public class SimpleAuthService : IAuthService
 
     public async Task LogoutAsync()
     {
-        await _js.InvokeVoidAsync("localStorage.removeItem", AuthKey);
-        await _js.InvokeVoidAsync("localStorage.removeItem", RoleKey);
+        try
+        {
+            // 인증 정보 명시적 삭제
+            await _js.InvokeVoidAsync("localStorage.removeItem", AuthKey);
+            await _js.InvokeVoidAsync("localStorage.removeItem", RoleKey);
+
+            // 삭제 확인 후 잔여 데이터가 있으면 재삭제
+            var check = await _js.InvokeAsync<string?>("localStorage.getItem", AuthKey);
+            if (check != null)
+            {
+                await _js.InvokeVoidAsync("localStorage.removeItem", AuthKey);
+                await _js.InvokeVoidAsync("localStorage.removeItem", RoleKey);
+            }
+        }
+        catch
+        {
+            // JSInterop 실패 시 eval로 직접 삭제 시도
+            try
+            {
+                await _js.InvokeVoidAsync("eval",
+                    $"localStorage.removeItem('{AuthKey}'); localStorage.removeItem('{RoleKey}');");
+            }
+            catch { /* 무시 */ }
+        }
     }
 
     public async Task<bool> IsAuthenticatedAsync()

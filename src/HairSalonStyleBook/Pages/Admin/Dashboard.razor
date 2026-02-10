@@ -117,7 +117,7 @@
     {
         await AuthService.LogoutAsync();
         ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
-        Nav.NavigateTo("");
+        Nav.NavigateTo("", forceLoad: true);
     }
 
     private async Task SeedInitialData()
@@ -159,6 +159,7 @@
                 Category = StyleCategory.남성,
                 Service = ServiceType.커트,
                 Description = "<p>옆과 뒷머리는 깔끔하게 밀어 올리고, 윗머리에 자연스러운 텍스쳐를 살린 남성 기본 스타일입니다.</p><p>출근룩부터 캐주얼까지 어디에나 잘 어울리며 스타일링이 간편합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/twoblock1/600/800", "https://picsum.photos/seed/twoblock2/600/800" },
                 Hashtags = new() { "투블록", "텍스쳐컷", "남성커트", "직장인헤어", "깔끔한스타일" },
                 IsPublished = true
             },
@@ -168,6 +169,7 @@
                 Category = StyleCategory.남성,
                 Service = ServiceType.커트,
                 Description = "<p>이마를 시원하게 드러내는 리젠트 스타일에 사이드를 타이트하게 정리했습니다.</p><p>드라이만으로도 볼륨이 살아나며, 정장과 특히 잘 어울리는 댄디한 느낌입니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/regent1/600/800", "https://picsum.photos/seed/regent2/600/800" },
                 Hashtags = new() { "리젠트", "댄디컷", "남성커트", "정장헤어", "볼륨" },
                 IsPublished = true
             },
@@ -176,7 +178,8 @@
                 Title = "크롭 페이드 컷",
                 Category = StyleCategory.남성,
                 Service = ServiceType.커트,
-                Description = "<p>✂️ 사이드와 뒷머리를 자연스럽게 그라데이션으로 밀어 올리고, 앞머리는 짧게 내려 뜨린 트렌디한 크롭 스타일입니다.</p><p>깔끔하면서도 힙한 느낌을 동시에 연출할 수 있으며, 동안 이미지에 잘 어울립니다.</p>",
+                Description = "<p>사이드와 뒷머리를 자연스럽게 그라데이션으로 밀어 올리고, 앞머리는 짧게 내려 뜨린 트렌디한 크롭 스타일입니다.</p><p>깔끔하면서도 힙한 느낌을 동시에 연출할 수 있으며, 동안 이미지에 잘 어울립니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/cropfade1/600/800" },
                 Hashtags = new() { "크롭컷", "페이드", "남성커트", "트렌드", "힙한스타일" },
                 IsPublished = true
             },
@@ -188,6 +191,7 @@
                 Category = StyleCategory.남성,
                 Service = ServiceType.펌,
                 Description = "<p>자연스러운 가르마 라인에 뿌리 볼륨 펌을 더해 세팅 시간을 단축시킨 스타일입니다.</p><p>과하지 않은 C컬로 부드러운 인상을 연출합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/garma1/600/800", "https://picsum.photos/seed/garma2/600/800" },
                 Hashtags = new() { "가르마펌", "남성펌", "C컬펌", "내추럴펌", "뿌리볼륨" },
                 IsPublished = true
             },
@@ -196,7 +200,8 @@
                 Title = "쉐도우 펌",
                 Category = StyleCategory.남성,
                 Service = ServiceType.펌,
-                Description = "<p>기존 다운펌의 눌린 느낌을 보완해 자연스럽게 떨어지면서도 모근에 볼륨감을 살려주는 펌입니다.</p><p>💇‍♀️ 과하지 않은 결이 특징으로, 세팅 없이도 자연스러운 헤어라인이 완성됩니다. 직모인 분들께 강추합니다.</p>",
+                Description = "<p>기존 다운펌의 눌린 느낌을 보완해 자연스럽게 떨어지면서도 모근에 볼륨감을 살려주는 펌입니다.</p><p>과하지 않은 결이 특징으로, 세팅 없이도 자연스러운 헤어라인이 완성됩니다. 직모인 분들께 강추합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/shadow1/600/800" },
                 Hashtags = new() { "쉐도우펌", "남성펌", "다운펌", "트렌드", "자연스러운펌" },
                 IsPublished = true
             },
@@ -206,6 +211,7 @@
                 Category = StyleCategory.남성,
                 Service = ServiceType.펌,
                 Description = "<p>앞머리부터 옆머리까지 자연스럽게 뒤로 넘어가는 흐름을 만들어주는 펌입니다.</p><p>리젠트보다 부드럽고 가르마펌보다 볼륨감이 있어 중간 밸런스를 원하는 분들에게 인기가 많습니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/swallow1/600/800", "https://picsum.photos/seed/swallow2/600/800" },
                 Hashtags = new() { "스왈로펌", "남성펌", "볼륨", "트렌드", "뒤로넘기기" },
                 IsPublished = true
             },
@@ -216,7 +222,8 @@
                 Title = "애쉬 그레이 투톤",
                 Category = StyleCategory.남성,
                 Service = ServiceType.염색,
-                Description = "<p>🎨 블리치 1회 후 애쉬 그레이를 얹어 차가운 무드를 연출한 남성 염색입니다.</p><p>톱 부분만 밝게 빼고 사이드는 자연 모발색을 유지해 투톤 효과를 줬습니다. 세련되고 도시적인 이미지를 원하시는 분께 추천합니다.</p>",
+                Description = "<p>블리치 1회 후 애쉬 그레이를 얹어 차가운 무드를 연출한 남성 염색입니다.</p><p>톱 부분만 밝게 빼고 사이드는 자연 모발색을 유지해 투톤 효과를 줬습니다. 세련되고 도시적인 이미지를 원하시는 분께 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/ashgray1/600/800" },
                 Hashtags = new() { "애쉬그레이", "남성염색", "투톤", "블리치", "트렌드컬러" },
                 IsPublished = true
             },
@@ -225,7 +232,8 @@
                 Title = "내추럴 브라운 염색",
                 Category = StyleCategory.남성,
                 Service = ServiceType.염색,
-                Description = "<p>블리치 없이 자연스러운 브라운 톤으로 염색한 남성 기본 컬러입니다.</p><p>💧 검은 머리의 무거운 느낌을 줄이면서도 직장에서 부담 없는 톤이라 첫 염색으로 많이 선택합니다.</p>",
+                Description = "<p>블리치 없이 자연스러운 브라운 톤으로 염색한 남성 기본 컬러입니다.</p><p>검은 머리의 무거운 느낌을 줄이면서도 직장에서 부담 없는 톤이라 첫 염색으로 많이 선택합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/natbrown1/600/800", "https://picsum.photos/seed/natbrown2/600/800" },
                 Hashtags = new() { "브라운염색", "남성염색", "자연스러운", "첫염색", "직장인컬러" },
                 IsPublished = true
             },
@@ -239,6 +247,7 @@
                 Category = StyleCategory.여성숏,
                 Service = ServiceType.커트,
                 Description = "<p>귀를 드러내는 짧은 길이에 레이어드를 넣어 입체감을 살렸습니다.</p><p>얼굴 라인을 깔끔하게 정리해주고, 왁스로 가볍게 흩뜨리면 세련된 분위기가 완성됩니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/pixie1/600/800", "https://picsum.photos/seed/pixie2/600/800" },
                 Hashtags = new() { "픽시컷", "숏컷", "레이어드", "여성숏헤어", "세련된스타일" },
                 IsPublished = true
             },
@@ -248,6 +257,7 @@
                 Category = StyleCategory.여성숏,
                 Service = ServiceType.커트,
                 Description = "<p>턱 위로 올라오는 짧은 보브에 시스루 뱅을 조합한 스타일입니다.</p><p>가볍고 청순한 느낌으로 여름철 특히 인기가 많습니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/seethrough1/600/800" },
                 Hashtags = new() { "숏보브", "시스루뱅", "여름헤어", "청순헤어", "턱선보브" },
                 IsPublished = true
             },
@@ -256,7 +266,8 @@
                 Title = "허쉬 컷",
                 Category = StyleCategory.여성숏,
                 Service = ServiceType.커트,
-                Description = "<p>✂️ 울프컷에서 영감을 받은 허쉬컷은 탑에 볼륨을 주고 사이드는 자연스럽게 흘러내리는 레이어가 포인트입니다.</p><p>멋스럽고 개성 있는 분위기를 원하는 분께 추천합니다.</p>",
+                Description = "<p>울프컷에서 영감을 받은 허쉬컷은 탑에 볼륨을 주고 사이드는 자연스럽게 흘러내리는 레이어가 포인트입니다.</p><p>멋스럽고 개성 있는 분위기를 원하는 분께 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/hush1/600/800", "https://picsum.photos/seed/hush2/600/800" },
                 Hashtags = new() { "허쉬컷", "울프컷", "개성헤어", "레이어드컷", "트렌드" },
                 IsPublished = true
             },
@@ -267,7 +278,8 @@
                 Title = "이어 허그 펌",
                 Category = StyleCategory.여성숏,
                 Service = ServiceType.펌,
-                Description = "<p>🪮 귀를 감싸듯 안쪽으로 말려 들어가는 C컬 펌으로, 짧은 기장에서 여성스러운 분위기를 살려줍니다.</p><p>얼굴 라인을 부드럽게 감싸 작아 보이는 효과가 있으며, 드라이만으로도 예쁜 컬이 유지됩니다.</p>",
+                Description = "<p>귀를 감싸듯 안쪽으로 말려 들어가는 C컬 펌으로, 짧은 기장에서 여성스러운 분위기를 살려줍니다.</p><p>얼굴 라인을 부드럽게 감싸 작아 보이는 효과가 있으며, 드라이만으로도 예쁜 컬이 유지됩니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/earhug1/600/800" },
                 Hashtags = new() { "이어허그", "숏펌", "C컬", "여성숏", "얼굴형보정" },
                 IsPublished = true
             },
@@ -278,7 +290,8 @@
                 Title = "핑크 베이지 숏 염색",
                 Category = StyleCategory.여성숏,
                 Service = ServiceType.염색,
-                Description = "<p>🌸 블리치 2회 후 핑크와 베이지를 블렌딩한 고명도 컬러입니다.</p><p>짧은 기장에 화사한 컬러를 더해 얼굴이 밝아 보이는 효과가 있습니다. 개성 있고 러블리한 이미지를 원하시는 분께 추천합니다.</p>",
+                Description = "<p>블리치 2회 후 핑크와 베이지를 블렌딩한 고명도 컬러입니다.</p><p>짧은 기장에 화사한 컬러를 더해 얼굴이 밝아 보이는 효과가 있습니다. 개성 있고 러블리한 이미지를 원하시는 분께 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/pinkbeige1/600/800", "https://picsum.photos/seed/pinkbeige2/600/800" },
                 Hashtags = new() { "핑크베이지", "숏염색", "블리치", "화사한컬러", "트렌드컬러" },
                 IsPublished = true
             },
@@ -292,6 +305,7 @@
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.커트,
                 Description = "<p>한 길이로 깔끔하게 자른 클래식 원랭스 보브입니다.</p><p>턱선 아래로 떨어지는 라인이 얼굴형을 보정해주며, 어떤 옷차림에도 단정한 인상을 줍니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/onelength1/600/800" },
                 Hashtags = new() { "원랭스", "단발", "보브컷", "클래식단발", "턱선단발" },
                 IsPublished = true
             },
@@ -301,6 +315,7 @@
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.커트,
                 Description = "<p>끝부분을 가볍게 쳐내어 바깥으로 자연스럽게 튕기는 커팅 기법의 단발입니다.</p><p>무거운 단발이 부담스러운 분께 추천하며, 경쾌하고 밝은 이미지를 줍니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/tassel1/600/800", "https://picsum.photos/seed/tassel2/600/800" },
                 Hashtags = new() { "태슬컷", "단발", "가벼운단발", "외쿡거리", "경쾌한스타일" },
                 IsPublished = true
             },
@@ -312,6 +327,7 @@
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.펌,
                 Description = "<p>단발 끝단에 S컬을 넣어 자연스러운 볼륨감을 연출한 펌 스타일입니다.</p><p>모발이 얇아 볼륨이 부족한 분께 특히 추천드리며, 드라이만으로 예쁜 컬이 살아납니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/scurl1/600/800" },
                 Hashtags = new() { "S컬펌", "단발펌", "볼륨펌", "자연스러운펌", "웨이브단발" },
                 IsPublished = true
             },
@@ -320,7 +336,8 @@
                 Title = "히메 컷 + 보브 펌",
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.펌,
-                Description = "<p>✨ 앞쪽은 눈썹 위 시스루 뱅, 옆머리에 히메 레이어를 넣고 끝단에 자연스러운 안쪽 말림 펌을 더한 스타일입니다.</p><p>일본풍의 깔끔하면서도 귀여운 무드가 트렌드로, 소녀감성을 좋아하는 분께 인기가 많습니다.</p>",
+                Description = "<p>앞쪽은 눈썹 위 시스루 뱅, 옆머리에 히메 레이어를 넣고 끝단에 자연스러운 안쪽 말림 펌을 더한 스타일입니다.</p><p>일본풍의 깔끔하면서도 귀여운 무드가 트렌드로, 소녀감성을 좋아하는 분께 인기가 많습니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/hime1/600/800", "https://picsum.photos/seed/hime2/600/800" },
                 Hashtags = new() { "히메컷", "보브펌", "단발펌", "일본풍", "트렌드" },
                 IsPublished = true
             },
@@ -331,7 +348,8 @@
                 Title = "밀크티 베이지 단발",
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.염색,
-                Description = "<p>🎨 블리치 후 따뜻한 밀크티 베이지 톤을 얹어 부드럽고 고급스러운 컬러감을 연출한 단발입니다.</p><p>피부 톤을 환하게 보이게 해주며, 카페라떼처럼 자연스러운 색빠짐까지 예뻐서 유지 관리가 쉬운 컬러입니다.</p>",
+                Description = "<p>블리치 후 따뜻한 밀크티 베이지 톤을 얹어 부드럽고 고급스러운 컬러감을 연출한 단발입니다.</p><p>피부 톤을 환하게 보이게 해주며, 카페라떼처럼 자연스러운 색빠짐까지 예뻐서 유지 관리가 쉬운 컬러입니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/milktea1/600/800" },
                 Hashtags = new() { "밀크티베이지", "단발염색", "블리치컬러", "트렌드컬러", "고급스러운" },
                 IsPublished = true
             },
@@ -340,7 +358,8 @@
                 Title = "올리브 베이지 단발",
                 Category = StyleCategory.여성단발,
                 Service = ServiceType.염색,
-                Description = "<p>💧 옐로끼를 잡아주는 올리브 톤에 베이지를 섞어 차분하면서도 세련된 컬러입니다.</p><p>블리치 1회로도 가능하며, 피부가 노란 편인 분들의 피부톤을 보정해주는 효과가 탁월합니다.</p>",
+                Description = "<p>옐로끼를 잡아주는 올리브 톤에 베이지를 섞어 차분하면서도 세련된 컬러입니다.</p><p>블리치 1회로도 가능하며, 피부가 노란 편인 분들의 피부톤을 보정해주는 효과가 탁월합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/olive1/600/800", "https://picsum.photos/seed/olive2/600/800" },
                 Hashtags = new() { "올리브베이지", "단발염색", "옐로끼잡기", "피부보정", "세련된컬러" },
                 IsPublished = true
             },
@@ -354,6 +373,7 @@
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.펌,
                 Description = "<p>쇄골 라인에서 자연스럽게 떨어지는 레이어드 컷에 허그 펌을 더했습니다.</p><p>얼굴을 감싸듯 안으로 말리는 C컬이 여성스러운 분위기를 연출합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/hughperm1/600/800", "https://picsum.photos/seed/hughperm2/600/800" },
                 Hashtags = new() { "허그펌", "레이어드", "미디움펌", "C컬", "여성스러운" },
                 IsPublished = true
             },
@@ -363,6 +383,7 @@
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.펌,
                 Description = "<p>쇄골 기장에 자연스러운 물결 웨이브를 넣은 데일리 스타일입니다.</p><p>과하지 않은 웨이브로 출근룩에도 적합하며, 묶었을 때도 예쁜 라인이 나옵니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/wave1/600/800" },
                 Hashtags = new() { "물결웨이브", "쇄골기장", "데일리헤어", "자연웨이브", "직장인헤어" },
                 IsPublished = true
             },
@@ -372,6 +393,7 @@
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.펌,
                 Description = "<p>가르마 부분에 뿌리 볼륨을 주어 탑이 납작해지는 고민을 해결한 펌입니다.</p><p>미디움 길이에 S컬을 조합해 풍성하고 세련된 느낌을 줍니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/build1/600/800", "https://picsum.photos/seed/build2/600/800" },
                 Hashtags = new() { "빌드펌", "가르마펌", "뿌리볼륨", "S컬", "볼륨업" },
                 IsPublished = true
             },
@@ -380,7 +402,8 @@
                 Title = "에어 펌",
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.펌,
-                Description = "<p>💆‍♀️ 공기를 머금은 듯 가볍고 풍성한 결을 만들어주는 저온 디지털 펌입니다.</p><p>모발 손상을 최소화하면서도 자연스러운 볼륨감이 오래 유지됩니다. 모발이 가늘고 힘이 없는 분들에게 특히 추천합니다.</p>",
+                Description = "<p>공기를 머금은 듯 가볍고 풍성한 결을 만들어주는 저온 디지털 펌입니다.</p><p>모발 손상을 최소화하면서도 자연스러운 볼륨감이 오래 유지됩니다. 모발이 가늘고 힘이 없는 분들에게 특히 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/airperm1/600/800" },
                 Hashtags = new() { "에어펌", "미디움펌", "저온펌", "가벼운펌", "볼륨" },
                 IsPublished = true
             },
@@ -391,7 +414,8 @@
                 Title = "레이어드 울프 컷",
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.커트,
-                Description = "<p>✂️ 상단은 짧게, 아래로 갈수록 길어지는 레이어드 울프 커팅입니다.</p><p>멀렛에서 진화한 스타일로, 쇄골 기장에서 개성 있으면서도 여성스러운 무드를 동시에 연출합니다. 스타일링에 따라 다양한 분위기 변화가 가능합니다.</p>",
+                Description = "<p>상단은 짧게, 아래로 갈수록 길어지는 레이어드 울프 커팅입니다.</p><p>멀렛에서 진화한 스타일로, 쇄골 기장에서 개성 있으면서도 여성스러운 무드를 동시에 연출합니다. 스타일링에 따라 다양한 분위기 변화가 가능합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/wolf1/600/800", "https://picsum.photos/seed/wolf2/600/800" },
                 Hashtags = new() { "울프컷", "레이어드", "미디움컷", "멀렛", "개성" },
                 IsPublished = true
             },
@@ -402,7 +426,8 @@
                 Title = "로즈 브라운 염색",
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.염색,
-                Description = "<p>🌸 레드 빛이 은은하게 감도는 로즈 브라운 컬러입니다.</p><p>블리치 없이도 자연광 아래에서 은은한 핑크빛이 비치며, 피부가 화사해 보이는 효과가 있습니다. 어두운 톤을 유지하면서도 분위기 변화를 원하시는 분께 추천합니다.</p>",
+                Description = "<p>레드 빛이 은은하게 감도는 로즈 브라운 컬러입니다.</p><p>블리치 없이도 자연광 아래에서 은은한 핑크빛이 비치며, 피부가 화사해 보이는 효과가 있습니다. 어두운 톤을 유지하면서도 분위기 변화를 원하시는 분께 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/rosebrown1/600/800" },
                 Hashtags = new() { "로즈브라운", "미디움염색", "블리치없이", "화사한컬러", "은은한핑크" },
                 IsPublished = true
             },
@@ -411,7 +436,8 @@
                 Title = "발레야쥬 애쉬 브라운",
                 Category = StyleCategory.여성미디움,
                 Service = ServiceType.염색,
-                Description = "<p>🎨 뿌리는 어둡게 유지하고 중간~끝으로 갈수록 자연스럽게 밝아지는 발레야쥬 기법의 애쉬 브라운 염색입니다.</p><p>✨ 입체감이 뛰어나 머리카락에 깊이감을 주며, 자라도 뿌리 부분이 자연스러워 유지 관리가 편합니다.</p>",
+                Description = "<p>뿌리는 어둡게 유지하고 중간~끝으로 갈수록 자연스럽게 밝아지는 발레야쥬 기법의 애쉬 브라운 염색입니다.</p><p>입체감이 뛰어나 머리카락에 깊이감을 주며, 자라도 뿌리 부분이 자연스러워 유지 관리가 편합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/balayage1/600/800", "https://picsum.photos/seed/balayage2/600/800" },
                 Hashtags = new() { "발레야쥬", "애쉬브라운", "그라데이션", "입체감", "트렌드염색" },
                 IsPublished = true
             },
@@ -425,6 +451,7 @@
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.펌,
                 Description = "<p>가슴 아래 긴 기장에 자연스럽게 풀어헤친 듯한 큰 웨이브의 히피 펌입니다.</p><p>보헤미안 무드의 자유롭고 여유로운 느낌이 특징이며, 최소한의 스타일링으로 완성됩니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/hippie1/600/800", "https://picsum.photos/seed/hippie2/600/800" },
                 Hashtags = new() { "히피펌", "롱웨이브", "보헤미안", "큰웨이브", "자유로운스타일" },
                 IsPublished = true
             },
@@ -434,6 +461,7 @@
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.펌,
                 Description = "<p>중간 기장부터 끝까지 자연스럽게 떨어지는 S~J컬의 에즈 펌입니다.</p><p>'있는 듯 없는 듯' 자연스러운 결이 특징이며, 손질이 매우 편해 바쁜 분들께 인기가 많습니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/aes1/600/800" },
                 Hashtags = new() { "애즈펌", "자연스러운펌", "롱펌", "S컬", "손질편한펌" },
                 IsPublished = true
             },
@@ -442,7 +470,8 @@
                 Title = "바디 웨이브 펌",
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.펌,
-                Description = "<p>💇‍♀️ 큰 롤로 전체적으로 부드러운 S컬 결을 넣어주는 바디 웨이브 펌입니다.</p><p>과하지 않은 자연스러운 웨이브가 롱 기장의 밋밋함을 해결해주며, 머리를 내렸을 때와 묶었을 때 모두 예쁜 라인이 나옵니다.</p>",
+                Description = "<p>큰 롤로 전체적으로 부드러운 S컬 결을 넣어주는 바디 웨이브 펌입니다.</p><p>과하지 않은 자연스러운 웨이브가 롱 기장의 밋밋함을 해결해주며, 머리를 내렸을 때와 묶었을 때 모두 예쁜 라인이 나옵니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/bodywave1/600/800", "https://picsum.photos/seed/bodywave2/600/800" },
                 Hashtags = new() { "바디웨이브", "롱펌", "자연웨이브", "S컬", "부드러운펌" },
                 IsPublished = true
             },
@@ -454,6 +483,7 @@
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.커트,
                 Description = "<p>긴 기장을 유지하면서 얼굴 주변에 풍성한 레이어를 넣은 볼류미한 컷입니다.</p><p>롱 기장의 단조로움을 레이어로 해결하며, 얼굴형 보정 효과도 뛰어납니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/glamour1/600/800" },
                 Hashtags = new() { "레이어드컷", "글래머", "롱헤어", "볼륨레이어", "얼굴형보정" },
                 IsPublished = true
             },
@@ -462,7 +492,8 @@
                 Title = "페이스 프레이밍 컷",
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.커트,
-                Description = "<p>✂️ 얼굴 양 옆에 짧은 레이어를 넣어 얼굴을 감싸는 프레임을 만들어주는 커팅 기법입니다.</p><p>긴 머리에 변화를 주고 싶지만 기장을 자르기 싫은 분들에게 딱! 광대와 턱선을 자연스럽게 가려 갸름해 보이는 효과가 있습니다.</p>",
+                Description = "<p>얼굴 양 옆에 짧은 레이어를 넣어 얼굴을 감싸는 프레임을 만들어주는 커팅 기법입니다.</p><p>긴 머리에 변화를 주고 싶지만 기장을 자르기 싫은 분들에게 딱! 광대와 턱선을 자연스럽게 가려 갸름해 보이는 효과가 있습니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/faceframe1/600/800", "https://picsum.photos/seed/faceframe2/600/800" },
                 Hashtags = new() { "페이스프레이밍", "롱컷", "얼굴형보정", "레이어", "트렌드" },
                 IsPublished = true
             },
@@ -473,7 +504,8 @@
                 Title = "밀크티 베이지 발레야쥬",
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.염색,
-                Description = "<p>🎨 뿌리부터 끝까지 자연스럽게 이어지는 밀크티 베이지 발레야쥬입니다.</p><p>✨ 고명도이지만 따뜻한 톤이라 피부가 화사해 보이며, 롱 기장에서 빛에 따라 다양한 색감이 연출됩니다. 색빠짐도 예뻐 오래 즐길 수 있는 컬러입니다.</p>",
+                Description = "<p>뿌리부터 끝까지 자연스럽게 이어지는 밀크티 베이지 발레야쥬입니다.</p><p>고명도이지만 따뜻한 톤이라 피부가 화사해 보이며, 롱 기장에서 빛에 따라 다양한 색감이 연출됩니다. 색빠짐도 예뻐 오래 즐길 수 있는 컬러입니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/milktealong1/600/800" },
                 Hashtags = new() { "밀크티베이지", "발레야쥬", "롱염색", "고명도", "트렌드컬러" },
                 IsPublished = true
             },
@@ -482,7 +514,8 @@
                 Title = "블루블랙 염색",
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.염색,
-                Description = "<p>💎 검은색 기반에 블루 빛이 감도는 블루블랙 염색입니다.</p><p>실내에서는 자연스러운 블랙이지만 햇빛 아래에서 은은한 네이비 빛이 비치는 것이 매력 포인트입니다. 블리치 없이 가능하며, 차분하고 시크한 이미지를 원하시는 분께 추천합니다.</p>",
+                Description = "<p>검은색 기반에 블루 빛이 감도는 블루블랙 염색입니다.</p><p>실내에서는 자연스러운 블랙이지만 햇빛 아래에서 은은한 네이비 빛이 비치는 것이 매력 포인트입니다. 블리치 없이 가능하며, 차분하고 시크한 이미지를 원하시는 분께 추천합니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/blueblack1/600/800", "https://picsum.photos/seed/blueblack2/600/800" },
                 Hashtags = new() { "블루블랙", "롱염색", "블리치없이", "시크한컬러", "네이비" },
                 IsPublished = true
             },
@@ -491,7 +524,8 @@
                 Title = "브릿지 하이라이트 염색",
                 Category = StyleCategory.여성롱,
                 Service = ServiceType.염색,
-                Description = "<p>✨ 정수리 부근 앞머리 안쪽에 포인트로 밝은 하이라이트를 넣는 브릿지 염색입니다.</p><p>🎨 전체 염색보다 손상이 적으면서도 머리를 넘길 때 살짝 보이는 밝은 결이 세련된 포인트가 됩니다. 직장인분들도 부담 없이 시도할 수 있는 트렌디한 기법입니다.</p>",
+                Description = "<p>정수리 부근 앞머리 안쪽에 포인트로 밝은 하이라이트를 넣는 브릿지 염색입니다.</p><p>전체 염색보다 손상이 적으면서도 머리를 넘길 때 살짝 보이는 밝은 결이 세련된 포인트가 됩니다. 직장인분들도 부담 없이 시도할 수 있는 트렌디한 기법입니다.</p>",
+                ImageUrls = new() { "https://picsum.photos/seed/bridge1/600/800" },
                 Hashtags = new() { "브릿지염색", "하이라이트", "포인트염색", "트렌드", "직장인염색" },
                 IsPublished = true
             }
