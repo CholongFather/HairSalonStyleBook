@@ -4,7 +4,7 @@
     <div class="style-card-image">
         @if (!string.IsNullOrEmpty(Style.ThumbnailUrl))
         {
-            <img src="@Style.ThumbnailUrl" alt="@Style.Title" loading="lazy" />
+            <img src="@Style.ThumbnailUrl" alt="@Style.Title" loading="lazy" onerror="this.onerror=null;this.src='images/default-style.svg'" />
         }
         else
         {

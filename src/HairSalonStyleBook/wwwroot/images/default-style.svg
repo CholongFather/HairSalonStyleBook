@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" fill="none">
+  <rect width="600" height="800" fill="#f0ebe0"/>
+  <rect x="150" y="250" width="300" height="300" rx="20" fill="#e8e3d8"/>
+  <!-- scissors icon -->
+  <g transform="translate(250, 340)" fill="#c4beb5">
+    <circle cx="0" cy="60" r="18" stroke="#c4beb5" stroke-width="4" fill="none"/>
+    <circle cx="100" cy="60" r="18" stroke="#c4beb5" stroke-width="4" fill="none"/>
+    <line x1="14" y1="48" x2="86" y2="12" stroke="#c4beb5" stroke-width="4" stroke-linecap="round"/>
+    <line x1="14" y1="12" x2="86" y2="48" stroke="#c4beb5" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="300" y="490" text-anchor="middle" fill="#a09a90" font-family="sans-serif" font-size="20" font-weight="500">이미지 준비 중</text>
+</svg>
