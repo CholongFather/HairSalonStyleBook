@@ -1,4 +1,5 @@
 @page "/"
+@attribute [Authorize]
 @inject IStyleService StyleService
 @inject NavigationManager Nav
 
@@ -19,9 +20,10 @@
 
     <!-- 탭 콘텐츠 영역 -->
     <div class="tab-content-area">
-        <div class="tab-slider" style="transform: translateX(-@(_activeTab * 100)%);">
+        @if (_activeTab == 0)
+        {
             <!-- 탭 0: 스타일북 -->
-            <div class="tab-panel">
+            <div class="tab-panel tab-fade-in">
                 <!-- 카테고리 & 시술 필터 -->
                 <CategoryMenu SelectedCategory="_selectedCategory" OnCategorySelected="OnCategoryChanged"
                               SelectedService="_selectedService" OnServiceSelected="OnServiceChanged" />
@@ -77,9 +79,11 @@
                     }
                 }
             </div>
-
+        }
+        else
+        {
             <!-- 탭 1: 매장 -->
-            <div class="tab-panel">
+            <div class="tab-panel tab-fade-in">
                 <!-- 서브탭: WiFi / 계좌 -->
                 <div class="sub-tab-bar">
                     <button class="sub-tab-item @(_shopTab == 0 ? "active" : "")" @onclick="() => _shopTab = 0">
@@ -159,7 +163,7 @@
                     </div>
                 }
             </div>
-        </div>
+        }
     </div>
 </div>
 
@@ -415,20 +419,22 @@
         color: #fff;
     }
 
-    /* -- 탭 콘텐츠 슬라이드 -- */
+    /* -- 탭 콘텐츠 -- */
     .tab-content-area {
         overflow: hidden;
     }
 
-    .tab-slider {
-        display: flex;
-        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        will-change: transform;
+    .tab-panel {
+        width: 100%;
     }
 
-    .tab-panel {
-        min-width: 100%;
-        flex-shrink: 0;
+    .tab-fade-in {
+        animation: tabFadeIn 0.3s ease;
+    }
+
+    @@keyframes tabFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     /* -- 서브탭 바 (매장 내) -- */
