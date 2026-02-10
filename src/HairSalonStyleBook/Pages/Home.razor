@@ -1,0 +1,153 @@
+@page "/"
+@attribute [Authorize]
+@inject IStyleService StyleService
+@inject NavigationManager Nav
+
+<PageTitle>늘-오던 헤어살롱</PageTitle>
+
+<div class="container salon-list-page">
+    <!-- 카테고리 메뉴 -->
+    <CategoryMenu SelectedCategory="_selectedCategory" OnCategorySelected="OnCategoryChanged" />
+
+    <!-- 검색바 -->
+    <SearchBar SearchText="@_searchText" OnSearch="OnSearch" />
+
+    <!-- 스타일 카드 그리드 -->
+    @if (_loading)
+    {
+        <div class="style-grid">
+            @for (var i = 0; i < 6; i++)
+            {
+                <div class="skeleton-card-wrapper">
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-text mt-2"></div>
+                    <div class="skeleton skeleton-text-sm"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (!_pagedStyles.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 2rem; color: var(--salon-light-gray);"></i>
+            <p class="text-muted mt-2">등록된 스타일이 없습니다.</p>
+        </div>
+    }
+    else
+    {
+        <div class="style-grid">
+            @foreach (var style in _pagedStyles)
+            {
+                <StyleCard Style="style" />
+            }
+        </div>
+
+        <!-- 페이지네이션 -->
+        @if (_totalPages > 1)
+        {
+            <Pagination CurrentPage="_currentPage" TotalPages="_totalPages" OnPageChanged="OnPageChanged" />
+        }
+    }
+</div>
+
+@code {
+    private List<StylePost> _allStyles = new();
+    private List<StylePost> _filteredStyles = new();
+    private List<StylePost> _pagedStyles = new();
+    private StyleCategory _selectedCategory = StyleCategory.전체;
+    private string _searchText = "";
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private const int PageSize = 10;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // URL 쿼리에서 검색어 파싱
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("search", out var searchValue))
+        {
+            _searchText = searchValue.ToString();
+        }
+
+        await LoadStyles();
+    }
+
+    private async Task LoadStyles()
+    {
+        _loading = true;
+        _allStyles = await StyleService.GetAllAsync();
+        _allStyles = _allStyles.Where(s => s.IsPublished).OrderByDescending(s => s.CreatedAt).ToList();
+        ApplyFilters();
+        _loading = false;
+    }
+
+    private void ApplyFilters()
+    {
+        _filteredStyles = _allStyles;
+
+        // 카테고리 필터
+        if (_selectedCategory != StyleCategory.전체)
+        {
+            _filteredStyles = _filteredStyles.Where(s => s.Category == _selectedCategory).ToList();
+        }
+
+        // 검색 필터
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var lower = _searchText.ToLower();
+            _filteredStyles = _filteredStyles.Where(s =>
+                s.Title.ToLower().Contains(lower) ||
+                s.Hashtags.Any(h => h.ToLower().Contains(lower))
+            ).ToList();
+        }
+
+        // 페이지네이션 계산
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_filteredStyles.Count / (double)PageSize));
+        _currentPage = Math.Clamp(_currentPage, 1, _totalPages);
+        _pagedStyles = _filteredStyles.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private Task OnCategoryChanged(StyleCategory category)
+    {
+        _selectedCategory = category;
+        _currentPage = 1;
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+
+    private Task OnSearch(string searchText)
+    {
+        _searchText = searchText;
+        _currentPage = 1;
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _currentPage = page;
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+}
+
+<style>
+    .salon-list-page {
+        max-width: 700px;
+        padding-top: 0.5rem;
+    }
+
+    .style-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    @@media (max-width: 400px) {
+        .style-grid {
+            gap: 0.5rem;
+        }
+    }
+</style>

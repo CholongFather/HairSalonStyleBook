@@ -1,0 +1,220 @@
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using HairSalonStyleBook.Models;
+using Microsoft.Extensions.Configuration;
+
+namespace HairSalonStyleBook.Services;
+
+/// <summary>
+/// Firebase Firestore REST API를 사용한 스타일 서비스 구현
+/// </summary>
+public class FirestoreStyleService : IStyleService
+{
+    private readonly HttpClient _http;
+    private readonly string _baseUrl;
+    private readonly string _apiKey;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    public FirestoreStyleService(HttpClient http, IConfiguration config)
+    {
+        _http = http;
+        var projectId = config["Firebase:ProjectId"] ?? "";
+        _apiKey = config["Firebase:ApiKey"] ?? "";
+        _baseUrl = $"https://firestore.googleapis.com/v1/projects/{projectId}/databases/(default)/documents";
+    }
+
+    public async Task<List<StylePost>> GetAllAsync()
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{_baseUrl}/styles?key={_apiKey}");
+            if (!response.IsSuccessStatusCode)
+                return new List<StylePost>();
+
+            var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
+            return json?.Documents?.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList()
+                   ?? new List<StylePost>();
+        }
+        catch
+        {
+            return new List<StylePost>();
+        }
+    }
+
+    public async Task<List<StylePost>> GetByCategoryAsync(StyleCategory category)
+    {
+        var all = await GetAllAsync();
+        if (category == StyleCategory.전체)
+            return all;
+        return all.Where(s => s.Category == category).ToList();
+    }
+
+    public async Task<List<StylePost>> SearchAsync(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return await GetAllAsync();
+
+        var all = await GetAllAsync();
+        var lower = keyword.ToLower();
+        return all.Where(s =>
+            s.Title.ToLower().Contains(lower) ||
+            s.Hashtags.Any(h => h.ToLower().Contains(lower))
+        ).ToList();
+    }
+
+    public async Task<StylePost?> GetByIdAsync(string id)
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var doc = await response.Content.ReadFromJsonAsync<FirestoreDocument>(JsonOptions);
+            return doc != null ? MapFromFirestore(doc) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<StylePost> CreateAsync(StylePost style)
+    {
+        style.Id = Guid.NewGuid().ToString("N")[..12];
+        style.CreatedAt = DateTime.UtcNow;
+        style.UpdatedAt = DateTime.UtcNow;
+
+        var firestoreDoc = MapToFirestore(style);
+        var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
+
+        await _http.PostAsync($"{_baseUrl}/styles?documentId={style.Id}&key={_apiKey}", content);
+        return style;
+    }
+
+    public async Task<StylePost> UpdateAsync(StylePost style)
+    {
+        style.UpdatedAt = DateTime.UtcNow;
+
+        var firestoreDoc = MapToFirestore(style);
+        var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
+
+        await _http.PatchAsync($"{_baseUrl}/styles/{style.Id}?key={_apiKey}", content);
+        return style;
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        await _http.DeleteAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
+    }
+
+    #region Firestore 매핑
+
+    private static StylePost? MapFromFirestore(FirestoreDocument doc)
+    {
+        try
+        {
+            var fields = doc.Fields;
+            if (fields == null) return null;
+
+            // 문서 이름에서 ID 추출 (projects/.../documents/styles/ID)
+            var id = doc.Name?.Split('/').LastOrDefault() ?? "";
+
+            return new StylePost
+            {
+                Id = id,
+                Title = GetStringValue(fields, "title"),
+                Description = GetStringValue(fields, "description"),
+                Category = Enum.TryParse<StyleCategory>(GetStringValue(fields, "category"), out var cat) ? cat : StyleCategory.커트,
+                ImageUrls = GetArrayValue(fields, "imageUrls"),
+                Hashtags = GetArrayValue(fields, "hashtags"),
+                RelatedPostIds = GetArrayValue(fields, "relatedPostIds"),
+                CreatedAt = GetTimestampValue(fields, "createdAt"),
+                UpdatedAt = GetTimestampValue(fields, "updatedAt"),
+                CreatedBy = GetStringValue(fields, "createdBy"),
+                IsPublished = GetBoolValue(fields, "isPublished")
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static FirestoreFields MapToFirestore(StylePost style)
+    {
+        return new FirestoreFields
+        {
+            Fields = new Dictionary<string, FirestoreValue>
+            {
+                ["title"] = new() { StringValue = style.Title },
+                ["description"] = new() { StringValue = style.Description },
+                ["category"] = new() { StringValue = style.Category.ToString() },
+                ["imageUrls"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.ImageUrls.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
+                ["hashtags"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.Hashtags.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
+                ["relatedPostIds"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.RelatedPostIds.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
+                ["createdAt"] = new() { TimestampValue = style.CreatedAt.ToString("o") },
+                ["updatedAt"] = new() { TimestampValue = style.UpdatedAt.ToString("o") },
+                ["createdBy"] = new() { StringValue = style.CreatedBy },
+                ["isPublished"] = new() { BooleanValue = style.IsPublished }
+            }
+        };
+    }
+
+    private static string GetStringValue(Dictionary<string, FirestoreValue> fields, string key)
+        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
+
+    private static bool GetBoolValue(Dictionary<string, FirestoreValue> fields, string key)
+        => fields.TryGetValue(key, out var v) && v.BooleanValue == true;
+
+    private static DateTime GetTimestampValue(Dictionary<string, FirestoreValue> fields, string key)
+        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
+
+    private static List<string> GetArrayValue(Dictionary<string, FirestoreValue> fields, string key)
+    {
+        if (!fields.TryGetValue(key, out var v) || v.ArrayValue?.Values == null)
+            return new List<string>();
+        return v.ArrayValue.Values.Select(x => x.StringValue ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList();
+    }
+
+    #endregion
+}
+
+#region Firestore REST API DTO
+
+public class FirestoreListResponse
+{
+    public List<FirestoreDocument>? Documents { get; set; }
+}
+
+public class FirestoreDocument
+{
+    public string? Name { get; set; }
+    public Dictionary<string, FirestoreValue>? Fields { get; set; }
+}
+
+public class FirestoreFields
+{
+    public Dictionary<string, FirestoreValue>? Fields { get; set; }
+}
+
+public class FirestoreValue
+{
+    public string? StringValue { get; set; }
+    public bool? BooleanValue { get; set; }
+    public string? TimestampValue { get; set; }
+    public FirestoreArrayValue? ArrayValue { get; set; }
+}
+
+public class FirestoreArrayValue
+{
+    public List<FirestoreValue>? Values { get; set; }
+}
+
+#endregion

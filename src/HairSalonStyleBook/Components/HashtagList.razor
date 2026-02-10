@@ -1,0 +1,48 @@
+@inject NavigationManager Nav
+
+<div class="hashtag-list">
+    @foreach (var tag in Hashtags)
+    {
+        <span class="hashtag" @onclick="() => SearchByTag(tag)">#@tag</span>
+    }
+</div>
+
+@code {
+    [Parameter] public List<string> Hashtags { get; set; } = new();
+    [Parameter] public bool Clickable { get; set; } = true;
+
+    private void SearchByTag(string tag)
+    {
+        if (Clickable)
+        {
+            Nav.NavigateTo($"?search={Uri.EscapeDataString(tag)}");
+        }
+    }
+}
+
+<style>
+    .hashtag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0.5rem 0;
+    }
+
+    .hashtag {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        color: var(--salon-green);
+        background: rgba(123, 163, 131, 0.1);
+        border: 1px solid var(--salon-green-light);
+        padding: 0.2rem 0.6rem;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .hashtag:hover {
+        background: var(--salon-green);
+        color: var(--salon-white);
+        border-color: var(--salon-green);
+    }
+</style>

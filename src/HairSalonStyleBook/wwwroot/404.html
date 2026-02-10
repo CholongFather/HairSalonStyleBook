@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>늘-오던 헤어살롱</title>
+    <script type="text/javascript">
+        // GitHub Pages SPA 라우팅 핸들러
+        // 404 에러를 쿼리 파라미터로 변환하여 index.html로 리다이렉트
+        var pathSegmentsToKeep = 1; // /HairSalonStyleBook/ 경로 유지
+        var l = window.location;
+        l.replace(
+            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+            l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+            l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash
+        );
+    </script>
+</head>
+<body></body>
+</html>

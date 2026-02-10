@@ -1,0 +1,102 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Publish
+        run: dotnet publish src/HairSalonStyleBook/HairSalonStyleBook.csproj -c Release -o release
+
+      - name: Set base href for GitHub Pages
+        run: sed -i 's|<base href="/" />|<base href="/HairSalonStyleBook/" />|g' release/wwwroot/index.html
+
+      - name: Ensure .nojekyll exists
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Ensure 404.html exists
+        run: cp release/wwwroot/404.html release/wwwroot/404.html 2>/dev/null || true
+
+      # 이미지 최적화 (sharp-cli)
+      - name: Setup Node.js for image optimization
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Optimize images
+        run: |
+          npm install -g sharp-cli 2>/dev/null || true
+          IMAGE_DIR="release/wwwroot/images/styles"
+          if [ -d "$IMAGE_DIR" ] && [ "$(ls -A $IMAGE_DIR 2>/dev/null)" ]; then
+            mkdir -p "$IMAGE_DIR/thumbs"
+            for img in "$IMAGE_DIR"/*.{jpg,jpeg,png,JPG,JPEG,PNG}; do
+              [ -f "$img" ] || continue
+              BASENAME=$(basename "$img" | sed 's/\.[^.]*$//')
+              # WebP 변환 (상세용 - max 1200px)
+              npx sharp-cli -i "$img" -o "$IMAGE_DIR/${BASENAME}.webp" -- resize 1200 --withoutEnlargement --toFormat webp --quality 80 2>/dev/null || true
+              # 썸네일 생성 (리스트용 - 300x400)
+              npx sharp-cli -i "$img" -o "$IMAGE_DIR/thumbs/${BASENAME}.webp" -- resize 300 400 --fit cover --toFormat webp --quality 75 2>/dev/null || true
+            done
+          fi
+
+      - name: Generate image manifest
+        run: |
+          IMAGE_DIR="release/wwwroot/images/styles"
+          MANIFEST="$IMAGE_DIR/manifest.json"
+          echo "[" > "$MANIFEST"
+          FIRST=true
+          if [ -d "$IMAGE_DIR" ]; then
+            for img in "$IMAGE_DIR"/*.{jpg,jpeg,png,gif,webp,JPG,JPEG,PNG,GIF,WEBP}; do
+              [ -f "$img" ] || continue
+              BASENAME=$(basename "$img")
+              # thumbs 디렉토리와 manifest.json 제외
+              if [ "$BASENAME" != "manifest.json" ]; then
+                if [ "$FIRST" = true ]; then
+                  FIRST=false
+                else
+                  echo "," >> "$MANIFEST"
+                fi
+                echo "  \"$BASENAME\"" >> "$MANIFEST"
+              fi
+            done
+          fi
+          echo "" >> "$MANIFEST"
+          echo "]" >> "$MANIFEST"
+          echo "Generated manifest:"
+          cat "$MANIFEST"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

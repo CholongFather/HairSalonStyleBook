@@ -1,0 +1,81 @@
+<div class="search-bar">
+    <div class="search-input-wrapper">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text"
+               class="form-control search-input"
+               placeholder="제목 또는 #해시태그 검색"
+               value="@SearchText"
+               @oninput="OnInput" />
+        @if (!string.IsNullOrEmpty(SearchText))
+        {
+            <button class="search-clear" @onclick="ClearSearch">
+                <i class="bi bi-x"></i>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? "";
+        await OnSearch.InvokeAsync(SearchText);
+    }
+
+    private async Task ClearSearch()
+    {
+        SearchText = "";
+        await OnSearch.InvokeAsync("");
+    }
+}
+
+<style>
+    .search-bar {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 0 1rem 1rem;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--salon-gray);
+        font-size: 0.85rem;
+    }
+
+    .search-input {
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 0;
+        padding: 0.5rem 2rem 0.5rem 2.2rem;
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        background: var(--salon-white);
+    }
+
+    .search-input:focus {
+        border-color: var(--salon-black);
+        box-shadow: none;
+    }
+
+    .search-clear {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--salon-gray);
+        cursor: pointer;
+        padding: 0;
+        font-size: 1.1rem;
+    }
+</style>

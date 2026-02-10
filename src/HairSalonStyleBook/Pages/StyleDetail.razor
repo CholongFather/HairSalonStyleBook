@@ -1,0 +1,148 @@
+@page "/style/{Id}"
+@attribute [Authorize]
+@inject IStyleService StyleService
+@inject NavigationManager Nav
+
+<PageTitle>@(_style?.Title ?? "스타일 상세") - 늘-오던 헤어살롱</PageTitle>
+
+<div class="container salon-detail-page">
+    <!-- 뒤로가기 -->
+    <button class="btn btn-back" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i> 목록으로
+    </button>
+
+    @if (_loading)
+    {
+        <div class="skeleton-detail">
+            <div class="skeleton skeleton-title mx-auto"></div>
+            <div class="skeleton skeleton-text-sm mx-auto mb-3" style="width:30%"></div>
+            <div class="skeleton skeleton-image"></div>
+            <div class="skeleton skeleton-text mt-3"></div>
+            <div class="skeleton skeleton-text" style="width:90%"></div>
+            <div class="skeleton skeleton-text" style="width:60%"></div>
+        </div>
+    }
+    else if (_style == null)
+    {
+        <div class="text-center py-5">
+            <p class="text-muted">스타일을 찾을 수 없습니다.</p>
+            <a href="" class="btn btn-salon">홈으로 돌아가기</a>
+        </div>
+    }
+    else
+    {
+        <!-- 제목 -->
+        <h1 class="detail-title">@_style.Title</h1>
+        <div class="detail-meta">
+            <span class="detail-category">@_style.Category</span>
+            <span class="detail-date">@_style.CreatedAt.ToString("yyyy.MM.dd")</span>
+        </div>
+
+        <!-- 이미지 캐러셀 -->
+        <ImageCarousel ImageUrls="_style.ImageUrls" />
+
+        <!-- 상세 설명 -->
+        @if (!string.IsNullOrEmpty(_style.Description))
+        {
+            <div class="detail-description">
+                @((MarkupString)_style.Description.Replace("\n", "<br/>"))
+            </div>
+        }
+
+        <!-- 해시태그 -->
+        @if (_style.Hashtags.Any())
+        {
+            <HashtagList Hashtags="_style.Hashtags" />
+        }
+
+        <!-- 연관 게시글 -->
+        @if (_style.RelatedPostIds.Any())
+        {
+            <RelatedPosts RelatedPostIds="_style.RelatedPostIds" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private StylePost? _style;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _style = await StyleService.GetByIdAsync(Id);
+        _loading = false;
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("");
+    }
+}
+
+<style>
+    .salon-detail-page {
+        max-width: 700px;
+        padding-top: 0.5rem;
+    }
+
+    .btn-back {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        color: var(--salon-gray);
+        background: none;
+        border: none;
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-back:hover {
+        color: var(--salon-black);
+    }
+
+    .detail-title {
+        font-family: var(--font-serif);
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--salon-black);
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+
+    .detail-meta {
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .detail-category {
+        font-size: 0.75rem;
+        background: var(--salon-green);
+        color: var(--salon-white);
+        padding: 2px 12px;
+        border-radius: 10px;
+        margin-right: 0.5rem;
+        letter-spacing: 0.05em;
+    }
+
+    .detail-date {
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+    }
+
+    .detail-description {
+        font-family: var(--font-serif);
+        font-size: 0.9rem;
+        line-height: 1.8;
+        color: var(--salon-dark);
+        padding: 1rem 0;
+        border-top: 1px solid var(--salon-light-gray);
+    }
+
+    @@media (max-width: 576px) {
+        .detail-title {
+            font-size: 1.2rem;
+        }
+    }
+</style>

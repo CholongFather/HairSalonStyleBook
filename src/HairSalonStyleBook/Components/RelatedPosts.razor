@@ -1,0 +1,122 @@
+@inject IStyleService StyleService
+@inject NavigationManager Nav
+
+@if (_relatedStyles.Any())
+{
+    <div class="related-posts">
+        <h4 class="related-title">연관 스타일</h4>
+        <div class="related-scroll">
+            @foreach (var style in _relatedStyles)
+            {
+                <div class="related-card" @onclick="() => GoToStyle(style.Id)">
+                    <div class="related-image">
+                        @if (!string.IsNullOrEmpty(style.ThumbnailUrl))
+                        {
+                            <img src="@style.ThumbnailUrl" alt="@style.Title" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="related-placeholder"><i class="bi bi-image"></i></div>
+                        }
+                    </div>
+                    <p class="related-card-title">@style.Title</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<string> RelatedPostIds { get; set; } = new();
+
+    private List<StylePost> _relatedStyles = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _relatedStyles.Clear();
+        foreach (var id in RelatedPostIds.Take(6))
+        {
+            var style = await StyleService.GetByIdAsync(id);
+            if (style != null)
+                _relatedStyles.Add(style);
+        }
+    }
+
+    private void GoToStyle(string id)
+    {
+        Nav.NavigateTo($"style/{id}", forceLoad: true);
+    }
+}
+
+<style>
+    .related-posts {
+        padding: 1.5rem 0;
+    }
+
+    .related-title {
+        font-family: var(--font-serif);
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--salon-black);
+    }
+
+    .related-scroll {
+        display: flex;
+        gap: 0.75rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .related-scroll::-webkit-scrollbar {
+        height: 3px;
+    }
+
+    .related-scroll::-webkit-scrollbar-thumb {
+        background: var(--salon-light-gray);
+    }
+
+    .related-card {
+        flex: 0 0 140px;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .related-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .related-image {
+        aspect-ratio: 3 / 4;
+        overflow: hidden;
+        background: #f0f0f0;
+    }
+
+    .related-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .related-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--salon-light-gray);
+        font-size: 1.5rem;
+    }
+
+    .related-card-title {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        margin-top: 0.4rem;
+        color: var(--salon-black);
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

@@ -1,0 +1,68 @@
+<nav class="salon-pagination" aria-label="페이지 네비게이션">
+    <ul class="pagination justify-content-center">
+        <li class="page-item @(CurrentPage <= 1 ? "disabled" : "")">
+            <button class="page-link" @onclick="() => GoToPage(CurrentPage - 1)">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+        </li>
+        @for (int i = startPage; i <= endPage; i++)
+        {
+            var pageNum = i;
+            <li class="page-item @(pageNum == CurrentPage ? "active" : "")">
+                <button class="page-link" @onclick="() => GoToPage(pageNum)">@pageNum</button>
+            </li>
+        }
+        <li class="page-item @(CurrentPage >= TotalPages ? "disabled" : "")">
+            <button class="page-link" @onclick="() => GoToPage(CurrentPage + 1)">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private int startPage => Math.Max(1, CurrentPage - 2);
+    private int endPage => Math.Min(TotalPages, startPage + 4);
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > TotalPages || page == CurrentPage) return;
+        await OnPageChanged.InvokeAsync(page);
+    }
+}
+
+<style>
+    .salon-pagination {
+        padding: 2rem 0 1rem;
+    }
+
+    .salon-pagination .page-link {
+        border: 1px solid var(--salon-light-gray);
+        color: var(--salon-black);
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        border-radius: 0;
+        padding: 0.4rem 0.75rem;
+        background: var(--salon-white);
+    }
+
+    .salon-pagination .page-link:hover {
+        background: var(--salon-black);
+        color: var(--salon-white);
+        border-color: var(--salon-black);
+    }
+
+    .salon-pagination .page-item.active .page-link {
+        background: var(--salon-black);
+        border-color: var(--salon-black);
+        color: var(--salon-white);
+    }
+
+    .salon-pagination .page-item.disabled .page-link {
+        opacity: 0.3;
+    }
+</style>

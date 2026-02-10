@@ -1,0 +1,123 @@
+@page "/admin/audit"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAuditService AuditService
+@inject NavigationManager Nav
+
+<PageTitle>감사 로그 - 관리자</PageTitle>
+
+<div class="container audit-page">
+    <button class="btn btn-back" @onclick="GoToAdmin">
+        <i class="bi bi-arrow-left"></i> 관리자 홈
+    </button>
+
+    <h2 class="audit-title">감사 로그</h2>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border spinner-border-sm"></div>
+        </div>
+    }
+    else if (!_logs.Any())
+    {
+        <div class="text-center py-5 text-muted">기록이 없습니다.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table audit-table">
+                <thead>
+                    <tr>
+                        <th>시간</th>
+                        <th>액션</th>
+                        <th>대상</th>
+                        <th>상세</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in _logs)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@log.Timestamp.ToLocalTime().ToString("yyyy.MM.dd HH:mm")</td>
+                            <td>
+                                <span class="audit-action audit-@log.Action.ToLower()">@GetActionLabel(log.Action)</span>
+                            </td>
+                            <td>@log.TargetTitle</td>
+                            <td class="text-muted">@log.Details</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<AuditLog> _logs = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _logs = await AuditService.GetAllAsync();
+        _logs = _logs.OrderByDescending(l => l.Timestamp).ToList();
+        _loading = false;
+    }
+
+    private void GoToAdmin() => Nav.NavigateTo("admin");
+
+    private static string GetActionLabel(string action) => action switch
+    {
+        "Create" => "생성",
+        "Update" => "수정",
+        "Delete" => "삭제",
+        _ => action
+    };
+}
+
+<style>
+    .audit-page {
+        max-width: 900px;
+        padding-top: 0.5rem;
+    }
+
+    .audit-title {
+        font-family: var(--font-serif);
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-table {
+        font-family: var(--font-serif);
+        font-size: 0.82rem;
+    }
+
+    .audit-table th {
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--salon-black);
+    }
+
+    .audit-action {
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        font-weight: 700;
+    }
+
+    .audit-create { background: #d4edda; color: #155724; }
+    .audit-update { background: #fff3cd; color: #856404; }
+    .audit-delete { background: #f8d7da; color: #842029; }
+
+    .btn-back {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        color: var(--salon-gray);
+        background: none;
+        border: none;
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+    }
+</style>

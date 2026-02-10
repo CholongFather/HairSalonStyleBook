@@ -1,0 +1,521 @@
+@page "/admin/edit"
+@page "/admin/edit/{Id}"
+@attribute [Authorize(Roles = "Admin")]
+@inject IStyleService StyleService
+@inject IAuditService AuditService
+@inject IImageService ImageService
+@inject NavigationManager Nav
+
+<PageTitle>@(_isEdit ? "스타일 수정" : "새 스타일") - 관리자</PageTitle>
+
+<div class="container editor-page">
+    <button class="btn btn-back" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i> 목록으로
+    </button>
+
+    <h2 class="editor-title">@(_isEdit ? "스타일 수정" : "새 스타일 등록")</h2>
+
+    <EditForm Model="_style" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <!-- 제목 -->
+        <div class="mb-3">
+            <label class="form-label">제목</label>
+            <InputText @bind-Value="_style.Title" class="form-control editor-input" placeholder="스타일 제목" />
+        </div>
+
+        <!-- 카테고리 -->
+        <div class="mb-3">
+            <label class="form-label">카테고리</label>
+            <InputSelect @bind-Value="_style.Category" class="form-select editor-input">
+                <option value="@StyleCategory.커트">커트</option>
+                <option value="@StyleCategory.펌">펌</option>
+                <option value="@StyleCategory.염색">염색</option>
+            </InputSelect>
+        </div>
+
+        <!-- 상세 설명 -->
+        <div class="mb-3">
+            <label class="form-label">상세 설명</label>
+            <InputTextArea @bind-Value="_style.Description" class="form-control editor-input" rows="5" placeholder="스타일에 대한 설명을 작성하세요" />
+        </div>
+
+        <!-- 이미지 업로드 -->
+        <div class="mb-3">
+            <label class="form-label">이미지</label>
+
+            <!-- 업로드 버튼 -->
+            <div class="upload-area">
+                <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="upload-input" id="imageUpload" />
+                <label for="imageUpload" class="upload-label">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span>이미지 선택 (여러장 가능)</span>
+                    <small>JPG, PNG, WebP / 최대 5MB</small>
+                </label>
+            </div>
+
+            <!-- 업로드 진행 -->
+            @if (_uploading)
+            {
+                <div class="upload-progress mt-2">
+                    <div class="spinner-border spinner-border-sm me-1"></div>
+                    <span>업로드 중... (@_uploadedCount/@_totalUploadCount)</span>
+                </div>
+            }
+
+            <!-- 업로드된 이미지 미리보기 -->
+            @if (_style.ImageUrls.Any())
+            {
+                <div class="uploaded-images mt-2">
+                    @foreach (var url in _style.ImageUrls)
+                    {
+                        var idx = _style.ImageUrls.IndexOf(url);
+                        <div class="uploaded-item">
+                            <img src="@url" alt="업로드 이미지" loading="lazy" />
+                            <div class="uploaded-order">@(idx + 1)</div>
+                            <button type="button" class="uploaded-remove" @onclick="() => RemoveImage(url)">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- 해시태그 -->
+        <div class="mb-3">
+            <label class="form-label">해시태그</label>
+            <small class="text-muted d-block mb-1">쉼표로 구분하여 입력</small>
+            <input type="text"
+                   class="form-control editor-input"
+                   placeholder="예: 레이어드컷, 볼륨펌, 자연스러운"
+                   value="@string.Join(", ", _style.Hashtags)"
+                   @onchange="OnHashtagsChanged" />
+            @if (_style.Hashtags.Any())
+            {
+                <div class="mt-1">
+                    <HashtagList Hashtags="_style.Hashtags" Clickable="false" />
+                </div>
+            }
+        </div>
+
+        <!-- 연관 게시글 -->
+        <div class="mb-3">
+            <label class="form-label">연관 게시글</label>
+            <small class="text-muted d-block mb-1">검색하여 연관 스타일을 추가하세요</small>
+            <div class="related-select-wrapper">
+                <input type="text"
+                       class="form-control editor-input"
+                       placeholder="스타일 제목으로 검색..."
+                       @bind="_relatedSearchText"
+                       @bind:event="oninput"
+                       @onfocus="() => _showRelatedDropdown = true" />
+                @if (_showRelatedDropdown && _filteredAvailablePosts.Any())
+                {
+                    <div class="related-dropdown">
+                        @foreach (var post in _filteredAvailablePosts)
+                        {
+                            <div class="related-dropdown-item" @onclick="() => AddRelatedPost(post)">
+                                <span class="related-category-badge">@post.Category</span>
+                                @post.Title
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            @if (_style.RelatedPostIds.Any())
+            {
+                <div class="related-selected-list mt-2">
+                    @foreach (var id in _style.RelatedPostIds)
+                    {
+                        var relatedPost = _allPosts.FirstOrDefault(p => p.Id == id);
+                        <span class="related-chip">
+                            @if (relatedPost != null)
+                            {
+                                <span class="related-category-badge-sm">@relatedPost.Category</span>
+                                @relatedPost.Title
+                            }
+                            else
+                            {
+                                @id
+                            }
+                            <button type="button" class="related-chip-remove" @onclick="() => RemoveRelatedPost(id)">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- 게시 여부 -->
+        <div class="mb-4">
+            <div class="form-check">
+                <InputCheckbox @bind-Value="_style.IsPublished" class="form-check-input" id="publishCheck" />
+                <label class="form-check-label" for="publishCheck">게시하기</label>
+            </div>
+        </div>
+
+        <!-- 버튼 -->
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-salon" disabled="@(_saving || _uploading)">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                @(_isEdit ? "수정" : "등록")
+            </button>
+            <button type="button" class="btn btn-salon-outline" @onclick="GoBack">취소</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private StylePost _style = new();
+    private bool _isEdit;
+    private bool _saving;
+    private bool _uploading;
+    private int _uploadedCount;
+    private int _totalUploadCount;
+    private List<StylePost> _allPosts = new();
+    private string _relatedSearchText = "";
+    private bool _showRelatedDropdown;
+
+    private IEnumerable<StylePost> _filteredAvailablePosts =>
+        _allPosts.Where(p =>
+            p.Id != _style.Id &&
+            !_style.RelatedPostIds.Contains(p.Id) &&
+            (string.IsNullOrWhiteSpace(_relatedSearchText) ||
+             p.Title.Contains(_relatedSearchText, StringComparison.OrdinalIgnoreCase) ||
+             p.Category.ToString().Contains(_relatedSearchText, StringComparison.OrdinalIgnoreCase)))
+        .Take(10);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _allPosts = await StyleService.GetAllAsync();
+
+        if (!string.IsNullOrEmpty(Id))
+        {
+            _isEdit = true;
+            var existing = await StyleService.GetByIdAsync(Id);
+            if (existing != null)
+                _style = existing;
+        }
+    }
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        var maxSize = 5 * 1024 * 1024; // 5MB
+        var files = e.GetMultipleFiles(10);
+        _uploading = true;
+        _uploadedCount = 0;
+        _totalUploadCount = files.Count;
+        StateHasChanged();
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if (file.Size > maxSize) continue;
+
+                using var stream = file.OpenReadStream(maxSize);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var data = ms.ToArray();
+
+                var url = await ImageService.UploadAsync(file.Name, data, file.ContentType);
+                _style.ImageUrls.Add(url);
+                _uploadedCount++;
+                StateHasChanged();
+            }
+            catch
+            {
+                // 개별 파일 업로드 실패 무시
+            }
+        }
+
+        _uploading = false;
+        StateHasChanged();
+    }
+
+    private void RemoveImage(string url)
+    {
+        _style.ImageUrls.Remove(url);
+    }
+
+    private void AddRelatedPost(StylePost post)
+    {
+        if (!_style.RelatedPostIds.Contains(post.Id))
+            _style.RelatedPostIds.Add(post.Id);
+        _relatedSearchText = "";
+        _showRelatedDropdown = false;
+    }
+
+    private void RemoveRelatedPost(string postId)
+    {
+        _style.RelatedPostIds.Remove(postId);
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+
+        if (_isEdit)
+        {
+            await StyleService.UpdateAsync(_style);
+            await AuditService.LogAsync("Update", _style.Id, _style.Title, $"스타일 '{_style.Title}' 수정");
+        }
+        else
+        {
+            var created = await StyleService.CreateAsync(_style);
+            await AuditService.LogAsync("Create", created.Id, created.Title, $"스타일 '{created.Title}' 생성");
+        }
+
+        _saving = false;
+        Nav.NavigateTo("admin");
+    }
+
+    private void OnHashtagsChanged(ChangeEventArgs e)
+    {
+        _style.Hashtags = ParseCommaSeparated(e.Value?.ToString());
+    }
+
+    private static List<string> ParseCommaSeparated(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return new();
+        return input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+    }
+
+    private void GoBack() => Nav.NavigateTo("admin");
+}
+
+<style>
+    .editor-page {
+        max-width: 600px;
+        padding-top: 0.5rem;
+        padding-bottom: 2rem;
+    }
+
+    .editor-title {
+        font-family: var(--font-serif);
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--salon-black);
+    }
+
+    .editor-input {
+        border-radius: 4px;
+        border: 1px solid var(--salon-light-gray);
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+    }
+
+    .editor-input:focus {
+        border-color: var(--salon-green);
+        box-shadow: 0 0 0 2px rgba(123, 163, 131, 0.15);
+    }
+
+    .btn-back {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        color: var(--salon-gray);
+        background: none;
+        border: none;
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+    }
+
+    /* 이미지 업로드 */
+    .upload-area {
+        position: relative;
+    }
+
+    .upload-input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+    }
+
+    .upload-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        border: 2px dashed var(--salon-light-gray);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--salon-gray);
+        font-family: var(--font-serif);
+    }
+
+    .upload-label:hover {
+        border-color: var(--salon-green);
+        color: var(--salon-green);
+        background: rgba(123, 163, 131, 0.05);
+    }
+
+    .upload-label i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-label span {
+        font-size: 0.85rem;
+    }
+
+    .upload-label small {
+        font-size: 0.7rem;
+        margin-top: 0.2rem;
+    }
+
+    .upload-progress {
+        font-size: 0.85rem;
+        color: var(--salon-green);
+        display: flex;
+        align-items: center;
+    }
+
+    /* 업로드된 이미지 목록 */
+    .uploaded-images {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+    }
+
+    .uploaded-item {
+        position: relative;
+        aspect-ratio: 3/4;
+        overflow: hidden;
+        border-radius: 4px;
+        border: 1px solid var(--salon-light-gray);
+    }
+
+    .uploaded-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .uploaded-order {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        background: var(--salon-green);
+        color: #fff;
+        font-size: 0.65rem;
+        width: 1.2rem;
+        height: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .uploaded-remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: none;
+        border: none;
+        color: #dc3545;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 0;
+        text-shadow: 0 0 3px rgba(255,255,255,0.8);
+    }
+
+    /* 연관 게시글 드롭다운 */
+    .related-select-wrapper {
+        position: relative;
+    }
+
+    .related-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--salon-white, #fff);
+        border: 1px solid var(--salon-light-gray);
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 100;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .related-dropdown-item {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: var(--font-serif);
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .related-dropdown-item:hover {
+        background-color: rgba(123, 163, 131, 0.1);
+    }
+
+    .related-category-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        padding: 0.1rem 0.4rem;
+        background: var(--salon-green);
+        color: #fff;
+        border-radius: 8px;
+        margin-right: 0.4rem;
+    }
+
+    .related-selected-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .related-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--salon-green);
+        color: #fff;
+        font-size: 0.8rem;
+        font-family: var(--font-serif);
+        border-radius: 4px;
+    }
+
+    .related-category-badge-sm {
+        font-size: 0.65rem;
+        padding: 0.05rem 0.3rem;
+        background: rgba(255,255,255,0.3);
+        border-radius: 4px;
+    }
+
+    .related-chip-remove {
+        background: none;
+        border: none;
+        color: #fff;
+        padding: 0;
+        font-size: 0.9rem;
+        cursor: pointer;
+        line-height: 1;
+        opacity: 0.7;
+    }
+
+    .related-chip-remove:hover {
+        opacity: 1;
+    }
+</style>

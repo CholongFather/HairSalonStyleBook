@@ -1,0 +1,158 @@
+@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>로그인 - 늘-오던 헤어살롱</PageTitle>
+
+<div class="container login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--salon-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="3"/>
+                <circle cx="6" cy="18" r="3"/>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
+        </div>
+        <h2 class="login-title">늘-오던 헤어살롱</h2>
+        <p class="login-subtitle">비밀번호를 입력하여 로그인하세요</p>
+
+        <div class="mb-3">
+            <input type="password"
+                   class="form-control login-input"
+                   placeholder="비밀번호"
+                   @bind="_password"
+                   @onkeydown="OnKeyDown" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="login-error">@_errorMessage</div>
+        }
+
+        <button class="btn btn-salon-green w-100" @onclick="HandleLogin" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            로그인
+        </button>
+    </div>
+</div>
+
+@code {
+    private string _password = "";
+    private string _errorMessage = "";
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 이미 로그인 되어 있으면 리다이렉트
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (isAuth)
+        {
+            var role = await AuthService.GetRoleAsync();
+            Nav.NavigateTo(role == "Admin" ? "admin" : "");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        _errorMessage = "";
+        _loading = true;
+
+        var role = await AuthService.LoginAsync(_password);
+
+        if (role != null)
+        {
+            ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
+            Nav.NavigateTo(role == "Admin" ? "admin" : "");
+        }
+        else
+        {
+            _errorMessage = "비밀번호가 올바르지 않습니다.";
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await HandleLogin();
+    }
+}
+
+<style>
+    .login-page {
+        max-width: 380px;
+        padding-top: 4rem;
+    }
+
+    .login-card {
+        background: var(--salon-white);
+        border: 1px solid var(--salon-light-gray);
+        padding: 2.5rem 2rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .login-logo {
+        margin-bottom: 1rem;
+    }
+
+    .login-title {
+        font-family: var(--font-serif);
+        font-size: 1.3rem;
+        font-weight: 900;
+        color: var(--salon-black);
+        margin-bottom: 0.3rem;
+        letter-spacing: 0.05em;
+    }
+
+    .login-subtitle {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        color: var(--salon-gray);
+        margin-bottom: 1.5rem;
+    }
+
+    .login-input {
+        border-radius: 4px;
+        border: 1px solid var(--salon-light-gray);
+        font-family: var(--font-serif);
+        font-size: 0.9rem;
+        padding: 0.6rem;
+        text-align: center;
+    }
+
+    .login-input:focus {
+        border-color: var(--salon-green);
+        box-shadow: 0 0 0 2px rgba(123, 163, 131, 0.15);
+    }
+
+    .login-error {
+        color: #dc3545;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-salon-green {
+        background-color: var(--salon-green);
+        color: var(--salon-white);
+        border: none;
+        border-radius: 4px;
+        padding: 0.6rem 1.5rem;
+        font-family: var(--font-serif);
+        font-size: 0.9rem;
+        letter-spacing: 0.05em;
+        transition: all 0.3s ease;
+    }
+
+    .btn-salon-green:hover {
+        background-color: #6a9272;
+        color: var(--salon-white);
+    }
+</style>

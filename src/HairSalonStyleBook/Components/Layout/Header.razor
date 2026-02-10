@@ -1,0 +1,106 @@
+@inject NavigationManager Nav
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<header class="salon-header">
+    <div class="container header-container">
+        <div class="header-spacer"></div>
+        <a href="" class="salon-logo" @onclick:preventDefault="false">
+            늘-오던 헤어살롱
+        </a>
+        <div class="header-actions">
+            <AuthorizeView>
+                <Authorized Context="authContext">
+                    <AuthorizeView Roles="Admin">
+                        <Authorized Context="adminContext">
+                            <a href="admin" class="header-link header-admin">
+                                <i class="bi bi-gear-fill"></i>
+                            </a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <button class="header-link" @onclick="HandleLogout" title="로그아웃">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</header>
+
+@code {
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
+        Nav.NavigateTo("login", forceLoad: true);
+    }
+}
+
+<style>
+    .salon-header {
+        background-color: var(--salon-white);
+        padding: 1.2rem 0;
+    }
+
+    .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .header-spacer {
+        flex: 1;
+    }
+
+    .salon-logo {
+        font-family: var(--font-serif);
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: var(--salon-black);
+        letter-spacing: 0.15em;
+        text-decoration: none;
+    }
+
+    .salon-logo:hover {
+        color: var(--salon-black);
+        opacity: 0.8;
+    }
+
+    .header-actions {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .header-link {
+        color: var(--salon-gray);
+        font-size: 1rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.25rem;
+        transition: color 0.2s;
+        text-decoration: none;
+    }
+
+    .header-link:hover {
+        color: var(--salon-green);
+    }
+
+    .header-admin {
+        color: var(--salon-green);
+    }
+
+    @@media (max-width: 576px) {
+        .salon-logo {
+            font-size: 1.4rem;
+        }
+
+        .salon-header {
+            padding: 0.8rem 0;
+        }
+    }
+</style>

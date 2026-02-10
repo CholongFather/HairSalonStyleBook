@@ -1,0 +1,166 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@inject IStyleService StyleService
+@inject IAuditService AuditService
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>관리자 - 늘-오던 헤어살롱</PageTitle>
+
+<div class="container admin-page">
+    <div class="admin-header">
+        <h2 class="admin-title">스타일 관리</h2>
+        <div class="admin-actions">
+            <a href="admin/edit" class="btn btn-salon">
+                <i class="bi bi-plus-lg"></i> 새 스타일
+            </a>
+            <a href="admin/audit" class="btn btn-salon-outline">
+                <i class="bi bi-clock-history"></i> 감사 로그
+            </a>
+            <button class="btn btn-salon-outline" @onclick="HandleLogout">
+                <i class="bi bi-box-arrow-right"></i> 로그아웃
+            </button>
+        </div>
+    </div>
+
+    <!-- 스타일 목록 테이블 -->
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border spinner-border-sm"></div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead>
+                    <tr>
+                        <th>제목</th>
+                        <th>카테고리</th>
+                        <th>게시</th>
+                        <th>생성일</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!_styles.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">등록된 스타일이 없습니다.</td>
+                        </tr>
+                    }
+                    @foreach (var style in _styles)
+                    {
+                        <tr>
+                            <td>@style.Title</td>
+                            <td><span class="badge-category">@style.Category</span></td>
+                            <td>
+                                @if (style.IsPublished)
+                                {
+                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted"><i class="bi bi-dash-circle"></i></span>
+                                }
+                            </td>
+                            <td>@style.CreatedAt.ToString("yyyy.MM.dd")</td>
+                            <td>
+                                <a href="admin/edit/@style.Id" class="btn btn-sm btn-salon-outline me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStyle(style)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<StylePost> _styles = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _styles = await StyleService.GetAllAsync();
+        _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
+        _loading = false;
+    }
+
+    private async Task DeleteStyle(StylePost style)
+    {
+        await StyleService.DeleteAsync(style.Id);
+        await AuditService.LogAsync("Delete", style.Id, style.Title, $"스타일 '{style.Title}' 삭제");
+        _styles.Remove(style);
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
+        Nav.NavigateTo("");
+    }
+}
+
+<style>
+    .admin-page {
+        max-width: 900px;
+        padding-top: 1rem;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-title {
+        font-family: var(--font-serif);
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .admin-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .admin-table {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+    }
+
+    .admin-table th {
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--salon-black);
+    }
+
+    .badge-category {
+        font-size: 0.7rem;
+        background: var(--salon-light-gray);
+        padding: 2px 8px;
+    }
+
+    @@media (max-width: 576px) {
+        .admin-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
