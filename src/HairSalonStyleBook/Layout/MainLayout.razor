@@ -43,6 +43,7 @@
 
 <style>
     .page-slide-container {
+        perspective: 1200px;
         overflow: hidden;
     }
 
@@ -52,37 +53,37 @@
         position: relative;
     }
 
-    /* 페이지 들어옴 - 오른쪽에서 슬라이드 인 */
+    /* 페이지 들어옴 - 책넘김 인 */
     .page-enter {
-        animation-name: slideIn;
-        animation-duration: 0.35s;
+        animation-name: flipIn;
+        animation-duration: 0.45s;
     }
 
-    /* 페이지 나감 - 왼쪽으로 슬라이드 아웃 */
+    /* 페이지 나감 - 책넘김 아웃 */
     .page-exit {
-        animation-name: slideOut;
+        animation-name: flipOut;
         animation-duration: 0.25s;
     }
 
-    @@keyframes slideIn {
+    @@keyframes flipIn {
         0% {
             opacity: 0;
-            transform: translateX(60px);
+            transform: rotateY(-12deg);
         }
         100% {
             opacity: 1;
-            transform: translateX(0);
+            transform: rotateY(0);
         }
     }
 
-    @@keyframes slideOut {
+    @@keyframes flipOut {
         0% {
             opacity: 1;
-            transform: translateX(0);
+            transform: rotateY(0);
         }
         100% {
             opacity: 0;
-            transform: translateX(-60px);
+            transform: rotateY(12deg);
         }
     }
 </style>

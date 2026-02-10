@@ -117,7 +117,7 @@
     {
         await AuthService.LogoutAsync();
         ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
-        Nav.NavigateTo("", forceLoad: true);
+        Nav.NavigateTo("login", forceLoad: true);
     }
 
     private async Task SeedInitialData()
