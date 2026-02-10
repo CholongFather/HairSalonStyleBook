@@ -7,8 +7,13 @@
 
 <div class="container login-page">
     <div class="login-card">
+        <div class="login-ornament">
+            <span class="login-line"></span>
+            <span class="login-diamond">&#10047;</span>
+            <span class="login-line"></span>
+        </div>
         <div class="login-logo">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--salon-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--salon-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="6" cy="6" r="3"/>
                 <circle cx="6" cy="18" r="3"/>
                 <line x1="20" y1="4" x2="8.12" y2="15.88"/>
@@ -17,19 +22,21 @@
             </svg>
         </div>
         <h2 class="login-title">늘-오던 헤어살롱</h2>
-        <p class="login-subtitle">비밀번호를 입력하여 로그인하세요</p>
+        <p class="login-subtitle">관리자 로그인</p>
 
         <div class="mb-3">
             <input type="password"
                    class="form-control login-input"
-                   placeholder="비밀번호"
+                   placeholder="비밀번호를 입력하세요"
                    @bind="_password"
                    @onkeydown="OnKeyDown" />
         </div>
 
         @if (!string.IsNullOrEmpty(_errorMessage))
         {
-            <div class="login-error">@_errorMessage</div>
+            <div class="login-error">
+                <i class="bi bi-exclamation-circle me-1"></i>@_errorMessage
+            </div>
         }
 
         <button class="btn btn-salon-green w-100" @onclick="HandleLogin" disabled="@_loading">
@@ -39,6 +46,10 @@
             }
             로그인
         </button>
+
+        <a href="" class="login-back">
+            <i class="bi bi-chevron-left"></i> 스타일북으로 돌아가기
+        </a>
     </div>
 </div>
 
@@ -88,54 +99,83 @@
 <style>
     .login-page {
         max-width: 380px;
-        padding-top: 4rem;
+        padding-top: 3rem;
     }
 
     .login-card {
         background: var(--salon-white);
         border: 1px solid var(--salon-light-gray);
-        padding: 2.5rem 2rem;
-        border-radius: 8px;
+        padding: 2.5rem 2rem 2rem;
+        border-radius: 12px;
         text-align: center;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .login-ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .login-line {
+        width: 30px;
+        height: 1px;
+        background: linear-gradient(to right, transparent, var(--salon-accent));
+        opacity: 0.3;
+    }
+
+    .login-line:last-child {
+        background: linear-gradient(to left, transparent, var(--salon-accent));
+    }
+
+    .login-diamond {
+        font-size: 0.6rem;
+        color: var(--salon-accent);
+        opacity: 0.4;
     }
 
     .login-logo {
-        margin-bottom: 1rem;
+        margin-bottom: 0.8rem;
     }
 
     .login-title {
         font-family: var(--font-serif);
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 900;
         color: var(--salon-black);
-        margin-bottom: 0.3rem;
-        letter-spacing: 0.05em;
+        margin-bottom: 0.2rem;
+        letter-spacing: 0.08em;
     }
 
     .login-subtitle {
         font-family: var(--font-serif);
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: var(--salon-gray);
         margin-bottom: 1.5rem;
+        letter-spacing: 0.1em;
     }
 
     .login-input {
-        border-radius: 4px;
+        border-radius: 8px;
         border: 1px solid var(--salon-light-gray);
         font-family: var(--font-serif);
-        font-size: 0.9rem;
-        padding: 0.6rem;
+        font-size: 0.88rem;
+        padding: 0.65rem;
         text-align: center;
+        transition: all 0.3s ease;
     }
 
     .login-input:focus {
         border-color: var(--salon-green);
-        box-shadow: 0 0 0 2px rgba(123, 163, 131, 0.15);
+        box-shadow: 0 0 0 3px rgba(123, 163, 131, 0.12);
     }
 
     .login-error {
         color: #dc3545;
-        font-size: 0.85rem;
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
         margin-bottom: 1rem;
     }
 
@@ -143,10 +183,10 @@
         background-color: var(--salon-green);
         color: var(--salon-white);
         border: none;
-        border-radius: 4px;
-        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        padding: 0.65rem 1.5rem;
         font-family: var(--font-serif);
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         letter-spacing: 0.05em;
         transition: all 0.3s ease;
     }
@@ -154,5 +194,25 @@
     .btn-salon-green:hover {
         background-color: #6a9272;
         color: var(--salon-white);
+        box-shadow: 0 4px 12px rgba(123, 163, 131, 0.25);
+    }
+
+    .login-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        margin-top: 1.5rem;
+        transition: color 0.2s;
+    }
+
+    .login-back:hover {
+        color: var(--salon-black);
+    }
+
+    .login-back i {
+        font-size: 0.65rem;
     }
 </style>

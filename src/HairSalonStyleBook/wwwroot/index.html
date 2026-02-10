@@ -60,6 +60,13 @@
                 loading.style.opacity = '0';
                 setTimeout(() => loading.style.display = 'none', 400);
             }
+        }).catch(err => {
+            console.error('Blazor start failed:', err);
+            const loading = document.getElementById('loading-screen');
+            if (loading) {
+                loading.style.opacity = '0';
+                setTimeout(() => loading.style.display = 'none', 400);
+            }
         });
     </script>
 </body>

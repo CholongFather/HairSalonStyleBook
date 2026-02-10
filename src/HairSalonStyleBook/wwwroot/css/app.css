@@ -16,6 +16,10 @@
     --salon-rose: #d4a0a0;
     --salon-rose-light: #ecd4d4;
     --font-serif: 'Noto Serif KR', serif;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(123, 163, 131, 0.15);
 }
 
 /* 기본 레이아웃 */
@@ -26,6 +30,11 @@ html, body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    scroll-behavior: smooth;
+}
+
+html {
+    overflow-x: hidden;
 }
 
 h1:focus {
@@ -43,29 +52,108 @@ a:hover {
     color: var(--salon-accent);
 }
 
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--salon-light-gray);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--salon-gray);
+}
+
+/* 글로벌 애니메이션 유틸리티 */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes floatSoft {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.anim-fade-in-up {
+    animation: fadeInUp 0.5s ease-out both;
+}
+
+.anim-delay-1 { animation-delay: 0.1s; }
+.anim-delay-2 { animation-delay: 0.2s; }
+.anim-delay-3 { animation-delay: 0.3s; }
+.anim-delay-4 { animation-delay: 0.4s; }
+
 /* 버튼 오버라이드 */
 .btn-salon {
     background-color: var(--salon-black);
     color: var(--salon-white);
     border: none;
-    border-radius: 0;
+    border-radius: 2px;
     padding: 0.5rem 1.5rem;
     font-family: var(--font-serif);
     font-size: 0.9rem;
     letter-spacing: 0.05em;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-salon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(201, 169, 110, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.btn-salon:hover::after {
+    width: 300px;
+    height: 300px;
 }
 
 .btn-salon:hover {
     background-color: var(--salon-dark);
     color: var(--salon-accent);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-salon-outline {
     background-color: transparent;
     color: var(--salon-black);
     border: 1px solid var(--salon-black);
-    border-radius: 0;
+    border-radius: 2px;
     padding: 0.5rem 1.5rem;
     font-family: var(--font-serif);
     font-size: 0.9rem;
@@ -76,6 +164,29 @@ a:hover {
 .btn-salon-outline:hover {
     background-color: var(--salon-black);
     color: var(--salon-white);
+    box-shadow: var(--shadow-md);
+}
+
+/* 장식 구분선 */
+.ornament-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
+}
+
+.ornament-divider::before,
+.ornament-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    max-width: 80px;
+    background: linear-gradient(to right, transparent, var(--salon-light-gray));
+}
+
+.ornament-divider::after {
+    background: linear-gradient(to left, transparent, var(--salon-light-gray));
 }
 
 /* 로딩 화면 */
@@ -161,6 +272,7 @@ a:hover {
 .skeleton-card {
     aspect-ratio: 3/4;
     width: 100%;
+    border-radius: 12px;
 }
 
 .skeleton-text {
@@ -183,6 +295,7 @@ a:hover {
 .skeleton-image {
     aspect-ratio: 4/3;
     width: 100%;
+    border-radius: 12px;
 }
 
 /* Blazor 에러 UI */

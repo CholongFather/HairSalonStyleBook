@@ -1,7 +1,9 @@
 <div class="ribbon-divider">
     <div class="ribbon-line"></div>
-    <div class="ribbon-bow">
+    <div class="ribbon-ornament">
+        <span class="ribbon-dot"></span>
         <i class="bi bi-flower1"></i>
+        <span class="ribbon-dot"></span>
     </div>
     <div class="ribbon-line"></div>
 </div>
@@ -11,20 +13,35 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.25rem 1rem;
+        padding: 0.15rem 1rem;
         background-color: var(--salon-white);
     }
 
     .ribbon-line {
         flex: 1;
         height: 1px;
-        background: linear-gradient(to right, transparent, var(--salon-green), transparent);
         max-width: 200px;
+        background: linear-gradient(to right, transparent, var(--salon-accent), transparent);
+        opacity: 0.4;
     }
 
-    .ribbon-bow {
-        margin: 0 1rem;
-        color: var(--salon-green);
-        font-size: 0.8rem;
+    .ribbon-ornament {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0 0.8rem;
+        color: var(--salon-accent);
+        opacity: 0.5;
+    }
+
+    .ribbon-ornament i {
+        font-size: 0.7rem;
+    }
+
+    .ribbon-dot {
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: var(--salon-accent);
     }
 </style>

@@ -12,6 +12,8 @@
                 <i class="bi bi-image"></i>
             </div>
         }
+        <!-- 그라데이션 오버레이 -->
+        <div class="style-card-overlay"></div>
         <!-- 이미지 위 태그 -->
         <div class="style-card-tags">
             <span class="card-tag @(Style.Category.IsFemale() ? "tag-female" : "tag-male")">@Style.Category.ToDisplayName()</span>
@@ -46,32 +48,54 @@
         background: var(--salon-white);
         cursor: pointer;
         overflow: hidden;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         border: 1px solid var(--salon-light-gray);
-        border-radius: 12px;
+        border-radius: 14px;
+        position: relative;
     }
 
     .style-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        transform: translateY(-5px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-color: transparent;
+    }
+
+    .style-card:active {
+        transform: translateY(-2px) scale(0.98);
     }
 
     .style-card-image {
         position: relative;
         aspect-ratio: 3 / 4;
         overflow: hidden;
-        background: #f0ebe0;
+        background: linear-gradient(135deg, #f0ebe0 0%, #e8e3d8 100%);
     }
 
     .style-card-image img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.5s ease;
+        transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
     .style-card:hover .style-card-image img {
-        transform: scale(1.04);
+        transform: scale(1.06);
+    }
+
+    .style-card-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50%;
+        background: linear-gradient(to top, rgba(0,0,0,0.12) 0%, transparent 100%);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+
+    .style-card:hover .style-card-overlay {
+        opacity: 1;
     }
 
     .style-card-placeholder {
@@ -94,33 +118,35 @@
     }
 
     .card-tag {
-        font-size: 0.62rem;
-        padding: 2px 8px;
-        border-radius: 10px;
+        font-size: 0.6rem;
+        padding: 3px 10px;
+        border-radius: 12px;
         font-family: var(--font-serif);
         letter-spacing: 0.03em;
-        font-weight: 500;
-        backdrop-filter: blur(4px);
+        font-weight: 600;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.2);
     }
 
     .card-tag.tag-female {
-        background: rgba(212, 160, 160, 0.9);
+        background: rgba(212, 160, 160, 0.85);
         color: #fff;
     }
 
     .card-tag.tag-male {
-        background: rgba(107, 155, 210, 0.9);
+        background: rgba(107, 155, 210, 0.85);
         color: #fff;
     }
 
     .card-tag.tag-service {
-        background: rgba(44, 44, 44, 0.65);
+        background: rgba(44, 44, 44, 0.6);
         color: #fff;
     }
 
     /* 카드 본문 */
     .style-card-body {
-        padding: 0.6rem 0.7rem 0.7rem;
+        padding: 0.65rem 0.75rem 0.75rem;
     }
 
     .style-card-title {
@@ -145,8 +171,9 @@
 
     .card-hashtag {
         font-family: var(--font-serif);
-        font-size: 0.65rem;
+        font-size: 0.63rem;
         color: var(--salon-green);
         letter-spacing: -0.01em;
+        opacity: 0.75;
     }
 </style>

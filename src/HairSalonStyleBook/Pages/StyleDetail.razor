@@ -1,5 +1,4 @@
 @page "/style/{Id}"
-@attribute [Authorize]
 @inject IStyleService StyleService
 @inject NavigationManager Nav
 
@@ -8,7 +7,7 @@
 <div class="container salon-detail-page">
     <!-- 뒤로가기 -->
     <button class="btn btn-back" @onclick="GoBack">
-        <i class="bi bi-chevron-left"></i> 목록
+        <i class="bi bi-chevron-left"></i> 목록으로
     </button>
 
     @if (_loading)
@@ -24,36 +23,49 @@
     else if (_style == null)
     {
         <div class="text-center py-5">
-            <p class="text-muted">스타일을 찾을 수 없습니다.</p>
-            <a href="" class="btn btn-salon">홈으로 돌아가기</a>
+            <div class="empty-detail">
+                <i class="bi bi-scissors" style="font-size: 2rem; color: var(--salon-light-gray);"></i>
+                <p class="mt-2">스타일을 찾을 수 없습니다.</p>
+                <a href="" class="btn btn-salon mt-2">홈으로 돌아가기</a>
+            </div>
         </div>
     }
     else
     {
-        <!-- 제목 -->
-        <h1 class="detail-title">@_style.Title</h1>
-
-        <!-- 카테고리 & 시술 태그 -->
-        <div class="detail-tags">
-            <span class="detail-tag @(_style.Category.IsFemale() ? "tag-female" : "tag-male")">@_style.Category.ToFullName()</span>
-            <span class="detail-tag tag-service">@_style.Service</span>
-        </div>
-
-        <!-- 상세 설명 -->
-        @if (!string.IsNullOrEmpty(_style.Description))
-        {
-            <div class="detail-description">
-                @((MarkupString)_style.Description)
+        <!-- 제목 영역 -->
+        <div class="detail-header">
+            <div class="detail-ornament">
+                <span class="detail-line"></span>
+                <span class="detail-diamond">&#9830;</span>
+                <span class="detail-line"></span>
             </div>
-        }
+            <h1 class="detail-title">@_style.Title</h1>
+            <!-- 카테고리 & 시술 태그 -->
+            <div class="detail-tags">
+                <span class="detail-tag @(_style.Category.IsFemale() ? "tag-female" : "tag-male")">@_style.Category.ToFullName()</span>
+                <span class="detail-tag tag-service">@_style.Service</span>
+            </div>
+        </div>
 
         <!-- 이미지 캐러셀 -->
         <ImageCarousel ImageUrls="_style.ImageUrls" />
 
+        <!-- 상세 설명 -->
+        @if (!string.IsNullOrEmpty(_style.Description))
+        {
+            <div class="detail-section">
+                <div class="detail-description">
+                    @((MarkupString)_style.Description)
+                </div>
+            </div>
+        }
+
         <!-- 해시태그 -->
         @if (_style.Hashtags.Any())
         {
-            <HashtagList Hashtags="_style.Hashtags" />
+            <div class="detail-section">
+                <HashtagList Hashtags="_style.Hashtags" />
+            </div>
         }
 
         <!-- 연관 게시글 -->
@@ -92,31 +104,70 @@
     /* 뒤로가기 */
     .btn-back {
         font-family: var(--font-serif);
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         color: var(--salon-gray);
         background: none;
         border: none;
         padding: 0.6rem 0;
         margin-bottom: 0.3rem;
-        transition: color 0.2s;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
     }
 
     .btn-back:hover {
         color: var(--salon-black);
+        transform: translateX(-3px);
     }
 
     .btn-back i {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        transition: transform 0.3s;
     }
 
-    /* 제목 */
+    .btn-back:hover i {
+        transform: translateX(-2px);
+    }
+
+    /* 제목 영역 */
+    .detail-header {
+        text-align: center;
+        margin-bottom: 1.2rem;
+    }
+
+    .detail-ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-line {
+        width: 30px;
+        height: 1px;
+        background: linear-gradient(to right, transparent, var(--salon-accent));
+        opacity: 0.4;
+    }
+
+    .detail-line:last-child {
+        background: linear-gradient(to left, transparent, var(--salon-accent));
+    }
+
+    .detail-diamond {
+        font-size: 0.5rem;
+        color: var(--salon-accent);
+        opacity: 0.4;
+    }
+
     .detail-title {
         font-family: var(--font-serif);
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 900;
         color: var(--salon-black);
         text-align: center;
-        margin: 0.3rem 0 0.6rem;
+        margin: 0 0 0.6rem;
         line-height: 1.5;
         letter-spacing: -0.02em;
     }
@@ -126,25 +177,24 @@
         display: flex;
         justify-content: center;
         gap: 0.4rem;
-        margin-bottom: 1rem;
     }
 
     .detail-tag {
         font-family: var(--font-serif);
-        font-size: 0.72rem;
-        padding: 3px 14px;
-        border-radius: 12px;
+        font-size: 0.7rem;
+        padding: 4px 16px;
+        border-radius: 14px;
         letter-spacing: 0.05em;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .tag-female {
-        background: var(--salon-rose);
+        background: linear-gradient(135deg, var(--salon-rose) 0%, var(--salon-rose-light) 100%);
         color: #fff;
     }
 
     .tag-male {
-        background: #6b9bd2;
+        background: linear-gradient(135deg, #6b9bd2 0%, #a3c4e8 100%);
         color: #fff;
     }
 
@@ -153,13 +203,19 @@
         color: #fff;
     }
 
+    /* 섹션 구분 */
+    .detail-section {
+        padding: 0.5rem 0;
+        border-top: 1px solid rgba(232, 227, 220, 0.5);
+    }
+
     /* 상세 설명 */
     .detail-description {
         font-family: var(--font-serif);
         font-size: 0.88rem;
-        line-height: 1.9;
+        line-height: 1.95;
         color: var(--salon-dark);
-        padding: 0.8rem 0.2rem 1rem;
+        padding: 0.8rem 0.2rem 0.5rem;
         word-break: keep-all;
     }
 
@@ -179,14 +235,20 @@
         margin: 1rem 0;
     }
 
+    .empty-detail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
     @@media (max-width: 576px) {
         .detail-title {
-            font-size: 1.15rem;
+            font-size: 1.2rem;
         }
 
         .detail-description {
             font-size: 0.84rem;
-            line-height: 1.8;
+            line-height: 1.85;
         }
     }
 </style>

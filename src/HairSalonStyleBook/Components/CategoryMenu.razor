@@ -5,6 +5,7 @@
     {
         <button class="btn category-btn @(SelectedCategory == category ? "active" : "") @GetColorClass(category)"
                 @onclick="() => OnCategorySelected.InvokeAsync(category)">
+            <span class="cat-icon">@GetIcon(category)</span>
             @category.ToDisplayName()
         </button>
     }
@@ -30,6 +31,17 @@
         _ when category.IsFemale() => "cat-female",
         _ => ""
     };
+
+    private static string GetIcon(StyleCategory category) => category switch
+    {
+        StyleCategory.전체 => "✦",
+        StyleCategory.남성 => "♠",
+        StyleCategory.여성숏 => "✂",
+        StyleCategory.여성단발 => "◆",
+        StyleCategory.여성미디움 => "◇",
+        StyleCategory.여성롱 => "♡",
+        _ => "·"
+    };
 }
 
 <style>
@@ -38,46 +50,75 @@
         justify-content: center;
         flex-wrap: wrap;
         gap: 0.4rem;
-        padding: 0.8rem 0.5rem;
+        padding: 0.8rem 0.5rem 0.5rem;
     }
 
     .category-btn {
         font-family: var(--font-serif);
-        font-size: 0.82rem;
-        padding: 0.35rem 1rem;
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
         border: 1px solid var(--salon-light-gray);
         background: var(--salon-white);
         color: var(--salon-black);
-        border-radius: 20px;
-        transition: all 0.3s ease;
+        border-radius: 22px;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cat-icon {
+        font-size: 0.6rem;
+        opacity: 0.5;
+        transition: opacity 0.3s;
     }
 
     .category-btn:hover {
         border-color: var(--salon-green);
         color: var(--salon-green);
+        box-shadow: 0 2px 8px rgba(123, 163, 131, 0.12);
+        transform: translateY(-1px);
+    }
+
+    .category-btn:hover .cat-icon {
+        opacity: 1;
     }
 
     .category-btn.active {
         background-color: var(--salon-green);
         color: #fff;
         border-color: var(--salon-green);
+        box-shadow: 0 3px 12px rgba(123, 163, 131, 0.25);
+        transform: translateY(-1px);
+    }
+
+    .category-btn.active .cat-icon {
+        opacity: 1;
     }
 
     .category-btn.cat-male.active {
         background: linear-gradient(135deg, #6b9bd2 0%, #a3c4e8 100%);
         border-color: #6b9bd2;
+        box-shadow: 0 3px 12px rgba(107, 155, 210, 0.25);
     }
 
     .category-btn.cat-female.active {
         background: linear-gradient(135deg, var(--salon-rose) 0%, var(--salon-rose-light) 100%);
         border-color: var(--salon-rose);
+        box-shadow: 0 3px 12px rgba(212, 160, 160, 0.25);
     }
 
     @@media (max-width: 576px) {
         .category-btn {
-            font-size: 0.75rem;
-            padding: 0.3rem 0.7rem;
+            font-size: 0.73rem;
+            padding: 0.35rem 0.7rem;
+        }
+
+        .cat-icon {
+            font-size: 0.55rem;
         }
     }
 </style>

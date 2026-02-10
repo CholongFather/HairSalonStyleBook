@@ -25,24 +25,30 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
-        padding: 0.5rem 0;
+        padding: 0.75rem 0;
     }
 
     .hashtag {
         font-family: var(--font-serif);
-        font-size: 0.78rem;
+        font-size: 0.76rem;
         color: var(--salon-green);
-        background: rgba(123, 163, 131, 0.08);
-        border: 1px solid var(--salon-green-light);
-        padding: 0.25rem 0.7rem;
-        border-radius: 14px;
+        background: rgba(123, 163, 131, 0.06);
+        border: 1px solid rgba(168, 197, 173, 0.4);
+        padding: 0.3rem 0.8rem;
+        border-radius: 16px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
     .hashtag:hover {
         background: var(--salon-green);
         color: var(--salon-white);
         border-color: var(--salon-green);
+        box-shadow: 0 2px 8px rgba(123, 163, 131, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .hashtag:active {
+        transform: translateY(0) scale(0.97);
     }
 </style>

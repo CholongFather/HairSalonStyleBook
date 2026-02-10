@@ -1,7 +1,12 @@
 <footer class="salon-footer">
     <div class="container text-center">
-        <div class="footer-divider"></div>
+        <div class="footer-ornament">
+            <span class="footer-line"></span>
+            <i class="bi bi-scissors"></i>
+            <span class="footer-line"></span>
+        </div>
         <p class="footer-brand">늘-오던 헤어살롱</p>
+        <p class="footer-tagline">Style Book</p>
         <p class="footer-copy">&copy; @DateTime.Now.Year All Rights Reserved</p>
     </div>
 </footer>
@@ -10,28 +15,55 @@
     .salon-footer {
         background-color: var(--salon-black);
         color: var(--salon-light-gray);
-        padding: 2rem 0;
+        padding: 2.5rem 0 2rem;
         margin-top: 3rem;
     }
 
-    .footer-divider {
+    .footer-ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.8rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .footer-ornament i {
+        color: var(--salon-accent);
+        font-size: 0.8rem;
+        opacity: 0.5;
+    }
+
+    .footer-line {
         width: 40px;
         height: 1px;
-        background-color: var(--salon-green-light);
-        margin: 0 auto 1rem;
+        background: linear-gradient(to right, transparent, var(--salon-accent));
+        opacity: 0.3;
+    }
+
+    .footer-line:last-child {
+        background: linear-gradient(to left, transparent, var(--salon-accent));
     }
 
     .footer-brand {
         font-family: var(--font-serif);
         font-size: 1rem;
         font-weight: 700;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.25rem;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.15rem;
+    }
+
+    .footer-tagline {
+        font-family: var(--font-serif);
+        font-size: 0.65rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        opacity: 0.4;
+        margin-bottom: 0.8rem;
     }
 
     .footer-copy {
-        font-size: 0.75rem;
-        opacity: 0.6;
+        font-size: 0.7rem;
+        opacity: 0.35;
         margin: 0;
     }
 </style>

@@ -6,14 +6,16 @@
     <div class="container header-container">
         <div class="header-spacer"></div>
         <a href="" class="salon-logo" @onclick:preventDefault="false">
+            <span class="logo-deco">&#10047;</span>
             늘-오던 헤어살롱
+            <span class="logo-deco">&#10047;</span>
         </a>
         <div class="header-actions">
             <AuthorizeView>
                 <Authorized Context="authContext">
                     <AuthorizeView Roles="Admin">
                         <Authorized Context="adminContext">
-                            <a href="admin" class="header-link header-admin">
+                            <a href="admin" class="header-link header-admin" title="관리자">
                                 <i class="bi bi-gear-fill"></i>
                             </a>
                         </Authorized>
@@ -25,6 +27,7 @@
             </AuthorizeView>
         </div>
     </div>
+    <div class="header-subtitle">Style Book</div>
 </header>
 
 @code {
@@ -39,7 +42,8 @@
 <style>
     .salon-header {
         background-color: var(--salon-white);
-        padding: 1.2rem 0;
+        padding: 1.5rem 0 0.5rem;
+        position: relative;
     }
 
     .header-container {
@@ -60,11 +64,31 @@
         color: var(--salon-black);
         letter-spacing: 0.15em;
         text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
     }
 
     .salon-logo:hover {
         color: var(--salon-black);
-        opacity: 0.8;
+    }
+
+    .logo-deco {
+        font-size: 0.7rem;
+        color: var(--salon-accent);
+        opacity: 0.6;
+    }
+
+    .header-subtitle {
+        text-align: center;
+        font-family: var(--font-serif);
+        font-size: 0.7rem;
+        color: var(--salon-gray);
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        margin-top: 0.1rem;
+        padding-bottom: 0.3rem;
     }
 
     .header-actions {
@@ -81,13 +105,15 @@
         background: none;
         border: none;
         cursor: pointer;
-        padding: 0.25rem;
-        transition: color 0.2s;
+        padding: 0.35rem;
+        transition: all 0.3s ease;
         text-decoration: none;
+        border-radius: 50%;
     }
 
     .header-link:hover {
         color: var(--salon-green);
+        background: rgba(123, 163, 131, 0.1);
     }
 
     .header-admin {
@@ -100,7 +126,15 @@
         }
 
         .salon-header {
-            padding: 0.8rem 0;
+            padding: 1rem 0 0.3rem;
+        }
+
+        .logo-deco {
+            font-size: 0.55rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.6rem;
         }
     }
 </style>

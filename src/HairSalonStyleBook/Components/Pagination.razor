@@ -1,7 +1,7 @@
 <nav class="salon-pagination" aria-label="페이지 네비게이션">
     <ul class="pagination justify-content-center">
         <li class="page-item @(CurrentPage <= 1 ? "disabled" : "")">
-            <button class="page-link" @onclick="() => GoToPage(CurrentPage - 1)">
+            <button class="page-link page-arrow" @onclick="() => GoToPage(CurrentPage - 1)">
                 <i class="bi bi-chevron-left"></i>
             </button>
         </li>
@@ -13,7 +13,7 @@
             </li>
         }
         <li class="page-item @(CurrentPage >= TotalPages ? "disabled" : "")">
-            <button class="page-link" @onclick="() => GoToPage(CurrentPage + 1)">
+            <button class="page-link page-arrow" @onclick="() => GoToPage(CurrentPage + 1)">
                 <i class="bi bi-chevron-right"></i>
             </button>
         </li>
@@ -44,25 +44,35 @@
         border: 1px solid var(--salon-light-gray);
         color: var(--salon-black);
         font-family: var(--font-serif);
-        font-size: 0.85rem;
-        border-radius: 0;
+        font-size: 0.82rem;
+        border-radius: 8px !important;
         padding: 0.4rem 0.75rem;
         background: var(--salon-white);
+        margin: 0 2px;
+        transition: all 0.3s ease;
     }
 
     .salon-pagination .page-link:hover {
         background: var(--salon-black);
         color: var(--salon-white);
         border-color: var(--salon-black);
+        box-shadow: 0 2px 8px rgba(44, 44, 44, 0.15);
+        transform: translateY(-1px);
     }
 
     .salon-pagination .page-item.active .page-link {
         background: var(--salon-black);
         border-color: var(--salon-black);
         color: var(--salon-white);
+        box-shadow: 0 2px 8px rgba(44, 44, 44, 0.2);
     }
 
     .salon-pagination .page-item.disabled .page-link {
-        opacity: 0.3;
+        opacity: 0.25;
+    }
+
+    .salon-pagination .page-arrow {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
     }
 </style>
