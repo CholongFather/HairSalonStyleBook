@@ -389,24 +389,92 @@
             await Task.Delay(30);
         }
 
-        // 새 초기 데이터 생성
+        // 1단계: 스타일 생성
         var styles = GetInitialStyles();
         _seedProgress = 0;
         _seedTotal = styles.Count;
         StateHasChanged();
 
+        var createdStyles = new List<StylePost>();
         foreach (var style in styles)
         {
-            await StyleService.CreateAsync(style);
+            var created = await StyleService.CreateAsync(style);
+            createdStyles.Add(created);
             _seedProgress++;
             if (_seedProgress % 5 == 0) StateHasChanged();
-            await Task.Delay(50); // Firestore 과부하 방지
+            await Task.Delay(50);
+        }
+
+        // 2단계: 연관 게시글 링크 + 해시태그 보강
+        _seedProgress = 0;
+        _seedTotal = createdStyles.Count;
+        StateHasChanged();
+
+        var titleToId = createdStyles.ToDictionary(s => s.Title, s => s.Id);
+        foreach (var style in createdStyles)
+        {
+            var updated = false;
+
+            // 연관 게시글: 같은 카테고리+서비스 중 자신 제외 최대 4개
+            var related = createdStyles
+                .Where(s => s.Id != style.Id && s.Category == style.Category && s.Service == style.Service)
+                .OrderBy(_ => Guid.NewGuid())
+                .Take(4)
+                .Select(s => s.Id)
+                .ToList();
+            if (related.Any())
+            {
+                style.RelatedPostIds = related;
+                updated = true;
+            }
+
+            // 해시태그 보강: 카테고리, 난이도, 트렌드 태그 자동 추가
+            var extraTags = new List<string>();
+            extraTags.Add(style.Category switch
+            {
+                StyleCategory.남성 => "남자헤어",
+                StyleCategory.여성숏 => "여자숏컷",
+                StyleCategory.여성단발 => "단발헤어",
+                StyleCategory.여성미디움 => "미디엄헤어",
+                StyleCategory.여성롱 => "롱헤어",
+                _ => ""
+            });
+            extraTags.Add(style.Service switch
+            {
+                ServiceType.커트 => "커트추천",
+                ServiceType.펌 => "펌추천",
+                ServiceType.염색 => "염색추천",
+                _ => ""
+            });
+            if (style.TreatmentDifficulty <= 2) extraTags.Add("초보추천");
+            if (style.MaintenanceLevel <= 2) extraTags.Add("관리쉬움");
+            if (style.MaintenanceLevel >= 4) extraTags.Add("스타일링필수");
+            if (style.Duration?.Contains("주") == true) extraTags.Add("자주방문");
+            if (style.RecommendedFaceShapes.Contains("둥근형")) extraTags.Add("둥근얼굴추천");
+            if (style.RecommendedFaceShapes.Contains("각진형")) extraTags.Add("각진얼굴추천");
+            extraTags.Add("헤어살롱");
+            extraTags.Add("헤어스타일");
+
+            var newTags = extraTags.Where(t => !string.IsNullOrEmpty(t) && !style.Hashtags.Contains(t)).ToList();
+            if (newTags.Any())
+            {
+                style.Hashtags.AddRange(newTags);
+                updated = true;
+            }
+
+            if (updated)
+            {
+                await StyleService.UpdateAsync(style);
+                await Task.Delay(30);
+            }
+            _seedProgress++;
+            if (_seedProgress % 10 == 0) StateHasChanged();
         }
 
         _styles = await StyleService.GetAllAsync();
         _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
         _seeding = false;
-        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: 기존 삭제 후 {styles.Count}건 생성");
+        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: {styles.Count}건 생성 + 연관링크 + 해시태그 보강");
     }
 
     private static List<StylePost> GetInitialStyles()
