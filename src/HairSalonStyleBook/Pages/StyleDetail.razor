@@ -87,20 +87,35 @@
                     <span>한눈에 보기</span>
                 </div>
                 <div class="quick-info-body">
-                    @if (!string.IsNullOrEmpty(_style.MaintenanceLevel))
+                    @if (_style.TreatmentDifficulty > 0)
+                    {
+                        <div class="quick-info-row">
+                            <span class="quick-info-label">시술 난이도</span>
+                            <span class="quick-info-value">
+                                @for (int i = 0; i < _style.TreatmentDifficulty; i++)
+                                {
+                                    <i class="bi bi-star-fill quick-dot active"></i>
+                                }
+                                @for (int i = _style.TreatmentDifficulty; i < 5; i++)
+                                {
+                                    <i class="bi bi-star quick-dot"></i>
+                                }
+                            </span>
+                        </div>
+                    }
+                    @if (_style.MaintenanceLevel > 0)
                     {
                         <div class="quick-info-row">
                             <span class="quick-info-label">관리 난이도</span>
                             <span class="quick-info-value">
-                                @for (int i = 0; i < MaintenanceDots; i++)
+                                @for (int i = 0; i < _style.MaintenanceLevel; i++)
                                 {
-                                    <i class="bi bi-circle-fill quick-dot active"></i>
+                                    <i class="bi bi-star-fill quick-dot active"></i>
                                 }
-                                @for (int i = MaintenanceDots; i < 3; i++)
+                                @for (int i = _style.MaintenanceLevel; i < 5; i++)
                                 {
-                                    <i class="bi bi-circle quick-dot"></i>
+                                    <i class="bi bi-star quick-dot"></i>
                                 }
-                                <span class="quick-dot-label">@_style.MaintenanceLevel</span>
                             </span>
                         </div>
                     }
@@ -191,18 +206,11 @@
     }
 
     private bool HasQuickInfo => _style != null && (
-        !string.IsNullOrEmpty(_style.MaintenanceLevel) ||
+        _style.TreatmentDifficulty > 0 ||
+        _style.MaintenanceLevel > 0 ||
         !string.IsNullOrEmpty(_style.Duration) ||
         _style.RecommendedFaceShapes.Any() ||
         _style.RecommendedHairTypes.Any());
-
-    private int MaintenanceDots => _style?.MaintenanceLevel switch
-    {
-        "쉬움" => 1,
-        "보통" => 2,
-        "어려움" => 3,
-        _ => 0
-    };
 
     private void GoBack() => Nav.NavigateTo("");
     private void GoPrev() { if (_prevId != null) Nav.NavigateTo($"style/{_prevId}"); }

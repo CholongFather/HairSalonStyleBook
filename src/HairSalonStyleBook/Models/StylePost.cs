@@ -24,9 +24,14 @@ public class StylePost
     public string StylingTip { get; set; } = string.Empty;
 
     /// <summary>
-    /// 관리 난이도: "쉬움" / "보통" / "어려움"
+    /// 시술 난이도 (1~5점)
     /// </summary>
-    public string MaintenanceLevel { get; set; } = string.Empty;
+    public int TreatmentDifficulty { get; set; }
+
+    /// <summary>
+    /// 관리 난이도 (1~5점)
+    /// </summary>
+    public int MaintenanceLevel { get; set; }
 
     /// <summary>
     /// 유지 기간 (예: "2~3개월")

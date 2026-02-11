@@ -94,21 +94,39 @@
             }
         </div>
 
-        <!-- 관리 난이도 -->
+        <!-- 시술 난이도 (1~5) -->
+        <div class="mb-3">
+            <label class="form-label">시술 난이도</label>
+            <div class="d-flex gap-2 align-items-center">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    var val = i;
+                    <button type="button"
+                            class="btn btn-sm @(_style.TreatmentDifficulty >= val ? "btn-warning" : "btn-outline-secondary")"
+                            style="min-width:36px"
+                            @onclick="() => _style.TreatmentDifficulty = val">
+                        @val
+                    </button>
+                }
+                <span class="text-muted small ms-2">@GetDifficultyLabel(_style.TreatmentDifficulty)</span>
+            </div>
+        </div>
+
+        <!-- 관리 난이도 (1~5) -->
         <div class="mb-3">
             <label class="form-label">관리 난이도</label>
-            <div class="d-flex gap-3">
-                @foreach (var level in new[] { "쉬움", "보통", "어려움" })
+            <div class="d-flex gap-2 align-items-center">
+                @for (int i = 1; i <= 5; i++)
                 {
-                    var lvl = level;
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="maintenanceLevel"
-                               id="ml_@lvl" value="@lvl"
-                               checked="@(_style.MaintenanceLevel == lvl)"
-                               @onchange="() => _style.MaintenanceLevel = lvl" />
-                        <label class="form-check-label" for="ml_@lvl">@lvl</label>
-                    </div>
+                    var val = i;
+                    <button type="button"
+                            class="btn btn-sm @(_style.MaintenanceLevel >= val ? "btn-warning" : "btn-outline-secondary")"
+                            style="min-width:36px"
+                            @onclick="() => _style.MaintenanceLevel = val">
+                        @val
+                    </button>
                 }
+                <span class="text-muted small ms-2">@GetDifficultyLabel(_style.MaintenanceLevel)</span>
             </div>
         </div>
 
@@ -376,6 +394,16 @@
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .ToList();
     }
+
+    private static string GetDifficultyLabel(int level) => level switch
+    {
+        1 => "매우 쉬움",
+        2 => "쉬움",
+        3 => "보통",
+        4 => "어려움",
+        5 => "매우 어려움",
+        _ => ""
+    };
 
     private void GoBack() => Nav.NavigateTo("admin");
 }

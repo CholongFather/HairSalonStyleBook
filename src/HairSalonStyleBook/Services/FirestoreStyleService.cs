@@ -172,7 +172,8 @@ public class FirestoreStyleService : IStyleService
                 Hashtags = GetArrayValue(fields, "hashtags"),
                 RelatedPostIds = GetArrayValue(fields, "relatedPostIds"),
                 StylingTip = GetStringValue(fields, "stylingTip"),
-                MaintenanceLevel = GetStringValue(fields, "maintenanceLevel"),
+                TreatmentDifficulty = GetIntValue(fields, "treatmentDifficulty"),
+                MaintenanceLevel = GetIntValue(fields, "maintenanceLevel"),
                 Duration = GetStringValue(fields, "duration"),
                 RecommendedFaceShapes = GetArrayValue(fields, "recommendedFaceShapes"),
                 RecommendedHairTypes = GetArrayValue(fields, "recommendedHairTypes"),
@@ -202,7 +203,8 @@ public class FirestoreStyleService : IStyleService
                 ["hashtags"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.Hashtags.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
                 ["relatedPostIds"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.RelatedPostIds.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
                 ["stylingTip"] = new() { StringValue = style.StylingTip },
-                ["maintenanceLevel"] = new() { StringValue = style.MaintenanceLevel },
+                ["treatmentDifficulty"] = new() { IntegerValue = style.TreatmentDifficulty.ToString() },
+                ["maintenanceLevel"] = new() { IntegerValue = style.MaintenanceLevel.ToString() },
                 ["duration"] = new() { StringValue = style.Duration },
                 ["recommendedFaceShapes"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.RecommendedFaceShapes.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
                 ["recommendedHairTypes"] = new() { ArrayValue = new FirestoreArrayValue { Values = style.RecommendedHairTypes.Select(v => new FirestoreValue { StringValue = v }).ToList() } },
@@ -216,6 +218,9 @@ public class FirestoreStyleService : IStyleService
 
     private static string GetStringValue(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
+
+    private static int GetIntValue(Dictionary<string, FirestoreValue> fields, string key)
+        => fields.TryGetValue(key, out var v) && int.TryParse(v.IntegerValue, out var n) ? n : 0;
 
     private static bool GetBoolValue(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) && v.BooleanValue == true;
@@ -255,6 +260,7 @@ public class FirestoreFields
 public class FirestoreValue
 {
     public string? StringValue { get; set; }
+    public string? IntegerValue { get; set; }
     public bool? BooleanValue { get; set; }
     public string? TimestampValue { get; set; }
     public FirestoreArrayValue? ArrayValue { get; set; }
