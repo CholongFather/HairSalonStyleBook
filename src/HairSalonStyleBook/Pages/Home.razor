@@ -54,6 +54,19 @@
                         }
                     </div>
                 }
+                else if (_loadError)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="bi bi-wifi-off"></i>
+                        </div>
+                        <p class="empty-text">데이터를 불러올 수 없습니다</p>
+                        <p class="empty-sub">네트워크 연결을 확인해주세요</p>
+                        <button class="btn btn-salon btn-sm mt-2" @onclick="LoadStyles">
+                            <i class="bi bi-arrow-clockwise"></i> 다시 시도
+                        </button>
+                    </div>
+                }
                 else if (!_pagedStyles.Any())
                 {
                     <div class="empty-state">
@@ -66,11 +79,7 @@
                 }
                 else
                 {
-                    <div class="swipe-area"
-                         @ontouchstart="OnTouchStart"
-                         @ontouchmove="OnTouchMove"
-                         @ontouchmove:preventDefault="_swiping"
-                         @ontouchend="OnTouchEnd">
+                    <div class="swipe-area">
                         <div class="style-grid @_slideClass" @key="_pageKey">
                             @foreach (var style in _pagedStyles)
                             {
@@ -229,12 +238,9 @@
     private int _activeTab;
     private int _shopTab;
 
-    // 페이지 슬라이드 & 스와이프
+    // 페이지 슬라이드
     private string _slideClass = "";
     private int _pageKey;
-    private double _touchStartX;
-    private double _touchCurrentX;
-    private bool _swiping;
 
     // QR 오버레이
     private bool _showQrOverlay;
@@ -290,12 +296,24 @@
         _qrScale = Math.Max(_qrScale - 0.25, 0.5);
     }
 
+    private bool _loadError;
+
     private async Task LoadStyles()
     {
         _loading = true;
-        _allStyles = await StyleService.GetAllAsync();
-        _allStyles = _allStyles.Where(s => s.IsPublished).OrderByDescending(s => s.CreatedAt).ToList();
-        ApplyFilters();
+        _loadError = false;
+        try
+        {
+            _allStyles = await StyleService.GetAllAsync();
+            _allStyles = _allStyles.Where(s => s.IsPublished).OrderByDescending(s => s.CreatedAt).ToList();
+            ApplyFilters();
+        }
+        catch
+        {
+            _loadError = true;
+            _allStyles = new();
+            _filteredStyles = new();
+        }
         _loading = false;
     }
 
@@ -364,36 +382,6 @@
         _pageKey++;
         _currentPage = page;
         ApplyFilters();
-        return Task.CompletedTask;
-    }
-
-    // 스와이프 이벤트
-    private void OnTouchStart(TouchEventArgs e)
-    {
-        _touchStartX = e.ChangedTouches[0].ClientX;
-        _touchCurrentX = _touchStartX;
-        _swiping = false;
-    }
-
-    private void OnTouchMove(TouchEventArgs e)
-    {
-        _touchCurrentX = e.ChangedTouches[0].ClientX;
-        var diff = Math.Abs(_touchStartX - _touchCurrentX);
-        if (diff > 20) _swiping = true;
-    }
-
-    private Task OnTouchEnd(TouchEventArgs e)
-    {
-        var diff = _touchStartX - _touchCurrentX;
-        _swiping = false;
-
-        if (Math.Abs(diff) < 60) return Task.CompletedTask;
-
-        if (diff > 0 && _currentPage < _totalPages)
-            return OnPageChanged(_currentPage + 1); // 왼쪽 스와이프 → 다음 페이지
-        if (diff < 0 && _currentPage > 1)
-            return OnPageChanged(_currentPage - 1); // 오른쪽 스와이프 → 이전 페이지
-
         return Task.CompletedTask;
     }
 

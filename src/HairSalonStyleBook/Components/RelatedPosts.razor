@@ -1,7 +1,22 @@
 @inject IStyleService StyleService
 @inject NavigationManager Nav
 
-@if (_relatedStyles.Any())
+@if (_loading && RelatedPostIds.Any())
+{
+    <div class="related-posts">
+        <h4 class="related-title">연관 스타일</h4>
+        <div class="related-scroll">
+            @for (int i = 0; i < Math.Min(RelatedPostIds.Count, 4); i++)
+            {
+                <div class="related-card">
+                    <div class="related-image related-skeleton"></div>
+                    <div class="related-skeleton-text"></div>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (_relatedStyles.Any())
 {
     <div class="related-posts">
         <h4 class="related-title">연관 스타일</h4>
@@ -30,9 +45,11 @@
     [Parameter] public List<string> RelatedPostIds { get; set; } = new();
 
     private List<StylePost> _relatedStyles = new();
+    private bool _loading = true;
 
     protected override async Task OnParametersSetAsync()
     {
+        _loading = true;
         _relatedStyles.Clear();
         foreach (var id in RelatedPostIds.Take(6))
         {
@@ -40,6 +57,7 @@
             if (style != null)
                 _relatedStyles.Add(style);
         }
+        _loading = false;
     }
 
     private void GoToStyle(string id)
@@ -118,5 +136,27 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    /* 스켈레톤 로딩 */
+    .related-skeleton {
+        background: linear-gradient(135deg, #f0ebe0 0%, #e8e3d8 50%, #f0ebe0 100%);
+        background-size: 200% 100%;
+        animation: related-shimmer 1.5s ease-in-out infinite;
+    }
+
+    .related-skeleton-text {
+        height: 12px;
+        margin-top: 0.4rem;
+        border-radius: 4px;
+        width: 80%;
+        background: linear-gradient(135deg, #f0ebe0 0%, #e8e3d8 50%, #f0ebe0 100%);
+        background-size: 200% 100%;
+        animation: related-shimmer 1.5s ease-in-out infinite;
+    }
+
+    @@keyframes related-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 </style>

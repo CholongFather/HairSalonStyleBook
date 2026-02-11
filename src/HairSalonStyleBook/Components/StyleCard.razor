@@ -24,6 +24,20 @@
     </div>
     <div class="style-card-body">
         <h3 class="style-card-title">@Style.Title</h3>
+        @if (Style.TreatmentDifficulty > 0)
+        {
+            <div class="card-difficulty">
+                <span class="card-diff-label">시술</span>
+                @for (int i = 0; i < Style.TreatmentDifficulty; i++)
+                {
+                    <i class="bi bi-star-fill card-star active"></i>
+                }
+                @for (int i = Style.TreatmentDifficulty; i < 5; i++)
+                {
+                    <i class="bi bi-star card-star"></i>
+                }
+            </div>
+        }
         @if (Style.Hashtags.Any())
         {
             <div class="style-card-hashtags">
@@ -174,6 +188,31 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+    }
+
+    /* 난이도 별점 */
+    .card-difficulty {
+        display: flex;
+        align-items: center;
+        gap: 0.1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .card-diff-label {
+        font-family: var(--font-serif);
+        font-size: 0.58rem;
+        color: var(--salon-gray);
+        margin-right: 0.2rem;
+        font-weight: 600;
+    }
+
+    .card-star {
+        font-size: 0.5rem;
+        color: #ddd;
+    }
+
+    .card-star.active {
+        color: #e8a840;
     }
 
     /* 해시태그 미리보기 */
