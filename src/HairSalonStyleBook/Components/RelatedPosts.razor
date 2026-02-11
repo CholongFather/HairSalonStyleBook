@@ -159,4 +159,19 @@ else if (_relatedStyles.Any())
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
     }
+
+    /* 태블릿 반응형 */
+    @@media (min-width: 768px) {
+        .related-title {
+            font-size: 1.1rem;
+        }
+
+        .related-card {
+            flex: 0 0 170px;
+        }
+
+        .related-card-title {
+            font-size: 0.85rem;
+        }
+    }
 </style>

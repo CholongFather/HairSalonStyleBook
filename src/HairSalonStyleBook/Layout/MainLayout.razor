@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="salon-app">
@@ -15,12 +16,59 @@
     <Footer />
 </div>
 
+<!-- 맨 위로 버튼 -->
+<button class="btn-scroll-top" @onclick="ScrollToTop">
+    <i class="bi bi-chevron-up"></i>
+</button>
+
 @code {
     private string _animClass = "page-enter";
-
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    // 맨 위로 버튼 스크롤 감지
+                    var btn = document.querySelector('.btn-scroll-top');
+                    if (btn) {
+                        window.addEventListener('scroll', function() {
+                            if (window.scrollY > 300) btn.classList.add('visible');
+                            else btn.classList.remove('visible');
+                        }, { passive: true });
+                    }
+
+                    // 비활성 자동 리셋 (5분)
+                    var IDLE_TIMEOUT = 5 * 60 * 1000;
+                    var idleTimer = null;
+                    function resetIdleTimer() {
+                        clearTimeout(idleTimer);
+                        idleTimer = setTimeout(function() {
+                            // 관리자 페이지에서는 리셋하지 않음
+                            if (window.location.pathname.indexOf('/admin') === -1 &&
+                                window.location.pathname.indexOf('/login') === -1) {
+                                window.scrollTo(0, 0);
+                                window.location.href = '/';
+                            }
+                        }, IDLE_TIMEOUT);
+                    }
+                    ['touchstart', 'touchmove', 'click', 'scroll', 'keydown'].forEach(function(evt) {
+                        document.addEventListener(evt, resetIdleTimer, { passive: true });
+                    });
+                    resetIdleTimer();
+                })();
+            ");
+        }
+    }
+
+    private async Task ScrollToTop()
+    {
+        await JS.InvokeVoidAsync("eval", "window.scrollTo({ top: 0, behavior: 'smooth' })");
     }
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
@@ -68,5 +116,56 @@
     @@keyframes fadeOut {
         from { opacity: 1; }
         to { opacity: 0; }
+    }
+
+    /* 맨 위로 버튼 */
+    .btn-scroll-top {
+        position: fixed;
+        bottom: 2rem;
+        right: 1.2rem;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--salon-light-gray);
+        background: var(--salon-white);
+        color: var(--salon-dark);
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        transition: all 0.3s ease;
+        z-index: 100;
+    }
+
+    .btn-scroll-top.visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .btn-scroll-top:hover {
+        background: var(--salon-green);
+        color: #fff;
+        border-color: var(--salon-green);
+    }
+
+    .btn-scroll-top:active {
+        transform: scale(0.95);
+    }
+
+    /* 태블릿 반응형 */
+    @@media (min-width: 768px) {
+        .btn-scroll-top {
+            width: 52px;
+            height: 52px;
+            font-size: 1.3rem;
+            bottom: 2.5rem;
+            right: 1.5rem;
+        }
     }
 </style>

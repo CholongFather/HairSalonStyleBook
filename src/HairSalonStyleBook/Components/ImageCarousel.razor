@@ -19,9 +19,11 @@
         @for (int i = 0; i < ImageUrls.Count; i++)
         {
             <div class="carousel-item @(i == 0 ? "active" : "")">
+                @{ var capturedIndex = i; }
                 <img src="@ImageUrls[i]" class="d-block w-100" alt="스타일 사진 @(i + 1)"
                      onload="this.classList.add('loaded')"
-                     onerror="this.onerror=null;this.src='images/default-style.svg'" />
+                     onerror="this.onerror=null;this.src='images/default-style.svg'"
+                     @onclick="() => OpenFullscreen(capturedIndex)" />
             </div>
         }
         @if (ImageUrls.Count == 0)
@@ -48,10 +50,58 @@
     }
 </div>
 
+@if (_showFullscreen)
+{
+    <div class="img-fullscreen-overlay" @onclick="CloseFullscreen">
+        <button class="img-fs-close" @onclick="CloseFullscreen">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="img-fs-inner" @onclick:stopPropagation>
+            <img src="@_fullscreenUrl" alt="풀스크린 이미지" />
+        </div>
+        @if (ImageUrls.Count > 1)
+        {
+            <div class="img-fs-counter">@(_fullscreenIndex + 1) / @ImageUrls.Count</div>
+            <button class="img-fs-nav img-fs-prev" @onclick="FsPrev" @onclick:stopPropagation>
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="img-fs-nav img-fs-next" @onclick="FsNext" @onclick:stopPropagation>
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        }
+    </div>
+}
+
 @code {
     [Parameter] public List<string> ImageUrls { get; set; } = new();
 
     private string _carouselId = $"carousel-{Guid.NewGuid():N}"[..16];
+
+    // 풀스크린
+    private bool _showFullscreen;
+    private string _fullscreenUrl = "";
+    private int _fullscreenIndex;
+
+    private void OpenFullscreen(int index)
+    {
+        _fullscreenIndex = index;
+        _fullscreenUrl = ImageUrls[index];
+        _showFullscreen = true;
+    }
+
+    private void CloseFullscreen() => _showFullscreen = false;
+
+    private void FsPrev()
+    {
+        _fullscreenIndex = (_fullscreenIndex - 1 + ImageUrls.Count) % ImageUrls.Count;
+        _fullscreenUrl = ImageUrls[_fullscreenIndex];
+    }
+
+    private void FsNext()
+    {
+        _fullscreenIndex = (_fullscreenIndex + 1) % ImageUrls.Count;
+        _fullscreenUrl = ImageUrls[_fullscreenIndex];
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -191,5 +241,134 @@
     .carousel-placeholder i {
         font-size: 3rem;
         margin-bottom: 0.5rem;
+    }
+
+    .salon-carousel .carousel-item img {
+        cursor: pointer;
+    }
+
+    /* 풀스크린 오버레이 */
+    .img-fullscreen-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.92);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: imgFsIn 0.2s ease;
+    }
+
+    @@keyframes imgFsIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .img-fs-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .img-fs-inner {
+        max-width: 90vw;
+        max-height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .img-fs-inner img {
+        max-width: 100%;
+        max-height: 85vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    .img-fs-counter {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        padding: 4px 16px;
+        border-radius: 16px;
+        letter-spacing: 0.05em;
+    }
+
+    .img-fs-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 1.3rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .img-fs-nav:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .img-fs-prev { left: 1rem; }
+    .img-fs-next { right: 1rem; }
+
+    /* 태블릿 반응형 */
+    @@media (min-width: 768px) {
+        .salon-carousel .carousel-control-prev,
+        .salon-carousel .carousel-control-next {
+            width: 56px;
+            height: 56px;
+        }
+
+        .salon-carousel .carousel-control-prev-icon,
+        .salon-carousel .carousel-control-next-icon {
+            padding: 1.2rem;
+        }
+
+        .carousel-counter {
+            font-size: 0.85rem;
+            padding: 3px 14px;
+        }
+
+        .img-fs-nav {
+            width: 56px;
+            height: 56px;
+            font-size: 1.5rem;
+        }
+
+        .img-fs-counter {
+            font-size: 0.95rem;
+            padding: 5px 20px;
+        }
+
+        .img-fs-close {
+            width: 52px;
+            height: 52px;
+            font-size: 1.4rem;
+        }
     }
 </style>
