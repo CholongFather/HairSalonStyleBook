@@ -5,11 +5,7 @@
 
 <PageTitle>@(_style?.Title ?? "스타일 상세") - 늘-오던 헤어살롱</PageTitle>
 
-<div class="container salon-detail-page"
-     @ontouchstart="OnTouchStart"
-     @ontouchmove="OnTouchMove"
-     @ontouchmove:preventDefault="_swiping"
-     @ontouchend="OnTouchEnd">
+<div class="container salon-detail-page">
     <!-- 뒤로가기 + 이전/다음 -->
     <div class="detail-nav-bar">
         <button class="btn btn-back" @onclick="GoBack">
@@ -174,12 +170,6 @@
     private int _styleIndex = -1;
     private int _totalCount;
 
-    // 스와이프
-    private double _touchStartX;
-    private double _touchStartY;
-    private double _touchCurrentX;
-    private bool _swiping;
-
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
@@ -217,39 +207,6 @@
     private void GoBack() => Nav.NavigateTo("");
     private void GoPrev() { if (_prevId != null) Nav.NavigateTo($"style/{_prevId}"); }
     private void GoNext() { if (_nextId != null) Nav.NavigateTo($"style/{_nextId}"); }
-
-    // 스와이프 (임계값 100px로 예민하지 않게)
-    private void OnTouchStart(TouchEventArgs e)
-    {
-        _touchStartX = e.ChangedTouches[0].ClientX;
-        _touchStartY = e.ChangedTouches[0].ClientY;
-        _touchCurrentX = _touchStartX;
-        _swiping = false;
-    }
-
-    private void OnTouchMove(TouchEventArgs e)
-    {
-        _touchCurrentX = e.ChangedTouches[0].ClientX;
-        var diffX = Math.Abs(_touchStartX - _touchCurrentX);
-        var diffY = Math.Abs(_touchStartY - e.ChangedTouches[0].ClientY);
-        // 수평 움직임이 수직보다 클 때만 스와이프로 판단
-        if (diffX > 30 && diffX > diffY * 1.5)
-            _swiping = true;
-    }
-
-    private void OnTouchEnd(TouchEventArgs e)
-    {
-        if (!_swiping) return;
-        _swiping = false;
-
-        var diff = _touchStartX - _touchCurrentX;
-        if (Math.Abs(diff) < 100) return; // 100px 이상이어야 동작
-
-        if (diff > 0 && _nextId != null)
-            GoNext(); // 왼쪽 스와이프 → 다음
-        else if (diff < 0 && _prevId != null)
-            GoPrev(); // 오른쪽 스와이프 → 이전
-    }
 }
 
 <style>
