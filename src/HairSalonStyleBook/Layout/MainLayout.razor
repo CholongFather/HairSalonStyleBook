@@ -43,7 +43,6 @@
 
 <style>
     .page-slide-container {
-        perspective: 1200px;
         overflow: hidden;
     }
 
@@ -53,37 +52,21 @@
         position: relative;
     }
 
-    /* 페이지 들어옴 - 책넘김 인 */
     .page-enter {
-        animation-name: flipIn;
-        animation-duration: 0.45s;
+        animation: fadeIn 0.3s ease;
     }
 
-    /* 페이지 나감 - 책넘김 아웃 */
     .page-exit {
-        animation-name: flipOut;
-        animation-duration: 0.25s;
+        animation: fadeOut 0.2s ease;
     }
 
-    @@keyframes flipIn {
-        0% {
-            opacity: 0;
-            transform: rotateY(-12deg);
-        }
-        100% {
-            opacity: 1;
-            transform: rotateY(0);
-        }
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 
-    @@keyframes flipOut {
-        0% {
-            opacity: 1;
-            transform: rotateY(0);
-        }
-        100% {
-            opacity: 0;
-            transform: rotateY(12deg);
-        }
+    @@keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
     }
 </style>
