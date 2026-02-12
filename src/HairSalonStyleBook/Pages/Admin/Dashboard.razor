@@ -274,10 +274,59 @@
         <div class="prompt-modal-body">
             <div class="prompt-field">
                 <label>모델 나이대</label>
-                <input type="text" class="form-control form-control-sm" @bind="_promptAge" />
+                <div class="d-flex gap-2">
+                    <select class="form-select form-select-sm" @bind="_promptAgeGroup">
+                        <option>10대</option>
+                        <option>20대</option>
+                        <option>30대</option>
+                        <option>40대</option>
+                        <option>50대</option>
+                    </select>
+                    <select class="form-select form-select-sm" @bind="_promptAgeDetail">
+                        <option>초반</option>
+                        <option>중반</option>
+                        <option>후반</option>
+                    </select>
+                </div>
+            </div>
+            <div class="prompt-field">
+                <label>분위기</label>
+                <select class="form-select form-select-sm" @bind="_promptMood">
+                    <option>자연스러움</option>
+                    <option>발랄함</option>
+                    <option>섹시함</option>
+                    <option>귀여움</option>
+                    <option>시크함</option>
+                    <option>청순함</option>
+                    <option>세련됨</option>
+                </select>
+            </div>
+            <div class="prompt-ai-tabs">
+                <button class="prompt-ai-tab @(_promptAi == "nanobanana" ? "active" : "")" @onclick='() => SelectAi("nanobanana")'>
+                    나노바나나 Pro
+                </button>
+                <button class="prompt-ai-tab @(_promptAi == "gemini" ? "active" : "")" @onclick='() => SelectAi("gemini")'>
+                    Gemini
+                </button>
+                <button class="prompt-ai-tab @(_promptAi == "chatgpt" ? "active" : "")" @onclick='() => SelectAi("chatgpt")'>
+                    ChatGPT
+                </button>
             </div>
             <div class="prompt-output">
-                <label>생성된 프롬프트 <small class="text-muted">(클릭하여 복사)</small></label>
+                <div class="prompt-ai-link">
+                    @if (_promptAi == "nanobanana")
+                    {
+                        <a href="https://nanobanana.com" target="_blank"><i class="bi bi-box-arrow-up-right"></i> nanobanana.com 열기</a>
+                    }
+                    else if (_promptAi == "gemini")
+                    {
+                        <a href="https://gemini.google.com" target="_blank"><i class="bi bi-box-arrow-up-right"></i> gemini.google.com 열기</a>
+                    }
+                    else
+                    {
+                        <a href="https://chatgpt.com" target="_blank"><i class="bi bi-box-arrow-up-right"></i> chatgpt.com 열기</a>
+                    }
+                </div>
                 <div class="prompt-text" @onclick="CopyPrompt">@GetGeneratedPrompt()</div>
             </div>
             @if (_promptCopied)
@@ -299,7 +348,11 @@
 
     // AI 프롬프트
     private StylePost? _promptStyle;
-    private string _promptAge = "20대 중반";
+    private string _promptAgeGroup = "20대";
+    private string _promptAgeDetail = "중반";
+    private string _promptAge => $"{_promptAgeGroup} {_promptAgeDetail}";
+    private string _promptMood = "자연스러움";
+    private string _promptAi = "nanobanana";
     private bool _promptCopied;
 
     private IEnumerable<StylePost> FilteredStyles => string.IsNullOrWhiteSpace(_searchText)
@@ -415,15 +468,35 @@
     {
         _promptStyle = style;
         _promptCopied = false;
-        _promptAge = style.Category == StyleCategory.남성 ? "20대 중반" : "20대 후반";
+        _promptAi = "nanobanana";
+
+        // 스타일에 저장된 나이대/분위기 우선, 없으면 기본값
+        if (!string.IsNullOrEmpty(style.RecommendedAge) && style.RecommendedAge.Contains("대"))
+        {
+            var parts = style.RecommendedAge.Split(' ', 2);
+            _promptAgeGroup = parts[0];
+            _promptAgeDetail = parts.Length > 1 ? parts[1] : "중반";
+        }
+        else
+        {
+            _promptAgeGroup = "20대";
+            _promptAgeDetail = style.Category == StyleCategory.남성 ? "중반" : "후반";
+        }
+
+        _promptMood = !string.IsNullOrEmpty(style.Mood) ? style.Mood : "자연스러움";
     }
 
     private void ClosePrompt() => _promptStyle = null;
 
-    private string GetGeneratedPrompt()
+    private void SelectAi(string ai)
     {
-        if (_promptStyle == null) return "";
-        var gender = _promptStyle.Category == StyleCategory.남성 ? "male" : "female";
+        _promptAi = ai;
+        _promptCopied = false;
+    }
+
+    private (string gender, string genderKr, string length, string service, string title, string mood) GetPromptParts()
+    {
+        var gender = _promptStyle!.Category == StyleCategory.남성 ? "male" : "female";
         var genderKr = _promptStyle.Category == StyleCategory.남성 ? "남성" : "여성";
         var length = _promptStyle.Category switch
         {
@@ -440,16 +513,65 @@
             ServiceType.염색 => "color-treated",
             _ => "freshly cut"
         };
-        var title = _promptStyle.Title;
+        var mood = _promptMood switch
+        {
+            "발랄함" => "cheerful and lively",
+            "섹시함" => "alluring and confident",
+            "귀여움" => "cute and adorable",
+            "시크함" => "chic and cool",
+            "청순함" => "innocent and pure",
+            "세련됨" => "sophisticated and elegant",
+            _ => "natural and relaxed"
+        };
+        return (gender, genderKr, length, service, _promptStyle.Title, mood);
+    }
 
-        return $@"Professional hair salon lookbook photography. Korean {gender} model, {_promptAge}, with ""{title}"" hairstyle ({service}, {length} hair).
+    private string GetGeneratedPrompt()
+    {
+        if (_promptStyle == null) return "";
+        var p = GetPromptParts();
 
-Generate 3 separate images:
-1) FRONT VIEW - model facing camera with a warm smile, modern hair salon interior with mirror and warm lighting
-2) SIDE PROFILE VIEW - model looking to the right, outdoor setting with soft natural daylight and blurred greenery background
-3) BACK VIEW - showing the full hairstyle from behind, minimalist white studio with clean soft lighting
+        return _promptAi switch
+        {
+            "nanobanana" => GetNanoBananaPrompt(p),
+            "gemini" => GetGeminiPrompt(p),
+            "chatgpt" => GetChatGptPrompt(p),
+            _ => GetNanoBananaPrompt(p)
+        };
+    }
 
-Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin texture, detailed hair strands visible, {genderKr} {_promptAge} Korean model, 8K resolution, realistic --ar 3:4";
+    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    {
+        return $@"Korean {p.gender} model, {_promptAge}, {p.mood} expression, ""{p.title}"" hairstyle, {p.service} {p.length} hair, professional hair salon lookbook, editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin texture, detailed hair strands, 8K, realistic, front view, warm salon lighting --ar 3:4";
+    }
+
+    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    {
+        return $@"헤어살롱 룩북 사진을 생성해주세요.
+
+모델: 한국인 {p.genderKr}, {_promptAge}, {_promptMood} 분위기
+헤어스타일: ""{p.title}"" ({p.service}, {p.length})
+촬영 스타일: 프로페셔널 뷰티 에디토리얼, 자연스러운 피부 질감, 머릿결이 선명하게 보이도록
+
+3장의 이미지를 각각 생성해주세요:
+1) 정면 - 모델이 카메라를 바라보며, 모던한 헤어살롱 내부, 거울과 따뜻한 조명
+2) 측면 - 모델이 오른쪽을 바라보며, 야외 자연광, 부드러운 보케 배경
+3) 후면 - 뒷모습에서 헤어스타일 전체가 보이도록, 깔끔한 화이트 스튜디오
+
+세로 비율(3:4)로 생성해주세요.";
+    }
+
+    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    {
+        return $@"Generate a professional hair salon lookbook photo.
+
+Subject: Korean {p.gender} model, {_promptAge}, with a {p.mood} expression
+Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair
+Setting: Modern hair salon interior with mirror and warm lighting
+Camera: Canon EOS R5, 85mm f/1.8, shallow depth of field
+Style: Editorial beauty photography, natural skin texture, every hair strand visible, 8K resolution, photorealistic
+
+The model is facing the camera with a front view composition. Vertical aspect ratio 3:4.";
     }
 
     private async Task CopyPrompt()
@@ -544,6 +666,38 @@ Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin text
                 if (style.RecommendedHairTypes.Contains("숱적은") && !recs.Contains("볼륨이 부족해 고민인 분"))
                     recs.Add("풍성해 보이고 싶은 분");
                 style.RecommendedFor = recs.Take(3).ToList();
+            }
+
+            // AI 프롬프트용 나이대·분위기 자동 세팅
+            if (string.IsNullOrEmpty(style.RecommendedAge))
+            {
+                style.RecommendedAge = style.Category switch
+                {
+                    StyleCategory.남성 => style.Title.Contains("리젠트") || style.Title.Contains("댄디") ? "30대 초반"
+                        : style.Title.Contains("크롭") || style.Title.Contains("페이드") ? "20대 초반"
+                        : "20대 중반",
+                    StyleCategory.여성숏 => "30대 초반",
+                    StyleCategory.여성단발 => "20대 후반",
+                    StyleCategory.여성미디움 => "20대 중반",
+                    StyleCategory.여성롱 => "20대 초반",
+                    _ => "20대 중반"
+                };
+            }
+            if (string.IsNullOrEmpty(style.Mood))
+            {
+                style.Mood = style.Category switch
+                {
+                    StyleCategory.남성 => style.Title.Contains("댄디") || style.Title.Contains("리젠트") ? "세련됨"
+                        : style.Title.Contains("크롭") || style.Title.Contains("페이드") ? "시크함"
+                        : "자연스러움",
+                    StyleCategory.여성숏 => style.Service == ServiceType.펌 ? "발랄함" : "시크함",
+                    StyleCategory.여성단발 => style.Service == ServiceType.펌 ? "귀여움" : "세련됨",
+                    StyleCategory.여성미디움 => style.Service == ServiceType.펌 ? "자연스러움"
+                        : style.Service == ServiceType.염색 ? "세련됨" : "청순함",
+                    StyleCategory.여성롱 => style.Service == ServiceType.펌 ? "섹시함"
+                        : style.Service == ServiceType.염색 ? "세련됨" : "청순함",
+                    _ => "자연스러움"
+                };
             }
         }
 
@@ -2536,6 +2690,49 @@ Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin text
         color: var(--salon-gray);
         margin-bottom: 0.3rem;
         display: block;
+    }
+
+    .prompt-ai-tabs {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .prompt-ai-tab {
+        flex: 1;
+        padding: 0.4rem 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #f8f8f8;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .prompt-ai-tab:hover {
+        background: #eee;
+    }
+
+    .prompt-ai-tab.active {
+        background: var(--salon-primary);
+        color: white;
+        border-color: var(--salon-primary);
+    }
+
+    .prompt-ai-link {
+        margin-bottom: 0.4rem;
+    }
+
+    .prompt-ai-link a {
+        font-size: 0.75rem;
+        color: #2563eb;
+        text-decoration: none;
+    }
+
+    .prompt-ai-link a:hover {
+        text-decoration: underline;
     }
 
     .prompt-output {

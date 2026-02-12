@@ -53,6 +53,16 @@ public class StylePost
     /// </summary>
     public List<string> RecommendedFor { get; set; } = new();
 
+    /// <summary>
+    /// 추천 나이대 (예: "20대 중반") - AI 프롬프트용
+    /// </summary>
+    public string RecommendedAge { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 분위기 (예: "자연스러움") - AI 프롬프트용
+    /// </summary>
+    public string Mood { get; set; } = string.Empty;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = "admin";
