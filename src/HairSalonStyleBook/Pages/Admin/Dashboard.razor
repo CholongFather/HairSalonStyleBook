@@ -8,7 +8,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
 
-<PageTitle>관리자 - 늘-오던 헤어살롱</PageTitle>
+<PageTitle>관리자 - 늘~오던 헤어살롱</PageTitle>
 
 <div class="container admin-page">
     <!-- 관리자 탭 -->
@@ -674,14 +674,23 @@ Vertical 3:4 aspect ratio.";
     private string GetSuggestedFilename()
     {
         if (_promptStyle == null) return "";
+        var category = _promptStyle.Category switch
+        {
+            StyleCategory.남성 => "남성",
+            StyleCategory.여성숏 => "여성숏",
+            StyleCategory.여성단발 => "여성단발",
+            StyleCategory.여성미디움 => "여성미디움",
+            StyleCategory.여성롱 => "여성롱",
+            _ => "기타"
+        };
         var angleTag = _promptAngle switch
         {
-            "side" => "_side",
-            "back" => "_back",
-            "three-quarter" => "_3q",
+            "side" => "_측면",
+            "back" => "_후면",
+            "three-quarter" => "_반측면",
             _ => ""
         };
-        return $"{_promptStyle.Title}{angleTag}.webp";
+        return $"{category}_{_promptStyle.Title}{angleTag}.webp";
     }
 
     private async Task CopyFilename()

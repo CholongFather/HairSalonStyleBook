@@ -1,4 +1,4 @@
-// 늘-오던 헤어살롱 - 이미지 캐싱 Service Worker
+// 늘~오던 헤어살롱 - 이미지 캐싱 Service Worker
 const CACHE_NAME = 'salon-image-cache-v1';
 
 // 캐싱할 이미지 패턴
