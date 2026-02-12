@@ -1,0 +1,321 @@
+@page "/pay"
+@inject IShopConfigService ShopConfigService
+@inject IJSRuntime JS
+
+<PageTitle>계좌정보 - 늘-오던 헤어살롱</PageTitle>
+
+<div class="pay-page">
+    <div class="pay-card">
+        <div class="pay-logo">
+            <i class="bi bi-scissors"></i>
+        </div>
+        <h1 class="pay-title">늘-오던 헤어살롱</h1>
+        <p class="pay-subtitle">계좌 정보</p>
+
+        <div class="pay-divider"></div>
+
+        <div class="pay-info">
+            <div class="pay-row">
+                <span class="pay-label">은행</span>
+                <span class="pay-value">@_config.BankName</span>
+            </div>
+            <div class="pay-row pay-row-main">
+                <span class="pay-label">계좌번호</span>
+                <span class="pay-value pay-account">@_config.AccountNumber</span>
+            </div>
+            <div class="pay-row">
+                <span class="pay-label">예금주</span>
+                <span class="pay-value">@_config.AccountHolder</span>
+            </div>
+        </div>
+
+        <!-- 계좌번호 복사 -->
+        <button class="pay-copy-btn" @onclick="CopyAccount">
+            <i class="bi @(_copied ? "bi-check-circle-fill" : "bi-clipboard")"></i>
+            @(_copied ? "복사 완료!" : "계좌번호 복사하기")
+        </button>
+
+        <!-- 뱅킹 앱으로 열기 -->
+        <div class="pay-apps">
+            <p class="pay-apps-label">뱅킹 앱에서 바로 송금</p>
+            <div class="pay-app-btns">
+                <button class="pay-app-btn toss" @onclick="OpenToss">
+                    <span class="pay-app-name">토스</span>
+                </button>
+                <button class="pay-app-btn kakao" @onclick="OpenKakaoBank">
+                    <span class="pay-app-name">카카오뱅크</span>
+                </button>
+                <button class="pay-app-btn woori" @onclick="OpenWooriBank">
+                    <span class="pay-app-name">우리WON</span>
+                </button>
+            </div>
+            <p class="pay-apps-note">앱이 설치되어 있어야 열립니다</p>
+        </div>
+
+        <p class="pay-note">복사 후 뱅킹 앱에 붙여넣기 하세요</p>
+    </div>
+</div>
+
+@code {
+    private ShopConfig _config = new();
+    private bool _copied;
+    private bool _isIOS;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _config = await ShopConfigService.GetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // iOS/Android 자동 감지
+            _isIOS = await JS.InvokeAsync<bool>("eval", "(/iPhone|iPad|iPod/i).test(navigator.userAgent)");
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyAccount()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _config.AccountNumber);
+        _copied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _copied = false;
+        StateHasChanged();
+    }
+
+    private async Task OpenToss()
+    {
+        // 토스 송금 딥링크 (은행코드: 우리은행=020)
+        var bankCode = GetBankCode(_config.BankName);
+        var scheme = $"supertoss://send?bank={bankCode}&accountNo={_config.AccountNumber}";
+        await TryOpenApp(scheme, "https://toss.im");
+    }
+
+    private async Task OpenKakaoBank()
+    {
+        if (_isIOS)
+            await JS.InvokeVoidAsync("window.open", "kakaobank://", "_self");
+        else
+            await TryOpenApp("kakaobank://", "intent://transfer#Intent;scheme=kakaobank;package=com.kakaobank.channel;end");
+    }
+
+    private async Task OpenWooriBank()
+    {
+        if (_isIOS)
+            await JS.InvokeVoidAsync("window.open", "wooribank://", "_self");
+        else
+            await TryOpenApp("wooribank://", "intent://#Intent;scheme=wooribank;package=com.wooribank.pib.smart;end");
+    }
+
+    private async Task TryOpenApp(string scheme, string fallback)
+    {
+        await JS.InvokeVoidAsync("eval", $@"
+            var w = window.open('{scheme}', '_self');
+            setTimeout(function() {{ if(document.hasFocus()) window.location.href = '{fallback}'; }}, 1500);
+        ");
+    }
+
+    private static string GetBankCode(string bankName) => bankName switch
+    {
+        "우리은행" => "020",
+        "국민은행" => "004",
+        "신한은행" => "088",
+        "하나은행" => "081",
+        "카카오뱅크" => "090",
+        "토스뱅크" => "092",
+        "농협" => "011",
+        _ => "020"
+    };
+}
+
+<style>
+    .pay-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: linear-gradient(135deg, #f5f0eb 0%, #e8e3d8 100%);
+    }
+
+    .pay-card {
+        width: 100%;
+        max-width: 360px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    .pay-logo {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 0.8rem;
+        background: linear-gradient(135deg, var(--salon-green) 0%, #9bc5a3 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.5rem;
+    }
+
+    .pay-title {
+        font-family: var(--font-serif);
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: var(--salon-black);
+        margin: 0;
+    }
+
+    .pay-subtitle {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        color: var(--salon-gray);
+        margin: 0.2rem 0 0;
+    }
+
+    .pay-divider {
+        width: 40px;
+        height: 2px;
+        background: var(--salon-green);
+        margin: 1rem auto;
+        border-radius: 1px;
+    }
+
+    .pay-info {
+        margin-bottom: 1.5rem;
+    }
+
+    .pay-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid rgba(232, 227, 220, 0.4);
+    }
+
+    .pay-row:last-child {
+        border-bottom: none;
+    }
+
+    .pay-row-main {
+        padding: 0.8rem 0;
+    }
+
+    .pay-label {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        color: var(--salon-gray);
+        font-weight: 600;
+    }
+
+    .pay-value {
+        font-family: var(--font-serif);
+        font-size: 0.9rem;
+        color: var(--salon-dark);
+        font-weight: 700;
+    }
+
+    .pay-account {
+        font-size: 1.1rem;
+        letter-spacing: 0.05em;
+    }
+
+    .pay-copy-btn {
+        width: 100%;
+        padding: 0.85rem;
+        border: none;
+        border-radius: 12px;
+        background: var(--salon-green);
+        color: #fff;
+        font-family: var(--font-serif);
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .pay-copy-btn:active {
+        transform: scale(0.97);
+        opacity: 0.9;
+    }
+
+    /* 뱅킹 앱 버튼 */
+    .pay-apps {
+        margin-top: 1.2rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(232, 227, 220, 0.4);
+    }
+
+    .pay-apps-label {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        margin: 0 0 0.6rem;
+    }
+
+    .pay-app-btns {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .pay-app-btn {
+        flex: 1;
+        padding: 0.6rem 0.4rem;
+        border: 1px solid;
+        border-radius: 10px;
+        font-family: var(--font-serif);
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+
+    .pay-app-btn:active {
+        transform: scale(0.96);
+    }
+
+    .pay-app-name {
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .pay-app-btn.toss {
+        border-color: #0064ff;
+        color: #0064ff;
+    }
+
+    .pay-app-btn.kakao {
+        border-color: #fee500;
+        color: #3c1e1e;
+        background: #fff9db;
+    }
+
+    .pay-app-btn.woori {
+        border-color: #005baa;
+        color: #005baa;
+    }
+
+    .pay-apps-note {
+        font-family: var(--font-serif);
+        font-size: 0.65rem;
+        color: var(--salon-light-gray);
+        margin: 0.5rem 0 0;
+    }
+
+    .pay-note {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        margin: 0.8rem 0 0;
+    }
+</style>
