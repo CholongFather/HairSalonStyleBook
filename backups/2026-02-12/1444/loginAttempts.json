@@ -1,0 +1,92 @@
+{
+  "documents": [
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/3aaeff20cccf",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:09.971Z"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "success": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2026-02-12T12:30:10.110179Z",
+      "updateTime": "2026-02-12T12:30:10.110179Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/73a1d041b670",
+      "fields": {
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:07.091Z"
+        }
+      },
+      "createTime": "2026-02-12T12:30:07.194983Z",
+      "updateTime": "2026-02-12T12:30:07.194983Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/71cedb14adb0",
+      "fields": {
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:05.611Z"
+        }
+      },
+      "createTime": "2026-02-12T12:30:05.723454Z",
+      "updateTime": "2026-02-12T12:30:05.723454Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/013d00fda839",
+      "fields": {
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:02.081Z"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        }
+      },
+      "createTime": "2026-02-12T12:30:02.215214Z",
+      "updateTime": "2026-02-12T12:30:02.215214Z"
+    }
+  ]
+}
