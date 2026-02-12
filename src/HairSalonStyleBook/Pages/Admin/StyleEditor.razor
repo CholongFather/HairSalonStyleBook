@@ -94,65 +94,6 @@
             }
         </div>
 
-        <!-- 시술 난이도 (1~5) -->
-        <div class="mb-3">
-            <label class="form-label">시술 난이도</label>
-            <div class="d-flex gap-2 align-items-center">
-                @for (int i = 1; i <= 5; i++)
-                {
-                    var val = i;
-                    <button type="button"
-                            class="btn btn-sm @(_style.TreatmentDifficulty >= val ? "btn-warning" : "btn-outline-secondary")"
-                            style="min-width:36px"
-                            @onclick="() => _style.TreatmentDifficulty = val">
-                        @val
-                    </button>
-                }
-                <span class="text-muted small ms-2">@GetDifficultyLabel(_style.TreatmentDifficulty)</span>
-            </div>
-        </div>
-
-        <!-- 관리 난이도 (1~5) -->
-        <div class="mb-3">
-            <label class="form-label">관리 난이도</label>
-            <div class="d-flex gap-2 align-items-center">
-                @for (int i = 1; i <= 5; i++)
-                {
-                    var val = i;
-                    <button type="button"
-                            class="btn btn-sm @(_style.MaintenanceLevel >= val ? "btn-warning" : "btn-outline-secondary")"
-                            style="min-width:36px"
-                            @onclick="() => _style.MaintenanceLevel = val">
-                        @val
-                    </button>
-                }
-                <span class="text-muted small ms-2">@GetDifficultyLabel(_style.MaintenanceLevel)</span>
-            </div>
-        </div>
-
-        <!-- 유지 기간 -->
-        <div class="mb-3">
-            <label class="form-label">유지 기간</label>
-            <InputText @bind-Value="_style.Duration" class="form-control editor-input" placeholder="예: 2~3개월, 4~6주" />
-        </div>
-
-        <!-- 추천 얼굴형 -->
-        <div class="mb-3">
-            <label class="form-label">추천 얼굴형</label>
-            <div class="d-flex flex-wrap gap-2">
-                @foreach (var shape in _faceShapeOptions)
-                {
-                    var s = shape;
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox"
-                               id="fs_@s" checked="@(_style.RecommendedFaceShapes.Contains(s))"
-                               @onchange="e => ToggleListItem(_style.RecommendedFaceShapes, s, (bool)(e.Value ?? false))" />
-                        <label class="form-check-label" for="fs_@s">@s</label>
-                    </div>
-                }
-            </div>
-        </div>
-
         <!-- 추천 모질 -->
         <div class="mb-3">
             <label class="form-label">추천 모질</label>
@@ -277,8 +218,7 @@
     private string _relatedSearchText = "";
     private bool _showRelatedDropdown;
 
-    private static readonly string[] _faceShapeOptions = { "둥근형", "긴형", "각진형", "계란형", "하트형" };
-    private static readonly string[] _hairTypeOptions = { "직모", "곱슬", "가는모", "굵은모", "숱많은", "숱적은" };
+    private static readonly string[] _hairTypeOptions = { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" };
 
     private void ToggleListItem(List<string> list, string item, bool isChecked)
     {
@@ -395,15 +335,6 @@
                     .ToList();
     }
 
-    private static string GetDifficultyLabel(int level) => level switch
-    {
-        1 => "매우 쉬움",
-        2 => "쉬움",
-        3 => "보통",
-        4 => "어려움",
-        5 => "매우 어려움",
-        _ => ""
-    };
 
     private void GoBack() => Nav.NavigateTo("admin");
 }
