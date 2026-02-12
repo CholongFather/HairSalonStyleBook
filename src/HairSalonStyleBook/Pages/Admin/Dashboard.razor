@@ -298,6 +298,18 @@
                     <option>세련됨</option>
                 </select>
             </div>
+            <div class="prompt-field">
+                <label>촬영 앵글</label>
+                <div class="prompt-angle-group">
+                    @foreach (var angle in _angleOptions)
+                    {
+                        <button class="prompt-angle-btn @(_promptAngle == angle.key ? "active" : "")"
+                                @onclick="() => _promptAngle = angle.key">
+                            <i class="bi @angle.icon"></i> @angle.label
+                        </button>
+                    }
+                </div>
+            </div>
             <div class="prompt-ai-tabs">
                 <button class="prompt-ai-tab @(_promptAi == "nanobanana" ? "active" : "")" @onclick='() => SelectAi("nanobanana")'>
                     나노바나나 Pro
@@ -349,8 +361,17 @@
     private string _promptAgeDetail = "중반";
     private string _promptAge => $"{_promptAgeGroup} {_promptAgeDetail}";
     private string _promptMood = "자연스러움";
+    private string _promptAngle = "front";
     private string _promptAi = "nanobanana";
     private bool _promptCopied;
+
+    private readonly (string key, string label, string icon)[] _angleOptions = new[]
+    {
+        ("front", "정면", "bi-person"),
+        ("side", "측면", "bi-person-fill"),
+        ("back", "후면", "bi-person-x"),
+        ("three-quarter", "반측면", "bi-person-check"),
+    };
 
     private IEnumerable<StylePost> FilteredStyles => string.IsNullOrWhiteSpace(_searchText)
         ? _styles
@@ -481,6 +502,7 @@
         }
 
         _promptMood = !string.IsNullOrEmpty(style.Mood) ? style.Mood : "자연스러움";
+        _promptAngle = "front";
     }
 
     private void ClosePrompt() => _promptStyle = null;
@@ -491,7 +513,7 @@
         _promptCopied = false;
     }
 
-    private (string gender, string genderKr, string length, string service, string title, string mood) GetPromptParts()
+    private (string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) GetPromptParts()
     {
         var gender = _promptStyle!.Category == StyleCategory.남성 ? "male" : "female";
         var genderKr = _promptStyle.Category == StyleCategory.남성 ? "남성" : "여성";
@@ -520,7 +542,21 @@
             "세련됨" => "sophisticated and elegant",
             _ => "natural and relaxed"
         };
-        return (gender, genderKr, length, service, _promptStyle.Title, mood);
+        var angle = _promptAngle switch
+        {
+            "side" => "from the side profile view",
+            "back" => "from behind showing the back of the head",
+            "three-quarter" => "from a three-quarter angle view",
+            _ => "facing the camera from the front"
+        };
+        var angleKr = _promptAngle switch
+        {
+            "side" => "측면",
+            "back" => "뒷모습",
+            "three-quarter" => "반측면 (3/4 앵글)",
+            _ => "정면"
+        };
+        return (gender, genderKr, length, service, _promptStyle.Title, mood, angle, angleKr);
     }
 
     private string GetGeneratedPrompt()
@@ -537,33 +573,34 @@
         };
     }
 
-    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
-        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, sitting in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression, looking at the mirror naturally. Shot on film, soft natural window light, slightly warm tones, no heavy retouching, visible skin pores and natural hair texture, real salon background with mirrors and chairs, not overly polished --ar 3:4 --style raw";
+        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on film, soft natural window light, slightly warm tones, no heavy retouching, visible skin pores and natural hair texture, real salon background with mirrors and chairs, not overly polished --ar 3:4 --style raw";
     }
 
-    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
         return $@"실제 미용실에서 촬영한 것 같은 자연스러운 헤어 사진을 만들어주세요. AI가 만든 것처럼 보이면 안 됩니다.
 
 모델: 한국인 {p.genderKr}, {_promptAge}, {_promptMood} 분위기
 헤어스타일: ""{p.title}"" ({p.service}, {p.length})
+촬영 앵글: {p.angleKr}
 
 중요한 점:
 - 과도한 보정 없이 자연스러운 피부와 머릿결
 - 실제 미용실 배경 (거울, 의자, 조명이 보이게)
 - 창문에서 들어오는 자연광 위주
-- 모델이 거울을 보거나 자연스럽게 포즈를 취하는 느낌
+- {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 스마트폰으로 찍은 듯한 캐주얼한 느낌도 좋음
 
 세로 비율(3:4)로 생성해주세요.";
     }
 
-    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
+    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
         return $@"Create a natural-looking photo that could pass as a real hair salon snapshot, not an AI-generated image.
 
-Subject: Korean {p.gender} in their {_promptAge}, {p.mood} expression
+Subject: Korean {p.gender} in their {_promptAge}, {p.mood} expression, shot {p.angle}
 Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair
 Setting: Real hair salon interior, mirrors, salon chairs visible in background
 
@@ -572,7 +609,7 @@ Key requirements:
 - No heavy skin retouching, visible pores and natural texture
 - Hair should look like it was just styled by a hairdresser, not digitally perfect
 - Candid feel, as if taken on a phone camera by a salon staff
-- The model is casually looking at the mirror or camera
+- The hairstyle should be clearly visible from the {_promptAngle} angle
 
 Vertical 3:4 aspect ratio.";
     }
@@ -2878,6 +2915,38 @@ Vertical 3:4 aspect ratio.";
         color: var(--salon-gray);
         margin-bottom: 0.3rem;
         display: block;
+    }
+
+    .prompt-angle-group {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .prompt-angle-btn {
+        flex: 1;
+        padding: 0.35rem 0.3rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #f8f8f8;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+    }
+
+    .prompt-angle-btn:hover {
+        background: #eee;
+    }
+
+    .prompt-angle-btn.active {
+        background: var(--salon-black);
+        color: white;
+        border-color: var(--salon-black);
     }
 
     .prompt-ai-tabs {

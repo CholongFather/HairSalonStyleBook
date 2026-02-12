@@ -168,9 +168,10 @@
 
     private async Task OpenToss()
     {
-        // 토스 송금 딥링크 (은행코드: 우리은행=020)
-        var bankCode = GetBankCode(_config.BankName);
-        var scheme = $"supertoss://send?bank={bankCode}&accountNo={_config.AccountNumber}";
+        // 토스 딥링크: bank 파라미터는 한글 은행명 (숫자 코드 아님)
+        var bankName = GetTossBankName(_config.BankName);
+        var accountNo = new string(_config.AccountNumber.Where(char.IsDigit).ToArray());
+        var scheme = $"supertoss://send?bank={bankName}&accountNo={accountNo}";
         await TryOpenApp(scheme, "https://toss.im");
     }
 
@@ -198,23 +199,37 @@
         ");
     }
 
-    private static string GetBankCode(string bankName) => bankName switch
+    // 토스 딥링크용 한글 은행명 (숫자 코드가 아닌 한글명 사용)
+    private static string GetTossBankName(string bankName) => bankName switch
     {
-        "우리은행" => "020",
-        "국민은행" => "004",
-        "신한은행" => "088",
-        "하나은행" => "081",
-        "카카오뱅크" => "090",
-        "토스뱅크" => "092",
-        "농협" => "011",
-        _ => "020"
+        "우리은행" => "우리",
+        "국민은행" => "국민",
+        "신한은행" => "신한",
+        "하나은행" => "하나",
+        "카카오뱅크" => "카카오",
+        "토스뱅크" => "토스",
+        "농협" => "농협",
+        "기업은행" => "기업",
+        "SC제일은행" => "SC제일",
+        _ => bankName.Replace("은행", "")
     };
 
-    private void ClosePage()
+    private async Task ClosePage()
     {
         _expired = true;
         _remainingSeconds = 0;
         _countdownTimer?.Dispose();
+        // 탭 닫기 시도, 실패하면 뒤로가기 방지용 히스토리 조작
+        await JS.InvokeVoidAsync("eval", @"
+            window.close();
+            setTimeout(function() {
+                history.replaceState(null, '', location.href);
+                history.pushState(null, '', location.href);
+                window.addEventListener('popstate', function() {
+                    history.pushState(null, '', location.href);
+                });
+            }, 100);
+        ");
     }
 
     public void Dispose()
