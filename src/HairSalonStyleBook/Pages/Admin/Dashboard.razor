@@ -617,7 +617,7 @@
     private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
         var fn = GetSuggestedFilename();
-        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. f/8 deep depth of field, everything in focus, absolutely NO background blur, NO bokeh effect at all, background must be sharp and clear. Soft natural window light, warm tones, no retouching, visible skin pores, real salon background with mirrors and chairs clearly visible, imperfect and authentic looking --ar 3:4 --style raw
+        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. f/8 deep depth of field, everything in focus, absolutely NO background blur, NO bokeh effect at all, background must be sharp and clear. Soft natural window light, warm tones, no retouching, visible skin pores, real salon background with mirrors and chairs clearly visible, imperfect and authentic looking. Add a small subtle watermark text ""늘~오던"" in the bottom-right corner, semi-transparent white, very small font --ar 3:4 --style raw
 
 Save the file as: {fn}";
     }
@@ -640,6 +640,7 @@ Save the file as: {fn}";
 - 창문에서 들어오는 자연광 위주
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 완벽하지 않고 실제 사진 같은 느낌이 중요
+- 이미지 오른쪽 하단에 ""늘~오던"" 워터마크를 작고 반투명한 흰색으로 살짝 넣어주세요
 
 세로 비율(3:4)로 생성해주세요.
 
@@ -664,6 +665,7 @@ Key requirements:
 - Hair should look real, not digitally perfect
 - Imperfect and authentic, as if casually taken by salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
+- Add a small subtle watermark text ""늘~오던"" in the bottom-right corner, semi-transparent white, very small font
 
 Vertical 3:4 aspect ratio.
 
@@ -725,6 +727,11 @@ Save the file as: {GetSuggestedFilename()}";
         _seeding = true;
         _seedProgress = 0;
         StateHasChanged();
+
+        // 기존 스타일의 이미지를 제목+카테고리 키로 보존
+        var existingImageMap = _styles
+            .Where(s => s.ImageUrls.Any())
+            .ToDictionary(s => $"{s.Category}|{s.Title}", s => s.ImageUrls);
 
         // 기존 데이터 병렬 삭제 (5개씩 배치)
         _seedTotal = _styles.Count;
@@ -796,7 +803,15 @@ Save the file as: {GetSuggestedFilename()}";
                 style.Mood = GetRecommendedMood(style);
         }
 
-        // 2단계: 병렬 생성 (5개씩 배치)
+        // 2단계: 같은 스타일의 기존 이미지 복원
+        foreach (var style in styles)
+        {
+            var key = $"{style.Category}|{style.Title}";
+            if (existingImageMap.TryGetValue(key, out var images))
+                style.ImageUrls = images;
+        }
+
+        // 3단계: 병렬 생성 (5개씩 배치)
         _seedProgress = 0;
         _seedTotal = styles.Count;
         StateHasChanged();
