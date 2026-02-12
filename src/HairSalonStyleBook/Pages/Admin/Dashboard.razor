@@ -539,36 +539,42 @@
 
     private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
     {
-        return $@"Korean {p.gender} model, {_promptAge}, {p.mood} expression, ""{p.title}"" hairstyle, {p.service} {p.length} hair, professional hair salon lookbook, editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin texture, detailed hair strands, 8K, realistic, front view, warm salon lighting --ar 3:4";
+        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, sitting in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression, looking at the mirror naturally. Shot on film, soft natural window light, slightly warm tones, no heavy retouching, visible skin pores and natural hair texture, real salon background with mirrors and chairs, not overly polished --ar 3:4 --style raw";
     }
 
     private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
     {
-        return $@"헤어살롱 룩북 사진을 생성해주세요.
+        return $@"실제 미용실에서 촬영한 것 같은 자연스러운 헤어 사진을 만들어주세요. AI가 만든 것처럼 보이면 안 됩니다.
 
 모델: 한국인 {p.genderKr}, {_promptAge}, {_promptMood} 분위기
 헤어스타일: ""{p.title}"" ({p.service}, {p.length})
-촬영 스타일: 프로페셔널 뷰티 에디토리얼, 자연스러운 피부 질감, 머릿결이 선명하게 보이도록
 
-3장의 이미지를 각각 생성해주세요:
-1) 정면 - 모델이 카메라를 바라보며, 모던한 헤어살롱 내부, 거울과 따뜻한 조명
-2) 측면 - 모델이 오른쪽을 바라보며, 야외 자연광, 부드러운 보케 배경
-3) 후면 - 뒷모습에서 헤어스타일 전체가 보이도록, 깔끔한 화이트 스튜디오
+중요한 점:
+- 과도한 보정 없이 자연스러운 피부와 머릿결
+- 실제 미용실 배경 (거울, 의자, 조명이 보이게)
+- 창문에서 들어오는 자연광 위주
+- 모델이 거울을 보거나 자연스럽게 포즈를 취하는 느낌
+- 스마트폰으로 찍은 듯한 캐주얼한 느낌도 좋음
 
 세로 비율(3:4)로 생성해주세요.";
     }
 
     private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood) p)
     {
-        return $@"Generate a professional hair salon lookbook photo.
+        return $@"Create a natural-looking photo that could pass as a real hair salon snapshot, not an AI-generated image.
 
-Subject: Korean {p.gender} model, {_promptAge}, with a {p.mood} expression
+Subject: Korean {p.gender} in their {_promptAge}, {p.mood} expression
 Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair
-Setting: Modern hair salon interior with mirror and warm lighting
-Camera: Canon EOS R5, 85mm f/1.8, shallow depth of field
-Style: Editorial beauty photography, natural skin texture, every hair strand visible, 8K resolution, photorealistic
+Setting: Real hair salon interior, mirrors, salon chairs visible in background
 
-The model is facing the camera with a front view composition. Vertical aspect ratio 3:4.";
+Key requirements:
+- Natural window lighting, slightly warm tones
+- No heavy skin retouching, visible pores and natural texture
+- Hair should look like it was just styled by a hairdresser, not digitally perfect
+- Candid feel, as if taken on a phone camera by a salon staff
+- The model is casually looking at the mirror or camera
+
+Vertical 3:4 aspect ratio.";
     }
 
     private async Task CopyPrompt()
@@ -623,7 +629,7 @@ The model is facing the camera with a front view composition. Vertical aspect ra
             if (style.RecommendedHairTypes.Contains("숱적은")) extraTags.Add("숱적은");
             style.Hashtags.AddRange(extraTags.Where(t => !style.Hashtags.Contains(t)));
 
-            // 추천 대상 자동 생성
+            // 추천 대상 자동 생성 (_recommendedForOptions 체크박스와 일치하는 값만 사용)
             if (!style.RecommendedFor.Any())
             {
                 var recs = new List<string>();
@@ -638,7 +644,7 @@ The model is facing the camera with a front view composition. Vertical aspect ra
                         break;
                     case ServiceType.염색:
                         recs.Add("분위기 변화를 원하는 분");
-                        recs.Add("개성 있는 스타일을 원하는 분");
+                        recs.Add("스타일 변화를 원하는 분");
                         break;
                     case ServiceType.커트:
                         if (style.Category == StyleCategory.남성)
@@ -655,7 +661,11 @@ The model is facing the camera with a front view composition. Vertical aspect ra
                 if (style.RecommendedHairTypes.Contains("숱많은"))
                     recs.Add("숱 정리가 필요한 분");
                 if (style.RecommendedHairTypes.Contains("숱적은") && !recs.Contains("볼륨이 부족해 고민인 분"))
+                {
                     recs.Add("풍성해 보이고 싶은 분");
+                    if (!recs.Contains("숱이 적어 고민인 분"))
+                        recs.Add("숱이 적어 고민인 분");
+                }
                 style.RecommendedFor = recs.Take(3).ToList();
             }
 

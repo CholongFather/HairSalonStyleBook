@@ -3,6 +3,8 @@
 @inject IStyleService StyleService
 @inject IShopConfigService ShopConfigService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>늘-오던 헤어살롱</PageTitle>
 
@@ -248,7 +250,7 @@
     private string _searchText = "";
     private int _currentPage = 1;
     private int _totalPages = 1;
-    private const int PageSize = 10;
+    private int _pageSize = 9; // 기본 3열 x 3행
     private bool _loading = true;
     private int _activeTab;
     private int _shopTab;
@@ -268,6 +270,8 @@
     private string QrScaleStyle =>
         $"transform: scale({_qrScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)})";
 
+    private const int Rows = 3; // 고정 행 수
+
     protected override async Task OnInitializedAsync()
     {
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
@@ -282,6 +286,33 @@
         await Task.WhenAll(loadStylesTask, loadShopTask);
         _shopConfig = loadShopTask.Result;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DetectPageSize();
+        }
+    }
+
+    private async Task DetectPageSize()
+    {
+        try
+        {
+            var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+            var cols = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
+            var newSize = cols * Rows;
+            if (newSize != _pageSize)
+            {
+                _pageSize = newSize;
+                ApplyFilters();
+                StateHasChanged();
+            }
+        }
+        catch { /* 무시 */ }
+    }
+
+    public void Dispose() { }
 
     private void SwitchTab(int tab)
     {
@@ -374,9 +405,9 @@
             ).ToList();
         }
 
-        _totalPages = Math.Max(1, (int)Math.Ceiling(_filteredStyles.Count / (double)PageSize));
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_filteredStyles.Count / (double)_pageSize));
         _currentPage = Math.Clamp(_currentPage, 1, _totalPages);
-        _pagedStyles = _filteredStyles.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
+        _pagedStyles = _filteredStyles.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
     }
 
     private Task OnCategoryChanged(StyleCategory category)
@@ -446,7 +477,7 @@
 
 <style>
     .salon-list-page {
-        max-width: 700px;
+        max-width: 920px;
         padding-top: 0.5rem;
     }
 
@@ -1132,6 +1163,14 @@
 
         .empty-sub {
             font-size: 0.88rem;
+        }
+    }
+
+    /* 태블릿 가로모드 (1024px+) */
+    @@media (min-width: 1024px) {
+        .style-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.4rem;
         }
     }
 </style>

@@ -22,5 +22,6 @@ builder.Services.AddScoped<IStyleService, FirestoreStyleService>();
 builder.Services.AddScoped<IAuditService, FirestoreAuditService>();
 builder.Services.AddScoped<IImageService, FirebaseStorageService>();
 builder.Services.AddScoped<IShopConfigService, FirestoreShopConfigService>();
+builder.Services.AddScoped<ILoginSecurityService, FirestoreLoginSecurityService>();
 
 await builder.Build().RunAsync();

@@ -1,7 +1,9 @@
 @page "/login"
 @inject IAuthService AuthService
+@inject ILoginSecurityService SecurityService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 <PageTitle>로그인 - 늘-오던 헤어살롱</PageTitle>
 
@@ -35,14 +37,20 @@
             </button>
         </div>
 
-        @if (!string.IsNullOrEmpty(_errorMessage))
+        @if (_isBlocked)
+        {
+            <div class="login-error login-blocked">
+                <i class="bi bi-shield-x me-1"></i>이 기기에서의 접근이 차단되었습니다.
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
         {
             <div class="login-error">
                 <i class="bi bi-exclamation-circle me-1"></i>@_errorMessage
             </div>
         }
 
-        <button class="btn btn-salon-green w-100" @onclick="HandleLogin" disabled="@_loading">
+        <button class="btn btn-salon-green w-100" @onclick="HandleLogin" disabled="@(_loading || _isBlocked)">
             @if (_loading)
             {
                 <span class="spinner-border spinner-border-sm me-1"></span>
@@ -57,6 +65,12 @@
     private string _errorMessage = "";
     private bool _loading;
     private bool _showPassword;
+    private bool _isBlocked;
+    private int _failCount;
+    private DateTime? _lockoutUntil;
+    private string _fingerprint = "";
+    private string _deviceInfo = "";
+    private string _screenSize = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,21 +83,95 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 기기 핑거프린트 생성
+            try
+            {
+                _fingerprint = await JS.InvokeAsync<string>("eval", @"
+                    (function() {
+                        var ua = navigator.userAgent;
+                        var screen = window.screen.width + 'x' + window.screen.height;
+                        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        var lang = navigator.language;
+                        var raw = ua + '|' + screen + '|' + tz + '|' + lang;
+                        // 간단한 해시 (FNV-1a)
+                        var hash = 0x811c9dc5;
+                        for (var i = 0; i < raw.length; i++) {
+                            hash ^= raw.charCodeAt(i);
+                            hash = Math.imul(hash, 0x01000193);
+                        }
+                        return (hash >>> 0).toString(16).padStart(8, '0');
+                    })()
+                ");
+                _deviceInfo = await JS.InvokeAsync<string>("eval", @"
+                    (function() {
+                        var ua = navigator.userAgent;
+                        if (ua.includes('iPhone')) return 'iPhone';
+                        if (ua.includes('iPad')) return 'iPad';
+                        if (ua.includes('Android')) return 'Android';
+                        if (ua.includes('Windows')) return 'Windows';
+                        if (ua.includes('Mac')) return 'Mac';
+                        return 'Unknown';
+                    })()
+                ");
+                _screenSize = await JS.InvokeAsync<string>("eval", "window.screen.width + 'x' + window.screen.height");
+
+                // 차단 여부 확인
+                _isBlocked = await SecurityService.IsBlockedAsync(_fingerprint);
+                StateHasChanged();
+            }
+            catch { }
+        }
+    }
+
     private async Task HandleLogin()
     {
         _errorMessage = "";
-        _loading = true;
 
+        if (_isBlocked) return;
+
+        // 잠금 상태 확인 (5회 실패 시 30초 잠금)
+        if (_lockoutUntil.HasValue && DateTime.UtcNow < _lockoutUntil.Value)
+        {
+            var remaining = (int)(_lockoutUntil.Value - DateTime.UtcNow).TotalSeconds;
+            _errorMessage = $"{remaining}초 후 다시 시도해주세요.";
+            return;
+        }
+
+        _loading = true;
         var role = await AuthService.LoginAsync(_password);
+
+        // 로그인 시도 기록
+        _ = SecurityService.LogAttemptAsync(new Models.LoginAttempt
+        {
+            DeviceFingerprint = _fingerprint,
+            DeviceInfo = _deviceInfo,
+            ScreenSize = _screenSize,
+            Success = role != null
+        });
 
         if (role != null)
         {
+            _failCount = 0;
             ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
             Nav.NavigateTo(role == "Admin" ? "admin" : "");
         }
         else
         {
-            _errorMessage = "비밀번호가 올바르지 않습니다.";
+            _failCount++;
+            if (_failCount >= 5)
+            {
+                _lockoutUntil = DateTime.UtcNow.AddSeconds(30);
+                _errorMessage = "로그인 시도가 초과되었습니다. 30초 후 다시 시도해주세요.";
+                _failCount = 0;
+            }
+            else
+            {
+                _errorMessage = $"비밀번호가 올바르지 않습니다. ({_failCount}/5)";
+            }
         }
 
         _loading = false;
@@ -205,6 +293,14 @@
         font-family: var(--font-serif);
         font-size: 0.8rem;
         margin-bottom: 1rem;
+    }
+
+    .login-blocked {
+        background: #fff3f3;
+        border: 1px solid #ffcccc;
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        color: #a94442;
     }
 
     .btn-salon-green {

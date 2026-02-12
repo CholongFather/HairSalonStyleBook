@@ -51,12 +51,10 @@ else if (_relatedStyles.Any())
     {
         _loading = true;
         _relatedStyles.Clear();
-        foreach (var id in RelatedPostIds.Take(6))
-        {
-            var style = await StyleService.GetByIdAsync(id);
-            if (style != null)
-                _relatedStyles.Add(style);
-        }
+        // 병렬 로딩으로 N+1 해결
+        var tasks = RelatedPostIds.Take(6).Select(id => StyleService.GetByIdAsync(id));
+        var results = await Task.WhenAll(tasks);
+        _relatedStyles = results.Where(s => s != null).ToList()!;
         _loading = false;
     }
 

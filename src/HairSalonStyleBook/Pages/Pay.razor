@@ -68,10 +68,15 @@
 
             <p class="pay-note">복사 후 뱅킹 앱에 붙여넣기 하세요</p>
 
-            <!-- 남은 시간 표시 -->
-            <div class="pay-timer">
-                <i class="bi bi-shield-lock"></i>
-                <span>@(_remainingSeconds)초 후 자동 만료</span>
+            <!-- 남은 시간 + 닫기 -->
+            <div class="pay-footer">
+                <div class="pay-timer">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>@(_remainingSeconds)초 후 자동 만료</span>
+                </div>
+                <button class="pay-close-btn" @onclick="ClosePage">
+                    <i class="bi bi-x-lg"></i> 닫기
+                </button>
             </div>
         </div>
     }
@@ -107,7 +112,7 @@
                     lastActivity: Date.now(),
                     reset: function() { this.lastActivity = Date.now(); }
                 };
-                ['touchstart','click','scroll'].forEach(function(evt) {
+                ['touchstart','click','scroll','keydown','keyup'].forEach(function(evt) {
                     document.addEventListener(evt, function() { window._payTimer.reset(); }, {passive:true});
                 });
             ");
@@ -204,6 +209,13 @@
         "농협" => "011",
         _ => "020"
     };
+
+    private void ClosePage()
+    {
+        _expired = true;
+        _remainingSeconds = 0;
+        _countdownTimer?.Dispose();
+    }
 
     public void Dispose()
     {
@@ -400,9 +412,16 @@
         margin: 0.8rem 0 0;
     }
 
-    /* 남은 시간 표시 */
+    /* 하단 영역 */
+    .pay-footer {
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
     .pay-timer {
-        margin-top: 0.8rem;
         font-family: var(--font-serif);
         font-size: 0.65rem;
         color: var(--salon-light-gray);
@@ -410,6 +429,26 @@
         align-items: center;
         justify-content: center;
         gap: 0.3rem;
+    }
+
+    .pay-close-btn {
+        background: none;
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 20px;
+        padding: 0.35rem 1rem;
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .pay-close-btn:active {
+        background: rgba(0,0,0,0.04);
+        transform: scale(0.96);
     }
 
     /* 만료 화면 */

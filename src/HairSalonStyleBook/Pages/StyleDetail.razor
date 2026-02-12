@@ -68,6 +68,11 @@
             </div>
         </div>
 
+        <!-- 이미지 캐러셀 -->
+        <div class="detail-carousel-wrap">
+            <ImageCarousel ImageUrls="_style.ImageUrls" />
+        </div>
+
         <!-- 상세 설명 -->
         @if (!string.IsNullOrEmpty(_style.Description))
         {
@@ -119,11 +124,6 @@
                 }
             </div>
         }
-
-        <!-- 이미지 캐러셀 -->
-        <div class="detail-carousel-wrap">
-            <ImageCarousel ImageUrls="_style.ImageUrls" />
-        </div>
 
         <!-- 해시태그 -->
         @if (_style.Hashtags.Any())
@@ -186,7 +186,7 @@
 
 <style>
     .salon-detail-page {
-        max-width: 640px;
+        max-width: 720px;
         padding: 0.5rem 1rem 2rem;
     }
 
@@ -537,7 +537,7 @@
     /* 태블릿 반응형 */
     @@media (min-width: 768px) {
         .salon-detail-page {
-            max-width: 720px;
+            max-width: 800px;
         }
 
         .btn-back {
