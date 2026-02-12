@@ -487,43 +487,20 @@ Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin text
         _seedProgress = 0;
         StateHasChanged();
 
-        // 기존 데이터 전부 삭제
+        // 기존 데이터 병렬 삭제 (5개씩 배치)
         _seedTotal = _styles.Count;
-        foreach (var existing in _styles)
+        foreach (var batch in _styles.Chunk(5))
         {
-            await StyleService.DeleteAsync(existing.Id);
-            _seedProgress++;
-            if (_seedProgress % 10 == 0) StateHasChanged();
-            await Task.Delay(30);
+            await Task.WhenAll(batch.Select(s => StyleService.DeleteAsync(s.Id)));
+            _seedProgress += batch.Length;
+            StateHasChanged();
         }
 
-        // 1단계: 스타일 생성
+        // 1단계: 스타일 데이터 준비 (해시태그·추천대상 미리 세팅)
         var styles = GetInitialStyles();
-        _seedProgress = 0;
-        _seedTotal = styles.Count;
-        StateHasChanged();
-
-        var createdStyles = new List<StylePost>();
         foreach (var style in styles)
         {
-            var created = await StyleService.CreateAsync(style);
-            createdStyles.Add(created);
-            _seedProgress++;
-            if (_seedProgress % 5 == 0) StateHasChanged();
-            await Task.Delay(50);
-        }
-
-        // 2단계: 연관 게시글 링크 + 해시태그 보강
-        _seedProgress = 0;
-        _seedTotal = createdStyles.Count;
-        StateHasChanged();
-
-        var titleToId = createdStyles.ToDictionary(s => s.Title, s => s.Id);
-        foreach (var style in createdStyles)
-        {
-            var updated = false;
-
-            // 해시태그 보강: 추천 모질 태그 자동 추가
+            // 해시태그 보강
             var extraTags = new List<string>();
             if (style.RecommendedHairTypes.Contains("직모")) extraTags.Add("직모");
             if (style.RecommendedHairTypes.Any(t => t.Contains("곱슬"))) extraTags.Add("곱슬");
@@ -531,13 +508,7 @@ Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin text
             if (style.RecommendedHairTypes.Contains("굵은모") || style.RecommendedHairTypes.Contains("뻣뻣한모")) extraTags.Add("굵은모");
             if (style.RecommendedHairTypes.Contains("숱많은")) extraTags.Add("숱많은");
             if (style.RecommendedHairTypes.Contains("숱적은")) extraTags.Add("숱적은");
-
-            var newTags = extraTags.Where(t => !string.IsNullOrEmpty(t) && !style.Hashtags.Contains(t)).ToList();
-            if (newTags.Any())
-            {
-                style.Hashtags.AddRange(newTags);
-                updated = true;
-            }
+            style.Hashtags.AddRange(extraTags.Where(t => !style.Hashtags.Contains(t)));
 
             // 추천 대상 자동 생성
             if (!style.RecommendedFor.Any())
@@ -572,24 +543,26 @@ Style: Editorial beauty photography, Canon EOS R5, 85mm f/1.8, natural skin text
                     recs.Add("숱 정리가 필요한 분");
                 if (style.RecommendedHairTypes.Contains("숱적은") && !recs.Contains("볼륨이 부족해 고민인 분"))
                     recs.Add("풍성해 보이고 싶은 분");
-
                 style.RecommendedFor = recs.Take(3).ToList();
-                updated = true;
             }
+        }
 
-            if (updated)
-            {
-                await StyleService.UpdateAsync(style);
-                await Task.Delay(30);
-            }
-            _seedProgress++;
-            if (_seedProgress % 10 == 0) StateHasChanged();
+        // 2단계: 병렬 생성 (5개씩 배치)
+        _seedProgress = 0;
+        _seedTotal = styles.Count;
+        StateHasChanged();
+
+        foreach (var batch in styles.Chunk(5))
+        {
+            await Task.WhenAll(batch.Select(s => StyleService.CreateAsync(s)));
+            _seedProgress += batch.Length;
+            StateHasChanged();
         }
 
         _styles = await StyleService.GetAllAsync();
         _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
         _seeding = false;
-        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: {styles.Count}건 생성 + 해시태그 보강");
+        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: {styles.Count}건 생성");
     }
 
     private static List<StylePost> GetInitialStyles()
