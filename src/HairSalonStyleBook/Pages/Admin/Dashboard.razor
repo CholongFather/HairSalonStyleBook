@@ -670,35 +670,9 @@ The model is facing the camera with a front view composition. Vertical aspect ra
 
             // AI 프롬프트용 나이대·분위기 자동 세팅
             if (string.IsNullOrEmpty(style.RecommendedAge))
-            {
-                style.RecommendedAge = style.Category switch
-                {
-                    StyleCategory.남성 => style.Title.Contains("리젠트") || style.Title.Contains("댄디") ? "30대 초반"
-                        : style.Title.Contains("크롭") || style.Title.Contains("페이드") ? "20대 초반"
-                        : "20대 중반",
-                    StyleCategory.여성숏 => "30대 초반",
-                    StyleCategory.여성단발 => "20대 후반",
-                    StyleCategory.여성미디움 => "20대 중반",
-                    StyleCategory.여성롱 => "20대 초반",
-                    _ => "20대 중반"
-                };
-            }
+                style.RecommendedAge = GetRecommendedAge(style);
             if (string.IsNullOrEmpty(style.Mood))
-            {
-                style.Mood = style.Category switch
-                {
-                    StyleCategory.남성 => style.Title.Contains("댄디") || style.Title.Contains("리젠트") ? "세련됨"
-                        : style.Title.Contains("크롭") || style.Title.Contains("페이드") ? "시크함"
-                        : "자연스러움",
-                    StyleCategory.여성숏 => style.Service == ServiceType.펌 ? "발랄함" : "시크함",
-                    StyleCategory.여성단발 => style.Service == ServiceType.펌 ? "귀여움" : "세련됨",
-                    StyleCategory.여성미디움 => style.Service == ServiceType.펌 ? "자연스러움"
-                        : style.Service == ServiceType.염색 ? "세련됨" : "청순함",
-                    StyleCategory.여성롱 => style.Service == ServiceType.펌 ? "섹시함"
-                        : style.Service == ServiceType.염색 ? "세련됨" : "청순함",
-                    _ => "자연스러움"
-                };
-            }
+                style.Mood = GetRecommendedMood(style);
         }
 
         // 2단계: 병렬 생성 (5개씩 배치)
@@ -717,6 +691,219 @@ The model is facing the camera with a front view composition. Vertical aspect ra
         _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
         _seeding = false;
         await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: {styles.Count}건 생성");
+    }
+
+    private static string GetRecommendedAge(StylePost style)
+    {
+        var t = style.Title;
+        // ── 남성 ──
+        if (style.Category == StyleCategory.남성)
+        {
+            if (t.Contains("버즈")) return "20대 초반";
+            if (t.Contains("크롭") || t.Contains("페이드") || t.Contains("머쉬룸")) return "20대 초반";
+            if (t.Contains("투블록") || t.Contains("콤마") || t.Contains("쉼표") || t.Contains("셋팅")) return "20대 중반";
+            if (t.Contains("가르마") || t.Contains("센터파트") || t.Contains("내추럴")) return "20대 중반";
+            if (t.Contains("쉐도우") || t.Contains("스왈로") || t.Contains("스핀스")) return "20대 중반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("리프")) return "20대 초반";
+            if (t.Contains("테이퍼")) return "20대 후반";
+            if (t.Contains("댄디") || t.Contains("리젠트") || t.Contains("포마드")) return "30대 초반";
+            if (t.Contains("다운펌") || t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("실버") || t.Contains("그레이")) return "20대 초반";
+            if (t.Contains("블론드") || t.Contains("금발")) return "20대 초반";
+            if (t.Contains("브라운") || t.Contains("카키")) return "20대 후반";
+            if (t.Contains("투펌")) return "20대 중반";
+            return "20대 중반";
+        }
+        // ── 여성 숏 ──
+        if (style.Category == StyleCategory.여성숏)
+        {
+            if (t.Contains("픽시")) return "20대 중반";
+            if (t.Contains("허쉬")) return "20대 후반";
+            if (t.Contains("보이쉬") || t.Contains("크롭")) return "20대 초반";
+            if (t.Contains("시스루")) return "20대 중반";
+            if (t.Contains("웨이브") || t.Contains("핑거")) return "30대 초반";
+            if (t.Contains("투블록")) return "20대 초반";
+            if (t.Contains("빅시")) return "20대 후반";
+            if (t.Contains("이어 허그")) return "20대 후반";
+            if (t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("라벤더") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("오렌지")) return "20대 초반";
+            if (t.Contains("애쉬")) return "20대 중반";
+            return "20대 후반";
+        }
+        // ── 여성 단발 ──
+        if (style.Category == StyleCategory.여성단발)
+        {
+            if (t.Contains("원랭스")) return "20대 후반";
+            if (t.Contains("태슬")) return "20대 중반";
+            if (t.Contains("칼단발") || t.Contains("블런트")) return "20대 후반";
+            if (t.Contains("히메")) return "10대 후반";
+            if (t.Contains("커튼뱅")) return "20대 초반";
+            if (t.Contains("보브") || t.Contains("밥")) return "20대 중반";
+            if (t.Contains("S컬") || t.Contains("C컬") || t.Contains("엔드컬")) return "20대 중반";
+            if (t.Contains("물결")) return "20대 후반";
+            if (t.Contains("A라인")) return "30대 초반";
+            if (t.Contains("미니")) return "20대 초반";
+            if (t.Contains("애플")) return "20대 초반";
+            if (t.Contains("밀크티")) return "20대 초반";
+            if (t.Contains("올리브")) return "20대 후반";
+            if (t.Contains("투톤") || t.Contains("와인")) return "20대 중반";
+            if (t.Contains("허니")) return "20대 중반";
+            if (t.Contains("블루")) return "20대 초반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("매직")) return "30대 초반";
+            return "20대 중반";
+        }
+        // ── 여성 미디움 ──
+        if (style.Category == StyleCategory.여성미디움)
+        {
+            if (t.Contains("레이어드 허그") || t.Contains("쇄골")) return "20대 후반";
+            if (t.Contains("가르마") || t.Contains("빌드")) return "20대 중반";
+            if (t.Contains("에어")) return "20대 초반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("로즈")) return "20대 중반";
+            if (t.Contains("발레야쥬")) return "20대 후반";
+            if (t.Contains("허쉬")) return "20대 후반";
+            if (t.Contains("이태리")) return "20대 후반";
+            if (t.Contains("젤리피쉬")) return "10대 후반";
+            if (t.Contains("엘리자벳")) return "30대 초반";
+            if (t.Contains("보헤미안")) return "20대 후반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("디지털") || t.Contains("S컬")) return "20대 중반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("뿌리")) return "30대 초반";
+            if (t.Contains("매직") || t.Contains("스트레이트")) return "20대 후반";
+            if (t.Contains("셋팅")) return "20대 중반";
+            if (t.Contains("체리") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("하이라이트")) return "20대 후반";
+            return "20대 중반";
+        }
+        // ── 여성 롱 ──
+        if (style.Category == StyleCategory.여성롱)
+        {
+            if (t.Contains("히피")) return "20대 초반";
+            if (t.Contains("애즈")) return "20대 중반";
+            if (t.Contains("바디 웨이브")) return "20대 후반";
+            if (t.Contains("글래머") || t.Contains("글램")) return "30대 초반";
+            if (t.Contains("페이스 프레이밍")) return "20대 후반";
+            if (t.Contains("밀크티")) return "20대 초반";
+            if (t.Contains("블루블랙")) return "20대 초반";
+            if (t.Contains("브릿지") || t.Contains("하이라이트")) return "20대 후반";
+            if (t.Contains("레이어드 물결")) return "20대 중반";
+            if (t.Contains("이어링")) return "20대 초반";
+            if (t.Contains("옴브레")) return "20대 중반";
+            if (t.Contains("원랭스")) return "20대 후반";
+            if (t.Contains("허그")) return "20대 중반";
+            if (t.Contains("워터")) return "20대 중반";
+            if (t.Contains("V컷")) return "20대 후반";
+            if (t.Contains("C컬") || t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("디지털")) return "20대 중반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("U컷")) return "20대 후반";
+            if (t.Contains("그라데이션") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("카키") || t.Contains("베이지")) return "20대 후반";
+            if (t.Contains("섀도우")) return "20대 후반";
+            if (t.Contains("허니") || t.Contains("블론드")) return "20대 초반";
+            if (t.Contains("투톤")) return "20대 중반";
+            if (t.Contains("체리") || t.Contains("레드")) return "20대 초반";
+            if (t.Contains("블랙빈") || t.Contains("흑갈색")) return "30대 초반";
+            if (t.Contains("가일")) return "20대 중반";
+            return "20대 중반";
+        }
+        return "20대 중반";
+    }
+
+    private static string GetRecommendedMood(StylePost style)
+    {
+        var t = style.Title;
+        // ── 남성 ──
+        if (style.Category == StyleCategory.남성)
+        {
+            if (t.Contains("댄디") || t.Contains("리젠트") || t.Contains("포마드")) return "세련됨";
+            if (t.Contains("크롭") || t.Contains("페이드") || t.Contains("버즈")) return "시크함";
+            if (t.Contains("울프") || t.Contains("머쉬룸")) return "발랄함";
+            if (t.Contains("실버") || t.Contains("블론드") || t.Contains("금발")) return "시크함";
+            if (t.Contains("가르마") || t.Contains("내추럴") || t.Contains("센터파트")) return "자연스러움";
+            if (t.Contains("콤마") || t.Contains("쉼표")) return "귀여움";
+            if (t.Contains("테이퍼")) return "세련됨";
+            return "자연스러움";
+        }
+        // ── 여성 숏 ──
+        if (style.Category == StyleCategory.여성숏)
+        {
+            if (t.Contains("픽시") || t.Contains("보이쉬") || t.Contains("크롭")) return "시크함";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("이어 허그")) return "귀여움";
+            if (t.Contains("핑거 웨이브")) return "세련됨";
+            if (t.Contains("투블록")) return "시크함";
+            if (t.Contains("빅시")) return "발랄함";
+            if (t.Contains("라벤더") || t.Contains("핑크") || t.Contains("오렌지")) return "발랄함";
+            if (t.Contains("허쉬")) return "시크함";
+            if (t.Contains("울프")) return "시크함";
+            if (style.Service == ServiceType.펌) return "발랄함";
+            return "시크함";
+        }
+        // ── 여성 단발 ──
+        if (style.Category == StyleCategory.여성단발)
+        {
+            if (t.Contains("히메")) return "귀여움";
+            if (t.Contains("칼단발") || t.Contains("블런트") || t.Contains("원랭스")) return "세련됨";
+            if (t.Contains("커튼뱅")) return "청순함";
+            if (t.Contains("태슬")) return "세련됨";
+            if (t.Contains("S컬") || t.Contains("물결")) return "자연스러움";
+            if (t.Contains("C컬") || t.Contains("애플") || t.Contains("엔드컬")) return "귀여움";
+            if (t.Contains("미니")) return "귀여움";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("A라인")) return "세련됨";
+            if (t.Contains("밀크티") || t.Contains("허니")) return "청순함";
+            if (t.Contains("와인") || t.Contains("투톤")) return "세련됨";
+            if (t.Contains("블루")) return "시크함";
+            if (t.Contains("올리브")) return "자연스러움";
+            return "자연스러움";
+        }
+        // ── 여성 미디움 ──
+        if (style.Category == StyleCategory.여성미디움)
+        {
+            if (t.Contains("울프") || t.Contains("젤리피쉬")) return "시크함";
+            if (t.Contains("에어")) return "청순함";
+            if (t.Contains("허쉬") || t.Contains("이태리")) return "시크함";
+            if (t.Contains("엘리자벳")) return "세련됨";
+            if (t.Contains("보헤미안")) return "자연스러움";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("로즈") || t.Contains("핑크") || t.Contains("체리")) return "발랄함";
+            if (t.Contains("발레야쥬") || t.Contains("하이라이트")) return "세련됨";
+            if (t.Contains("가르마") || t.Contains("빌드")) return "자연스러움";
+            if (t.Contains("S컬") || t.Contains("디지털")) return "자연스러움";
+            if (t.Contains("레이어드 허그") || t.Contains("쇄골")) return "자연스러움";
+            return "자연스러움";
+        }
+        // ── 여성 롱 ──
+        if (style.Category == StyleCategory.여성롱)
+        {
+            if (t.Contains("히피")) return "발랄함";
+            if (t.Contains("글래머") || t.Contains("글램")) return "섹시함";
+            if (t.Contains("바디 웨이브") || t.Contains("워터")) return "섹시함";
+            if (t.Contains("페이스 프레이밍")) return "세련됨";
+            if (t.Contains("울프")) return "시크함";
+            if (t.Contains("밀크티") || t.Contains("허니") || t.Contains("블론드")) return "청순함";
+            if (t.Contains("블루블랙") || t.Contains("블랙빈")) return "시크함";
+            if (t.Contains("발레야쥬") || t.Contains("하이라이트") || t.Contains("브릿지")) return "세련됨";
+            if (t.Contains("이어링")) return "발랄함";
+            if (t.Contains("그라데이션") || t.Contains("핑크") || t.Contains("체리")) return "발랄함";
+            if (t.Contains("옴브레") || t.Contains("투톤")) return "세련됨";
+            if (t.Contains("원랭스")) return "청순함";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("V컷") || t.Contains("U컷")) return "세련됨";
+            if (t.Contains("허그") || t.Contains("레이어드 물결")) return "자연스러움";
+            if (t.Contains("애즈")) return "자연스러움";
+            if (t.Contains("가일")) return "자연스러움";
+            return "자연스러움";
+        }
+        return "자연스러움";
     }
 
     private static List<StylePost> GetInitialStyles()
