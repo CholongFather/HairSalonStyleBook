@@ -194,7 +194,7 @@
             </div>
 
             <div class="trash-notes">
-                <p><i class="bi bi-info-circle"></i> 배출시간: 일몰 후 ~ 자정 (수거일 전날 저녁)</p>
+                <p><i class="bi bi-info-circle"></i> 월·목 저녁에 내놓고, 화·금 아침에 수거</p>
                 <p><i class="bi bi-exclamation-triangle"></i> 공휴일에는 수거하지 않습니다</p>
                 <p><i class="bi bi-telephone"></i> 문의: 화성시 자원순환과 031-5189-6801</p>
             </div>
@@ -262,10 +262,7 @@
     // 쓰레기 배출 스케줄
     private readonly List<TrashScheduleItem> _trashSchedule = new()
     {
-        new("일반 쓰레기", "월 · 수 · 금", "일몰 후", "bi-bag", "#6b7280"),
-        new("음식물 쓰레기", "월 · 수 · 금", "일몰 후", "bi-cup-straw", "#059669"),
-        new("재활용", "목", "일몰 후", "bi-recycle", "#2563eb"),
-        new("대형 폐기물", "사전 신청", "신청 후 배출", "bi-box-seam", "#d97706"),
+        new("쓰레기", "월 · 목 저녁 배출 → 화 · 금 아침 수거", "", "bi-trash3", "#6b7280"),
     };
 
     private record TrashScheduleItem(string Type, string Days, string Time, string Icon, string Color);
