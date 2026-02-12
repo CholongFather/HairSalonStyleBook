@@ -51,9 +51,6 @@
                         }
                     </button>
                 }
-                <a href="admin/audit" class="btn btn-salon-outline">
-                    <i class="bi bi-clock-history"></i> 감사 로그
-                </a>
             </div>
         </div>
 
@@ -298,9 +295,66 @@
     {
         <!-- 보안 탭 -->
         <div class="admin-header">
-            <h2 class="admin-title">로그인 보안</h2>
-            <div class="admin-actions">
-                <button class="btn btn-salon-outline" @onclick="LoadSecurityData" disabled="@_securityLoading">
+            <h2 class="admin-title">보안</h2>
+        </div>
+
+        <!-- 서브 탭 -->
+        <div class="security-sub-tabs">
+            <button class="security-sub-tab @(_securitySubTab == 0 ? "active" : "")" @onclick="() => _securitySubTab = 0">
+                <i class="bi bi-clock-history"></i> 감사 로그
+            </button>
+            <button class="security-sub-tab @(_securitySubTab == 1 ? "active" : "")" @onclick="() => _securitySubTab = 1">
+                <i class="bi bi-shield-lock"></i> 로그인 보안
+            </button>
+        </div>
+
+        @if (_securitySubTab == 0)
+        {
+            <!-- 감사 로그 -->
+            @if (_auditLoading)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm"></div>
+                </div>
+            }
+            else if (!_auditLogs.Any())
+            {
+                <p class="text-muted text-center py-4" style="font-size:0.85rem;">감사 로그가 없습니다.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>시간</th>
+                                <th>액션</th>
+                                <th>대상</th>
+                                <th>상세</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in _auditLogs)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@log.Timestamp.ToLocalTime().ToString("yyyy.MM.dd HH:mm")</td>
+                                    <td>
+                                        <span class="audit-badge audit-@log.Action.ToLower()">@GetAuditActionLabel(log.Action)</span>
+                                    </td>
+                                    <td>@log.TargetTitle</td>
+                                    <td class="text-muted">@log.Details</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- 로그인 보안 -->
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-salon-outline btn-sm" @onclick="LoadSecurityData" disabled="@_securityLoading">
                     @if (_securityLoading)
                     {
                         <span class="spinner-border spinner-border-sm me-1"></span>
@@ -308,85 +362,85 @@
                     <i class="bi bi-arrow-clockwise"></i> 새로고침
                 </button>
             </div>
-        </div>
 
-        @if (_blockedDevices.Any())
-        {
-            <div class="security-blocked-section">
-                <h6><i class="bi bi-shield-x"></i> 차단된 기기 (@_blockedDevices.Count)</h6>
-                <div class="security-blocked-list">
-                    @foreach (var fp in _blockedDevices)
-                    {
-                        <div class="security-blocked-item">
-                            <code>@fp</code>
-                            <button class="btn btn-sm btn-outline-success" @onclick="() => UnblockDevice(fp)">
-                                <i class="bi bi-unlock"></i> 해제
-                            </button>
-                        </div>
-                    }
+            @if (_blockedDevices.Any())
+            {
+                <div class="security-blocked-section">
+                    <h6><i class="bi bi-shield-x"></i> 차단된 기기 (@_blockedDevices.Count)</h6>
+                    <div class="security-blocked-list">
+                        @foreach (var fp in _blockedDevices)
+                        {
+                            <div class="security-blocked-item">
+                                <code>@fp</code>
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => UnblockDevice(fp)">
+                                    <i class="bi bi-unlock"></i> 해제
+                                </button>
+                            </div>
+                        }
+                    </div>
                 </div>
+            }
+
+            <div class="security-attempts-section">
+                <h6><i class="bi bi-clock-history"></i> 최근 로그인 시도</h6>
+                @if (!_loginAttempts.Any() && !_securityLoading)
+                {
+                    <p class="text-muted" style="font-size:0.85rem;">기록된 로그인 시도가 없습니다.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table admin-table security-table">
+                            <thead>
+                                <tr>
+                                    <th>시간</th>
+                                    <th>기기</th>
+                                    <th>해상도</th>
+                                    <th>결과</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var attempt in _loginAttempts)
+                                {
+                                    var isBlocked = _blockedDevices.Contains(attempt.DeviceFingerprint);
+                                    <tr class="@(attempt.Success ? "" : "attempt-fail") @(isBlocked ? "attempt-blocked" : "")">
+                                        <td>@attempt.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")</td>
+                                        <td>
+                                            <span class="device-info">@attempt.DeviceInfo</span>
+                                            <code class="device-fp">@attempt.DeviceFingerprint</code>
+                                        </td>
+                                        <td>@attempt.ScreenSize</td>
+                                        <td>
+                                            @if (attempt.Success)
+                                            {
+                                                <span class="badge bg-success">성공</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">실패</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!attempt.Success && !isBlocked)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => BlockDevice(attempt.DeviceFingerprint)">
+                                                    <i class="bi bi-shield-x"></i> 차단
+                                                </button>
+                                            }
+                                            else if (isBlocked)
+                                            {
+                                                <span class="badge bg-secondary">차단됨</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             </div>
         }
-
-        <div class="security-attempts-section">
-            <h6><i class="bi bi-clock-history"></i> 최근 로그인 시도</h6>
-            @if (!_loginAttempts.Any() && !_securityLoading)
-            {
-                <p class="text-muted" style="font-size:0.85rem;">기록된 로그인 시도가 없습니다.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table admin-table security-table">
-                        <thead>
-                            <tr>
-                                <th>시간</th>
-                                <th>기기</th>
-                                <th>해상도</th>
-                                <th>결과</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var attempt in _loginAttempts)
-                            {
-                                var isBlocked = _blockedDevices.Contains(attempt.DeviceFingerprint);
-                                <tr class="@(attempt.Success ? "" : "attempt-fail") @(isBlocked ? "attempt-blocked" : "")">
-                                    <td>@attempt.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")</td>
-                                    <td>
-                                        <span class="device-info">@attempt.DeviceInfo</span>
-                                        <code class="device-fp">@attempt.DeviceFingerprint</code>
-                                    </td>
-                                    <td>@attempt.ScreenSize</td>
-                                    <td>
-                                        @if (attempt.Success)
-                                        {
-                                            <span class="badge bg-success">성공</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">실패</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (!attempt.Success && !isBlocked)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => BlockDevice(attempt.DeviceFingerprint)">
-                                                <i class="bi bi-shield-x"></i> 차단
-                                            </button>
-                                        }
-                                        else if (isBlocked)
-                                        {
-                                            <span class="badge bg-secondary">차단됨</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
     }
 </div>
 
@@ -596,9 +650,12 @@
     }
 
     // 보안
+    private int _securitySubTab;
     private List<LoginAttempt> _loginAttempts = new();
     private List<string> _blockedDevices = new();
     private bool _securityLoading;
+    private List<AuditLog> _auditLogs = new();
+    private bool _auditLoading;
 
     // 매장 설정
     private ShopConfig _shopConfig = new();
@@ -662,9 +719,29 @@
     private async Task OpenSecurityTab()
     {
         _adminTab = 3;
+        if (!_auditLogs.Any())
+            await LoadAuditLogs();
         if (!_loginAttempts.Any())
             await LoadSecurityData();
     }
+
+    private async Task LoadAuditLogs()
+    {
+        _auditLoading = true;
+        StateHasChanged();
+        _auditLogs = await AuditService.GetAllAsync();
+        _auditLogs = _auditLogs.OrderByDescending(l => l.Timestamp).ToList();
+        _auditLoading = false;
+        StateHasChanged();
+    }
+
+    private static string GetAuditActionLabel(string action) => action switch
+    {
+        "Create" => "생성",
+        "Update" => "수정",
+        "Delete" => "삭제",
+        _ => action
+    };
 
     private async Task LoadSecurityData()
     {
@@ -3701,6 +3778,49 @@ Save the file as: {GetSuggestedFilename()}";
         white-space: nowrap;
         border-radius: 6px;
     }
+
+    /* 보안 서브 탭 */
+    .security-sub-tabs {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 1.2rem;
+        border-bottom: 2px solid var(--salon-light-gray);
+    }
+
+    .security-sub-tab {
+        font-family: var(--font-serif);
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.5rem 0.8rem;
+        border: none;
+        background: none;
+        color: var(--salon-gray);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+    }
+
+    .security-sub-tab.active {
+        color: var(--salon-black);
+        border-bottom-color: var(--salon-black);
+    }
+
+    .security-sub-tab:hover {
+        color: var(--salon-dark);
+    }
+
+    /* 감사 로그 배지 */
+    .audit-badge {
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        font-weight: 700;
+        border-radius: 4px;
+    }
+
+    .audit-create { background: #d4edda; color: #155724; }
+    .audit-update { background: #fff3cd; color: #856404; }
+    .audit-delete { background: #f8d7da; color: #842029; }
 
     /* 보안 탭 */
     .security-blocked-section {

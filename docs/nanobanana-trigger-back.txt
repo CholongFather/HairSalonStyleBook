@@ -245,69 +245,14 @@
 
 ---
 
-## Firestore 이미지 URL 업로드
-
-이미지 생성 후, 아래 REST API를 사용해서 Firestore에 이미지 URL을 직접 업로드해줘.
-
-**1단계: 스타일 문서 검색**
-```
-GET https://firestore.googleapis.com/v1/projects/always-hair-salon/databases/(default)/documents/styles?key=AIzaSyBUC61LDhLONI-O0QOFl3y2C4uWMapbbI0&pageSize=300
-```
-응답에서 `documents[].fields.title.stringValue`가 현재 스타일명과 일치하는 문서를 찾아.
-해당 문서의 `name` 필드에서 마지막 `/` 뒤의 값이 `docId`야.
-기존 `imageUrls.arrayValue.values[]`가 있으면 보존해야 해.
-
-**2단계: Firebase Storage에 이미지 업로드**
-```
-POST https://firebasestorage.googleapis.com/v0/b/always-hair-salon.firebasestorage.app/o?uploadType=media&name=styles%2F{timestamp}_{safeName}_{angle}.webp
-Content-Type: image/webp
-Body: (이미지 바이너리)
-```
-- `{timestamp}`: 현재 Unix timestamp (밀리초)
-- `{safeName}`: 스타일명에서 특수문자를 `_`로 치환
-- `{angle}`: 후면
-- 응답의 `downloadTokens` 값으로 다운로드 URL 생성:
-  `https://firebasestorage.googleapis.com/v0/b/always-hair-salon.firebasestorage.app/o/styles%2F{파일명}?alt=media&token={downloadTokens}`
-
-**3단계: Firestore imageUrls 업데이트**
-```
-PATCH https://firestore.googleapis.com/v1/projects/always-hair-salon/databases/(default)/documents/styles/{docId}?key=AIzaSyBUC61LDhLONI-O0QOFl3y2C4uWMapbbI0&updateMask.fieldPaths=imageUrls
-Content-Type: application/json
-
-{
-  "fields": {
-    "imageUrls": {
-      "arrayValue": {
-        "values": [
-          ...기존 URL들...,
-          { "stringValue": "새 다운로드 URL" }
-        ]
-      }
-    }
-  }
-}
-```
-
-**4단계: 게시 상태 업데이트**
-```
-PATCH https://firestore.googleapis.com/v1/projects/always-hair-salon/databases/(default)/documents/styles/{docId}?key=AIzaSyBUC61LDhLONI-O0QOFl3y2C4uWMapbbI0&updateMask.fieldPaths=isPublished
-Content-Type: application/json
-
-{ "fields": { "isPublished": { "booleanValue": true } } }
-```
-
----
-
 ## 결과 보고
-이미지 생성 및 업로드 후 아래 형식으로 보고해:
+이미지 생성 후 아래 형식으로 보고해:
 - 번호: {목록 번호}
 - 스타일명: {제목}
 - 카테고리: {카테고리}
 - 앵글: 후면
 - 배경: {선택한 배경}
 - 얼굴형: {선택한 얼굴형}
-- Firestore 문서ID: {docId}
-- 업로드 상태: 완료/실패
 - 파일명: {번호}_{카테고리}_{스타일명}_후면.webp
 
 ## 주의사항
@@ -315,4 +260,66 @@ Content-Type: application/json
 - 매 실행마다 목록에서 1개를 순서대로 처리해
 - 이전 실행에서 N번까지 했으면 N+1번부터 이어서 해
 - 파일명에 반드시 `_후면`을 포함시켜
-- 이미지 생성 후 반드시 Firestore에 URL을 업로드해
+- Firestore 업로드는 하지 마. 이미지 생성만 해.
+
+---
+
+## 전체 완료 후: 매핑 JSON 파일 생성
+
+모든 스타일(1~96번)의 후면 이미지 생성이 끝나면, 생성한 이미지 파일과 Firestore에 올려야 할 데이터를 매핑하는 JSON 파일을 생성해줘.
+
+**파일명:** `back-view-mapping.json`
+
+**형식:**
+```json
+{
+  "generatedAt": "2026-02-13T12:00:00Z",
+  "angle": "후면",
+  "totalCount": 96,
+  "successCount": 94,
+  "failedCount": 2,
+  "styles": [
+    {
+      "no": 1,
+      "title": "투블록 텍스쳐 컷",
+      "category": "남성",
+      "type": "커트",
+      "fileName": "1_남성_투블록_텍스쳐_컷_후면.webp",
+      "status": "success",
+      "metadata": {
+        "background": "미용실 거울과 스타일링 의자",
+        "faceShape": "계란형"
+      }
+    }
+  ]
+}
+```
+
+**필드 설명:**
+- `no`: 목록 번호 (1~96)
+- `title`: Firestore `styles` 컬렉션의 `title` 필드와 매칭되는 스타일명
+- `category`: 남성 / 여성숏 / 여성단발 / 여성미디움 / 여성롱
+- `type`: 커트 / 펌
+- `fileName`: 생성된 이미지 파일명 (나중에 Firebase Storage 업로드 시 사용)
+- `status`: `"success"` 또는 `"failed"`
+- `metadata.background`: 사용한 배경
+- `metadata.faceShape`: 사용한 얼굴형
+
+**실패한 항목 예시:**
+```json
+{
+  "no": 5,
+  "title": "시저 컷",
+  "category": "남성",
+  "type": "커트",
+  "fileName": null,
+  "status": "failed",
+  "error": "이미지 생성 실패 - 콘텐츠 정책 위반",
+  "metadata": {
+    "background": "미용실 창가",
+    "faceShape": "둥근형"
+  }
+}
+```
+
+이 JSON 파일은 나중에 별도 스크립트로 Firebase Storage 업로드 + Firestore 데이터 연동할 때 사용할 거야.

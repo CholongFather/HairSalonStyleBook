@@ -31,6 +31,7 @@
                    class="form-control login-input"
                    placeholder="비밀번호를 입력하세요"
                    @bind="_password"
+                   @bind:event="oninput"
                    @onkeydown="OnKeyDown" />
             <button type="button" class="btn-pw-toggle" @onclick="() => _showPassword = !_showPassword" tabindex="-1">
                 <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>

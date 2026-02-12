@@ -20,7 +20,8 @@ public class ShopConfig
     public string NaverPlaceId { get; set; } = "1883331965";
     public string NaverPlaceUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://m.place.naver.com/hairshop/{NaverPlaceId}/home";
     public string NaverReviewUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://m.place.naver.com/hairshop/{NaverPlaceId}/review/visitor";
-    public string NaverMapUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://map.naver.com/p/entry/place/{NaverPlaceId}";
+    public string NaverMapSearchKeyword { get; set; } = "산척동 미용실";
+    public string NaverMapUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://map.naver.com/p/search/{Uri.EscapeDataString(NaverMapSearchKeyword)}/place/{NaverPlaceId}?placePath=/home";
 
     // QR 코드 URL 자동 생성
     public string Wifi5GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName5G};P:{WifiPassword};;")}";
@@ -29,4 +30,6 @@ public class ShopConfig
     public string AccountQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("https://cholongfather.github.io/HairSalonStyleBook/pay")}";
     public string InstagramQrUrl => string.IsNullOrEmpty(InstagramUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(InstagramUrl)}";
     public string NaverPlaceQrUrl => string.IsNullOrEmpty(NaverPlaceUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverPlaceUrl)}";
+    public string NaverReviewQrUrl => string.IsNullOrEmpty(NaverReviewUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverReviewUrl)}";
+    public string NaverMapQrUrl => string.IsNullOrEmpty(NaverMapUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverMapUrl)}";
 }
