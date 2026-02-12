@@ -24,17 +24,12 @@
     </div>
     <div class="style-card-body">
         <h3 class="style-card-title">@Style.Title</h3>
-        @if (Style.TreatmentDifficulty > 0)
+        @if (Style.RecommendedHairTypes.Any())
         {
-            <div class="card-difficulty">
-                <span class="card-diff-label">시술</span>
-                @for (int i = 0; i < Style.TreatmentDifficulty; i++)
+            <div class="card-hair-types">
+                @foreach (var hairType in Style.RecommendedHairTypes.Take(4))
                 {
-                    <i class="bi bi-star-fill card-star active"></i>
-                }
-                @for (int i = Style.TreatmentDifficulty; i < 5; i++)
-                {
-                    <i class="bi bi-star card-star"></i>
+                    <span class="card-hair-badge">@hairType</span>
                 }
             </div>
         }
@@ -190,29 +185,23 @@
         overflow: hidden;
     }
 
-    /* 난이도 별점 */
-    .card-difficulty {
+    /* 추천 모질 배지 */
+    .card-hair-types {
         display: flex;
-        align-items: center;
-        gap: 0.1rem;
+        flex-wrap: wrap;
+        gap: 0.2rem;
         margin-bottom: 0.25rem;
     }
 
-    .card-diff-label {
+    .card-hair-badge {
         font-family: var(--font-serif);
-        font-size: 0.58rem;
-        color: var(--salon-gray);
-        margin-right: 0.2rem;
+        font-size: 0.55rem;
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: rgba(123, 163, 131, 0.12);
+        color: var(--salon-green);
         font-weight: 600;
-    }
-
-    .card-star {
-        font-size: 0.5rem;
-        color: #ddd;
-    }
-
-    .card-star.active {
-        color: #e8a840;
+        letter-spacing: -0.01em;
     }
 
     /* 해시태그 미리보기 */
@@ -241,12 +230,9 @@
             padding: 4px 12px;
         }
 
-        .card-diff-label {
-            font-size: 0.65rem;
-        }
-
-        .card-star {
-            font-size: 0.58rem;
+        .card-hair-badge {
+            font-size: 0.62rem;
+            padding: 2px 8px;
         }
 
         .card-hashtag {

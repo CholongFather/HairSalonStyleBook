@@ -87,52 +87,6 @@
                     <span>한눈에 보기</span>
                 </div>
                 <div class="quick-info-body">
-                    @if (_style.TreatmentDifficulty > 0)
-                    {
-                        <div class="quick-info-row">
-                            <span class="quick-info-label">시술 난이도</span>
-                            <span class="quick-info-value">
-                                @for (int i = 0; i < _style.TreatmentDifficulty; i++)
-                                {
-                                    <i class="bi bi-star-fill quick-dot active"></i>
-                                }
-                                @for (int i = _style.TreatmentDifficulty; i < 5; i++)
-                                {
-                                    <i class="bi bi-star quick-dot"></i>
-                                }
-                            </span>
-                        </div>
-                    }
-                    @if (_style.MaintenanceLevel > 0)
-                    {
-                        <div class="quick-info-row">
-                            <span class="quick-info-label">관리 난이도</span>
-                            <span class="quick-info-value">
-                                @for (int i = 0; i < _style.MaintenanceLevel; i++)
-                                {
-                                    <i class="bi bi-star-fill quick-dot active"></i>
-                                }
-                                @for (int i = _style.MaintenanceLevel; i < 5; i++)
-                                {
-                                    <i class="bi bi-star quick-dot"></i>
-                                }
-                            </span>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(_style.Duration))
-                    {
-                        <div class="quick-info-row">
-                            <span class="quick-info-label">유지 기간</span>
-                            <span class="quick-info-value">@_style.Duration</span>
-                        </div>
-                    }
-                    @if (_style.RecommendedFaceShapes.Any())
-                    {
-                        <div class="quick-info-row">
-                            <span class="quick-info-label">추천 얼굴형</span>
-                            <span class="quick-info-value">@string.Join(" · ", _style.RecommendedFaceShapes)</span>
-                        </div>
-                    }
                     @if (_style.RecommendedHairTypes.Any())
                     {
                         <div class="quick-info-row">
@@ -206,11 +160,8 @@
     }
 
     private bool HasQuickInfo => _style != null && (
-        _style.TreatmentDifficulty > 0 ||
-        _style.MaintenanceLevel > 0 ||
-        !string.IsNullOrEmpty(_style.Duration) ||
-        _style.RecommendedFaceShapes.Any() ||
-        _style.RecommendedHairTypes.Any());
+        _style.RecommendedHairTypes.Any() ||
+        !string.IsNullOrEmpty(_style.StylingTip));
 
     private void GoBack() => Nav.NavigateTo("");
     private void GoPrev() { if (_prevId != null) Nav.NavigateTo($"style/{_prevId}"); }
