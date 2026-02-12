@@ -342,6 +342,10 @@
             {
                 <div class="prompt-copied"><i class="bi bi-check-circle-fill"></i> 복사됨</div>
             }
+            <div class="prompt-filename">
+                <i class="bi bi-file-image"></i> 저장 파일명:
+                <code @onclick="CopyFilename">@GetSuggestedFilename()</code>
+            </div>
         </div>
     </div>
 }
@@ -665,6 +669,24 @@ Vertical 3:4 aspect ratio.";
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", prompt);
         _promptCopied = true;
         StateHasChanged();
+    }
+
+    private string GetSuggestedFilename()
+    {
+        if (_promptStyle == null) return "";
+        var angleTag = _promptAngle switch
+        {
+            "side" => "_side",
+            "back" => "_back",
+            "three-quarter" => "_3q",
+            _ => ""
+        };
+        return $"{_promptStyle.Title}{angleTag}.webp";
+    }
+
+    private async Task CopyFilename()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetSuggestedFilename());
     }
 
     private async Task TogglePublish(StylePost style)
@@ -3077,6 +3099,33 @@ Vertical 3:4 aspect ratio.";
         align-items: center;
         gap: 0.3rem;
         padding: 0.3rem 0;
+    }
+
+    .prompt-filename {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.6rem;
+        background: #f8f7f5;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .prompt-filename code {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--salon-black);
+        cursor: pointer;
+        padding: 1px 6px;
+        background: #eee;
+        border-radius: 4px;
+    }
+
+    .prompt-filename code:hover {
+        background: #ddd;
     }
 
     /* 매장 관리 - 쓰레기 배출 */
