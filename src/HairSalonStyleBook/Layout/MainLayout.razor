@@ -49,9 +49,13 @@
                     function resetIdleTimer() {
                         clearTimeout(idleTimer);
                         idleTimer = setTimeout(function() {
-                            // 관리자 페이지에서는 리셋하지 않음
-                            if (window.location.pathname.indexOf('/admin') === -1 &&
-                                window.location.pathname.indexOf('/login') === -1) {
+                            if (window.location.pathname.indexOf('/login') !== -1) return;
+                            if (window.location.pathname.indexOf('/admin') !== -1) {
+                                // 관리자: 로그아웃 후 로그인 페이지로
+                                localStorage.removeItem('salon_auth');
+                                localStorage.removeItem('salon_role');
+                                window.location.href = '/login';
+                            } else {
                                 window.scrollTo(0, 0);
                                 window.location.href = '/';
                             }
