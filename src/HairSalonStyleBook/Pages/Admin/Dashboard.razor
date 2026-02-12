@@ -373,11 +373,48 @@
         ("three-quarter", "반측면", "bi-person-check"),
     };
 
-    private IEnumerable<StylePost> FilteredStyles => string.IsNullOrWhiteSpace(_searchText)
-        ? _styles
-        : _styles.Where(s =>
-            s.Title.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
-            s.Hashtags.Any(h => h.Contains(_searchText, StringComparison.OrdinalIgnoreCase)));
+    private IEnumerable<StylePost> FilteredStyles
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchText)) return _styles;
+            var q = _searchText.Trim();
+            var isChoseong = q.All(c => _choseongs.Contains(c));
+            return _styles.Where(s =>
+                MatchText(s.Title, q, isChoseong) ||
+                s.Hashtags.Any(h => MatchText(h, q, isChoseong)));
+        }
+    }
+
+    // 초성 검색
+    private static readonly char[] _choseongs = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ".ToCharArray();
+
+    private static bool MatchText(string text, string query, bool isChoseong)
+    {
+        if (text.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!isChoseong) return false;
+        // 텍스트에서 초성 추출 후 매칭
+        var textChoseong = ExtractChoseongs(text);
+        return textChoseong.Contains(query);
+    }
+
+    private static string ExtractChoseongs(string text)
+    {
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text)
+        {
+            if (c >= 0xAC00 && c <= 0xD7A3)
+            {
+                var idx = (c - 0xAC00) / (21 * 28);
+                sb.Append(_choseongs[idx]);
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString();
+    }
 
     // 매장 설정
     private ShopConfig _shopConfig = new();
