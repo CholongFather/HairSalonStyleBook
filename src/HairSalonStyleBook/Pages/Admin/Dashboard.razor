@@ -4,6 +4,7 @@
 @inject IAuditService AuditService
 @inject IAuthService AuthService
 @inject IShopConfigService ShopConfigService
+@inject ILoginSecurityService LoginSecurityService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
@@ -21,6 +22,9 @@
         </button>
         <button class="admin-tab @(_adminTab == 2 ? "active" : "")" @onclick="() => _adminTab = 2">
             <i class="bi bi-check2-square"></i> 마감
+        </button>
+        <button class="admin-tab @(_adminTab == 3 ? "active" : "")" @onclick="OpenSecurityTab">
+            <i class="bi bi-shield-lock"></i> 보안
         </button>
     </div>
 
@@ -66,6 +70,11 @@
                     </button>
                 }
             </div>
+            <button class="btn btn-sm @(_publishFilter == null ? "btn-outline-secondary" : _publishFilter == true ? "btn-success" : "btn-outline-danger") publish-filter-btn"
+                    @onclick="TogglePublishFilter">
+                <i class="bi @(_publishFilter == null ? "bi-funnel" : _publishFilter == true ? "bi-eye-fill" : "bi-eye-slash")"></i>
+                @(_publishFilter == null ? "전체" : _publishFilter == true ? "게시" : "미게시")
+            </button>
             <span class="admin-search-count">@FilteredStyles.Count()건</span>
         </div>
 
@@ -256,6 +265,100 @@
             <span class="progress-text">@CheckedCount / @TotalCount 완료</span>
         </div>
     }
+    else if (_adminTab == 3)
+    {
+        <!-- 보안 탭 -->
+        <div class="admin-header">
+            <h2 class="admin-title">로그인 보안</h2>
+            <div class="admin-actions">
+                <button class="btn btn-salon-outline" @onclick="LoadSecurityData" disabled="@_securityLoading">
+                    @if (_securityLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="bi bi-arrow-clockwise"></i> 새로고침
+                </button>
+            </div>
+        </div>
+
+        @if (_blockedDevices.Any())
+        {
+            <div class="security-blocked-section">
+                <h6><i class="bi bi-shield-x"></i> 차단된 기기 (@_blockedDevices.Count)</h6>
+                <div class="security-blocked-list">
+                    @foreach (var fp in _blockedDevices)
+                    {
+                        <div class="security-blocked-item">
+                            <code>@fp</code>
+                            <button class="btn btn-sm btn-outline-success" @onclick="() => UnblockDevice(fp)">
+                                <i class="bi bi-unlock"></i> 해제
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="security-attempts-section">
+            <h6><i class="bi bi-clock-history"></i> 최근 로그인 시도</h6>
+            @if (!_loginAttempts.Any() && !_securityLoading)
+            {
+                <p class="text-muted" style="font-size:0.85rem;">기록된 로그인 시도가 없습니다.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table admin-table security-table">
+                        <thead>
+                            <tr>
+                                <th>시간</th>
+                                <th>기기</th>
+                                <th>해상도</th>
+                                <th>결과</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var attempt in _loginAttempts)
+                            {
+                                var isBlocked = _blockedDevices.Contains(attempt.DeviceFingerprint);
+                                <tr class="@(attempt.Success ? "" : "attempt-fail") @(isBlocked ? "attempt-blocked" : "")">
+                                    <td>@attempt.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")</td>
+                                    <td>
+                                        <span class="device-info">@attempt.DeviceInfo</span>
+                                        <code class="device-fp">@attempt.DeviceFingerprint</code>
+                                    </td>
+                                    <td>@attempt.ScreenSize</td>
+                                    <td>
+                                        @if (attempt.Success)
+                                        {
+                                            <span class="badge bg-success">성공</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">실패</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!attempt.Success && !isBlocked)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => BlockDevice(attempt.DeviceFingerprint)">
+                                                <i class="bi bi-shield-x"></i> 차단
+                                            </button>
+                                        }
+                                        else if (isBlocked)
+                                        {
+                                            <span class="badge bg-secondary">차단됨</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 <!-- AI 프롬프트 모달 -->
@@ -358,6 +461,7 @@
     private int _seedTotal;
     private int _adminTab;
     private string _searchText = "";
+    private bool? _publishFilter; // null=전체, true=게시, false=미게시
 
     // AI 프롬프트
     private StylePost? _promptStyle;
@@ -381,13 +485,25 @@
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(_searchText)) return _styles;
-            var q = _searchText.Trim();
-            var isChoseong = q.All(c => _choseongs.Contains(c));
-            return _styles.Where(s =>
-                MatchText(s.Title, q, isChoseong) ||
-                s.Hashtags.Any(h => MatchText(h, q, isChoseong)));
+            IEnumerable<StylePost> result = _styles;
+            if (_publishFilter.HasValue)
+                result = result.Where(s => s.IsPublished == _publishFilter.Value);
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var q = _searchText.Trim();
+                var isChoseong = q.All(c => _choseongs.Contains(c));
+                result = result.Where(s =>
+                    MatchText(s.Title, q, isChoseong) ||
+                    s.Hashtags.Any(h => MatchText(h, q, isChoseong)));
+            }
+            return result;
         }
+    }
+
+    private void TogglePublishFilter()
+    {
+        // null → true → false → null 순환
+        _publishFilter = _publishFilter switch { null => true, true => false, false => null };
     }
 
     // 초성 검색
@@ -419,6 +535,11 @@
         }
         return sb.ToString();
     }
+
+    // 보안
+    private List<LoginAttempt> _loginAttempts = new();
+    private List<string> _blockedDevices = new();
+    private bool _securityLoading;
 
     // 매장 설정
     private ShopConfig _shopConfig = new();
@@ -476,6 +597,41 @@
     {
         foreach (var item in _checklistGroups.SelectMany(g => g.Items))
             item.Checked = false;
+    }
+
+    // 보안 탭
+    private async Task OpenSecurityTab()
+    {
+        _adminTab = 3;
+        if (!_loginAttempts.Any())
+            await LoadSecurityData();
+    }
+
+    private async Task LoadSecurityData()
+    {
+        _securityLoading = true;
+        StateHasChanged();
+        var attemptsTask = LoginSecurityService.GetAttemptsAsync();
+        var blockedTask = LoginSecurityService.GetBlockedDevicesAsync();
+        await Task.WhenAll(attemptsTask, blockedTask);
+        _loginAttempts = attemptsTask.Result;
+        _blockedDevices = blockedTask.Result;
+        _securityLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task BlockDevice(string fingerprint)
+    {
+        await LoginSecurityService.BlockDeviceAsync(fingerprint);
+        _blockedDevices = await LoginSecurityService.GetBlockedDevicesAsync();
+        StateHasChanged();
+    }
+
+    private async Task UnblockDevice(string fingerprint)
+    {
+        await LoginSecurityService.UnblockDeviceAsync(fingerprint);
+        _blockedDevices = await LoginSecurityService.GetBlockedDevicesAsync();
+        StateHasChanged();
     }
 
     private class ChecklistGroup
@@ -3444,6 +3600,78 @@ Save the file as: {GetSuggestedFilename()}";
         white-space: nowrap;
     }
 
+    /* 게시 필터 */
+    .publish-filter-btn {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        border-radius: 6px;
+    }
+
+    /* 보안 탭 */
+    .security-blocked-section {
+        background: #fff3f3;
+        border: 1px solid #ffcccc;
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .security-blocked-section h6 {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #a94442;
+        margin-bottom: 0.7rem;
+    }
+
+    .security-blocked-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .security-blocked-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        background: white;
+        border: 1px solid #f0d0d0;
+        border-radius: 6px;
+        padding: 0.4rem 0.7rem;
+    }
+
+    .security-blocked-item code {
+        font-size: 0.75rem;
+        color: #a94442;
+    }
+
+    .security-attempts-section h6 {
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.7rem;
+    }
+
+    .security-table .device-info {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .security-table .device-fp {
+        font-size: 0.68rem;
+        color: var(--salon-gray);
+    }
+
+    .security-table .attempt-fail {
+        background: #fff8f8;
+    }
+
+    .security-table .attempt-blocked {
+        opacity: 0.6;
+    }
+
     @@media (max-width: 576px) {
         .admin-header {
             flex-direction: column;
@@ -3461,6 +3689,11 @@ Save the file as: {GetSuggestedFilename()}";
 
         .checklist-item {
             padding: 0.55rem 0.8rem;
+        }
+
+        .security-table th:nth-child(3),
+        .security-table td:nth-child(3) {
+            display: none;
         }
     }
 </style>
