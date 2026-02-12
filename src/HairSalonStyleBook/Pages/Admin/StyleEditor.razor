@@ -56,6 +56,20 @@
         <div class="mb-3">
             <label class="form-label">이미지</label>
 
+            <!-- 앵글 선택 -->
+            <div class="angle-selector mb-2">
+                <span class="angle-label">앵글:</span>
+                @foreach (var angle in _angleOptions)
+                {
+                    var a = angle;
+                    <button type="button"
+                            class="angle-chip @(IsAngleActive(a.Key))"
+                            @onclick="() => ToggleAngle(a.Key)">
+                        @a.Value
+                    </button>
+                }
+            </div>
+
             <!-- 업로드 영역 (드래그앤드랍 + 클릭) -->
             <div class="upload-area @(_dragOver ? "drag-over" : "")"
                  @ondragover="OnDragOver" @ondragover:preventDefault
@@ -100,6 +114,11 @@
                              @ondragend="OnImageDragEnd" @ondrop:preventDefault>
                             <img src="@url" alt="업로드 이미지" loading="lazy" />
                             <div class="uploaded-order">@(idx + 1)</div>
+                            @{ var angleTag = GetAngleFromUrl(url); }
+                            @if (!string.IsNullOrEmpty(angleTag))
+                            {
+                                <div class="uploaded-angle">@angleTag</div>
+                            }
                             <button type="button" class="uploaded-remove" @onclick="() => RemoveImage(url)">
                                 <i class="bi bi-x-circle-fill"></i>
                             </button>
@@ -250,9 +269,18 @@
     private bool _dragOver;
     private int _dragIdx = -1;
     private int _dropTargetIdx = -1;
+    private string _selectedAngle = "";
     private List<StylePost> _allPosts = new();
     private string _relatedSearchText = "";
     private bool _showRelatedDropdown;
+
+    private static readonly Dictionary<string, string> _angleOptions = new()
+    {
+        { "front", "정면" },
+        { "side", "측면" },
+        { "back", "후면" },
+        { "detail", "디테일" }
+    };
 
     private static readonly string[] _hairTypeOptions = { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" };
     private static readonly string[] _recommendedForOptions = {
@@ -312,7 +340,15 @@
                 await stream.CopyToAsync(ms);
                 var data = ms.ToArray();
 
-                var url = await ImageService.UploadAsync(file.Name, data, file.ContentType);
+                // 앵글 선택 시 파일명에 태그 추가
+                var uploadName = file.Name;
+                if (!string.IsNullOrEmpty(_selectedAngle))
+                {
+                    var ext = Path.GetExtension(file.Name);
+                    var nameOnly = Path.GetFileNameWithoutExtension(file.Name);
+                    uploadName = $"{nameOnly}_{_selectedAngle}{ext}";
+                }
+                var url = await ImageService.UploadAsync(uploadName, data, file.ContentType);
                 _style.ImageUrls.Add(url);
                 _uploadedCount++;
                 StateHasChanged();
@@ -344,6 +380,21 @@
             _imageSaved = false;
             StateHasChanged();
         }
+    }
+
+    private string IsAngleActive(string key) => _selectedAngle == key ? "active" : "";
+    private void ToggleAngle(string key) => _selectedAngle = _selectedAngle == key ? "" : key;
+
+    // URL에서 앵글 태그 추출
+    private static string GetAngleFromUrl(string url)
+    {
+        var decoded = Uri.UnescapeDataString(url);
+        foreach (var kv in _angleOptions)
+        {
+            if (decoded.Contains($"_{kv.Key}.") || decoded.Contains($"_{kv.Key}?"))
+                return kv.Value;
+        }
+        return "";
     }
 
     // 드래그앤드랍 - 파일 업로드
@@ -489,6 +540,58 @@
         transition: all 0.2s ease;
         color: var(--salon-gray);
         font-family: var(--font-serif);
+    }
+
+    /* 앵글 선택 */
+    .angle-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .angle-label {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        margin-right: 0.2rem;
+    }
+
+    .angle-chip {
+        padding: 0.2rem 0.7rem;
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 16px;
+        background: var(--salon-white);
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .angle-chip:hover {
+        border-color: var(--salon-green);
+        color: var(--salon-dark);
+    }
+
+    .angle-chip.active {
+        background: var(--salon-green);
+        color: #fff;
+        border-color: var(--salon-green);
+    }
+
+    /* 이미지 앵글 태그 */
+    .uploaded-angle {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        font-family: var(--font-serif);
+        font-size: 0.6rem;
+        padding: 1px 6px;
+        border-radius: 4px;
+        pointer-events: none;
     }
 
     .upload-area.drag-over .upload-label {

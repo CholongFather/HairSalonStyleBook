@@ -127,9 +127,12 @@
                                 <td>@style.CreatedAt.ToString("yyyy.MM.dd")</td>
                                 <td>
                                     <div class="admin-action-btns">
-                                        <button class="btn btn-sm admin-action-btn btn-outline-secondary" @onclick="() => ShowPrompt(style)" title="AI 프롬프트">
-                                            <i class="bi bi-stars"></i>
-                                        </button>
+                                        @if (style.Service != ServiceType.염색)
+                                        {
+                                            <button class="btn btn-sm admin-action-btn btn-outline-secondary" @onclick="() => ShowPrompt(style)" title="AI 프롬프트">
+                                                <i class="bi bi-stars"></i>
+                                            </button>
+                                        }
                                         <a href="admin/edit/@style.Id" class="btn btn-sm admin-action-btn btn-salon-outline">
                                             <i class="bi bi-pencil"></i>
                                         </a>
@@ -186,6 +189,26 @@
                 <div class="shop-edit-group">
                     <label class="form-label">예금주</label>
                     <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountHolder" />
+                </div>
+            </div>
+        </div>
+
+        <!-- SNS 정보 -->
+        <div class="shop-section">
+            <div class="shop-section-header">
+                <i class="bi bi-share"></i>
+                <h3>SNS / 네이버</h3>
+            </div>
+            <div class="shop-edit-grid">
+                <div class="shop-edit-group">
+                    <label class="form-label">Instagram URL</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.InstagramUrl"
+                           placeholder="https://www.instagram.com/yourshop" />
+                </div>
+                <div class="shop-edit-group">
+                    <label class="form-label">네이버 플레이스 ID</label>
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPlaceId"
+                           placeholder="1883331965" />
                 </div>
             </div>
             <button class="btn btn-salon mt-2" @onclick="SaveShopConfig" disabled="@_shopSaving">
@@ -762,7 +785,6 @@
         var service = _promptStyle.Service switch
         {
             ServiceType.펌 => "permed wavy",
-            ServiceType.염색 => "color-treated",
             _ => "freshly cut"
         };
         var mood = _promptMood switch
@@ -862,7 +884,7 @@
         var fn = GetSuggestedFilename();
         var desc = GetStyleDescription();
         var descPart = !string.IsNullOrEmpty(desc) ? $" This hairstyle is: {desc}" : "";
-        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair).{descPart} {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. WATERMARK: You MUST render the text ""always hair salon"" in the bottom-left corner of the image. Position it exactly at the lower-left, small font size, semi-transparent white color, clearly readable but subtle. This watermark is mandatory. --ar 3:4 --style raw
+        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair).{descPart} {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. --ar 3:4 --style raw
 
 Save the file as: {fn}";
     }
@@ -889,11 +911,6 @@ Save the file as: {fn}";
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 완벽하지 않고 실제 사진 같은 느낌이 중요
 
-워터마크 (필수):
-- 이미지 왼쪽 하단 모서리에 ""always hair salon"" 텍스트를 반드시 넣어주세요
-- 위치: 왼쪽 아래 구석 (하단에서 약간 위, 왼쪽에서 약간 오른쪽)
-- 스타일: 반투명 흰색, 아주 작은 폰트, 읽을 수 있되 눈에 띄지 않게
-
 세로 비율(3:4)로 생성해주세요.
 
 저장 파일명: {GetSuggestedFilename()}";
@@ -919,11 +936,6 @@ Key requirements:
 - Hair should look real, not digitally perfect
 - Imperfect and authentic, as if casually taken by salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
-
-WATERMARK (mandatory):
-- Render the text ""always hair salon"" in the bottom-left corner of the image
-- Position: lower-left corner, small font, semi-transparent white
-- Must be clearly readable but subtle, not obstructing the image
 
 Vertical 3:4 aspect ratio.
 

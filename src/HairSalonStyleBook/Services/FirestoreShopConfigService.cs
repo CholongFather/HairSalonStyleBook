@@ -59,7 +59,9 @@ public class FirestoreShopConfigService : IShopConfigService
                 WifiPassword = GetStr(doc.Fields, "wifiPassword", "DE01K7#0E5"),
                 BankName = GetStr(doc.Fields, "bankName", "우리은행"),
                 AccountNumber = GetStr(doc.Fields, "accountNumber", "-"),
-                AccountHolder = GetStr(doc.Fields, "accountHolder", "정*경")
+                AccountHolder = GetStr(doc.Fields, "accountHolder", "정*경"),
+                InstagramUrl = GetStr(doc.Fields, "instagramUrl", ""),
+                NaverPlaceId = GetStr(doc.Fields, "naverPlaceId", "1883331965")
             };
             return _cache;
         }
@@ -79,7 +81,9 @@ public class FirestoreShopConfigService : IShopConfigService
             ["wifiPassword"] = new() { StringValue = config.WifiPassword },
             ["bankName"] = new() { StringValue = config.BankName },
             ["accountNumber"] = new() { StringValue = config.AccountNumber },
-            ["accountHolder"] = new() { StringValue = config.AccountHolder }
+            ["accountHolder"] = new() { StringValue = config.AccountHolder },
+            ["instagramUrl"] = new() { StringValue = config.InstagramUrl ?? "" },
+            ["naverPlaceId"] = new() { StringValue = config.NaverPlaceId ?? "" }
         };
 
         var body = new FirestoreFields { Fields = fields };

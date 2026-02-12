@@ -30,3 +30,9 @@ Thumbs.db
 
 ## Taskmaster
 .taskmaster/
+
+## Claude Code
+.claude/
+
+## Test/temp
+release_test/

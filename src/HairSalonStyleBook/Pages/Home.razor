@@ -19,6 +19,10 @@
             <i class="bi bi-shop"></i>
             <span>매장</span>
         </button>
+        <button class="tab-item @(_activeTab == 2 ? "active" : "")" @onclick="() => SwitchTab(2)">
+            <i class="bi bi-share"></i>
+            <span>SNS</span>
+        </button>
     </div>
 
     <!-- 탭 콘텐츠 영역 -->
@@ -116,7 +120,7 @@
                 }
             </div>
         }
-        else
+        else if (_activeTab == 1)
         {
             <!-- 탭 1: 매장 -->
             <div class="tab-panel tab-fade-in">
@@ -213,6 +217,87 @@
                         </p>
                     </div>
                 }
+            </div>
+        }
+        else if (_activeTab == 2)
+        {
+            <!-- 탭 2: SNS -->
+            <div class="tab-panel tab-fade-in">
+                <div class="sns-cards">
+                    <!-- 인스타그램 -->
+                    @if (!string.IsNullOrEmpty(_shopConfig.InstagramUrl))
+                    {
+                        <div class="sns-card" @onclick="() => OpenLink(_shopConfig.InstagramUrl)">
+                            <div class="sns-card-icon sns-instagram">
+                                <i class="bi bi-instagram"></i>
+                            </div>
+                            <div class="sns-card-body">
+                                <h4 class="sns-card-title">Instagram</h4>
+                                <p class="sns-card-desc">실시간 스타일 업데이트</p>
+                            </div>
+                            <div class="sns-card-qr" @onclick:stopPropagation @onclick="() => OpenQr(_shopConfig.InstagramQrUrl)">
+                                <img src="@_shopConfig.InstagramQrUrl" alt="Instagram QR" loading="lazy" />
+                            </div>
+                            <i class="bi bi-chevron-right sns-card-arrow"></i>
+                        </div>
+                    }
+
+                    <!-- 네이버 플레이스 -->
+                    @if (!string.IsNullOrEmpty(_shopConfig.NaverPlaceUrl))
+                    {
+                        <div class="sns-card" @onclick="() => OpenLink(_shopConfig.NaverPlaceUrl)">
+                            <div class="sns-card-icon sns-naver">
+                                <span class="naver-n">N</span>
+                            </div>
+                            <div class="sns-card-body">
+                                <h4 class="sns-card-title">네이버 플레이스</h4>
+                                <p class="sns-card-desc">매장 정보 & 예약</p>
+                            </div>
+                            <i class="bi bi-chevron-right sns-card-arrow"></i>
+                        </div>
+
+                        <!-- 네이버 리뷰 -->
+                        <div class="sns-card" @onclick="() => OpenLink(_shopConfig.NaverReviewUrl)">
+                            <div class="sns-card-icon sns-review">
+                                <i class="bi bi-chat-heart"></i>
+                            </div>
+                            <div class="sns-card-body">
+                                <h4 class="sns-card-title">리뷰</h4>
+                                <p class="sns-card-desc">고객님들의 솔직한 후기</p>
+                            </div>
+                            <i class="bi bi-chevron-right sns-card-arrow"></i>
+                        </div>
+                    }
+
+                    <!-- 네이버 지도 -->
+                    @if (!string.IsNullOrEmpty(_shopConfig.NaverMapUrl))
+                    {
+                        <div class="sns-card" @onclick="() => OpenLink(_shopConfig.NaverMapUrl)">
+                            <div class="sns-card-icon sns-map">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </div>
+                            <div class="sns-card-body">
+                                <h4 class="sns-card-title">네이버 지도</h4>
+                                <p class="sns-card-desc">오시는 길 안내</p>
+                            </div>
+                            <i class="bi bi-chevron-right sns-card-arrow"></i>
+                        </div>
+                    }
+
+                    <!-- 네이버 플레이스 QR -->
+                    @if (!string.IsNullOrEmpty(_shopConfig.NaverPlaceQrUrl))
+                    {
+                        <div class="sns-qr-section">
+                            <p class="qr-label">QR로 네이버 플레이스 바로가기</p>
+                            <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.NaverPlaceQrUrl)">
+                                <img src="@_shopConfig.NaverPlaceQrUrl" alt="네이버 플레이스 QR" class="qr-image" loading="lazy" />
+                                <span class="qr-tap-hint">
+                                    <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
         }
     </div>
@@ -330,6 +415,12 @@
     private void CloseQr()
     {
         _showQrOverlay = false;
+    }
+
+    private async Task OpenLink(string url)
+    {
+        if (!string.IsNullOrEmpty(url))
+            await JS.InvokeVoidAsync("open", url, "_blank");
     }
 
     private void QrZoomIn()
@@ -1171,6 +1262,160 @@
         .style-grid {
             grid-template-columns: repeat(4, 1fr);
             gap: 1.4rem;
+        }
+    }
+
+    /* -- SNS 탭 -- */
+    .sns-cards {
+        padding: 0.8rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+
+    .sns-card {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1rem 1.1rem;
+        background: var(--salon-white);
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+
+    .sns-card:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .sns-card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .sns-card-icon i,
+    .sns-card-icon .naver-n {
+        font-size: 1.2rem;
+        color: #fff;
+    }
+
+    .naver-n {
+        font-weight: 900;
+        font-family: var(--font-serif);
+        font-size: 1.3rem !important;
+    }
+
+    .sns-instagram {
+        background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    }
+
+    .sns-naver {
+        background: #03C75A;
+    }
+
+    .sns-review {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    }
+
+    .sns-map {
+        background: linear-gradient(135deg, #03C75A, #00a046);
+    }
+
+    .sns-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sns-card-title {
+        font-family: var(--font-serif);
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--salon-black);
+        margin: 0 0 0.15rem;
+    }
+
+    .sns-card-desc {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        color: var(--salon-gray);
+        margin: 0;
+    }
+
+    .sns-card-qr {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--salon-light-gray);
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .sns-card-qr img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .sns-card-arrow {
+        font-size: 0.85rem;
+        color: var(--salon-light-gray);
+        flex-shrink: 0;
+    }
+
+    .sns-qr-section {
+        text-align: center;
+        margin-top: 0.5rem;
+        padding: 1rem;
+    }
+
+    @@media (max-width: 576px) {
+        .sns-cards {
+            padding: 0.6rem 0.3rem;
+        }
+
+        .sns-card {
+            padding: 0.8rem 0.9rem;
+            gap: 0.65rem;
+        }
+
+        .sns-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .sns-card-icon i,
+        .sns-card-icon .naver-n {
+            font-size: 1.05rem;
+        }
+    }
+
+    @@media (min-width: 768px) {
+        .sns-cards {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .sns-card {
+            padding: 1.1rem 1.4rem;
+        }
+
+        .sns-card-title {
+            font-size: 0.95rem;
+        }
+
+        .sns-card-desc {
+            font-size: 0.8rem;
         }
     }
 </style>
