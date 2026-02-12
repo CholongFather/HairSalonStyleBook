@@ -1,0 +1,104 @@
+name: Backup Firestore Data
+
+on:
+  schedule:
+    # 매 15분마다 실행 (UTC)
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PROJECT_ID: always-hair-salon
+  API_KEY: AIzaSyBUC61LDhLONI-O0QOFl3y2C4uWMapbbI0
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup backups branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # backups 브랜치 체크아웃 (없으면 orphan으로 생성)
+          git fetch origin backups 2>/dev/null && git checkout backups || {
+            git checkout --orphan backups
+            git rm -rf . 2>/dev/null || true
+            echo "# Firestore Backups" > README.md
+            echo "매 15분마다 자동 백업. 7일간 보관." >> README.md
+            git add README.md
+            git commit -m "init: backups branch"
+          }
+
+      - name: Fetch Firestore collections
+        run: |
+          BASE_URL="https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents"
+          TIMESTAMP=$(date -u +"%Y-%m-%d/%H%M")
+          BACKUP_DIR="backups/${TIMESTAMP}"
+          mkdir -p "${BACKUP_DIR}"
+
+          echo "=== Backing up Firestore at ${TIMESTAMP} ==="
+
+          # styles 컬렉션
+          echo "Fetching styles..."
+          curl -sf "${BASE_URL}/styles?key=${API_KEY}&pageSize=500" \
+            -o "${BACKUP_DIR}/styles.json" || echo '{"documents":[]}' > "${BACKUP_DIR}/styles.json"
+
+          # auditLogs 컬렉션
+          echo "Fetching auditLogs..."
+          curl -sf "${BASE_URL}/auditLogs?key=${API_KEY}&orderBy=timestamp%20desc&pageSize=500" \
+            -o "${BACKUP_DIR}/auditLogs.json" || echo '{"documents":[]}' > "${BACKUP_DIR}/auditLogs.json"
+
+          # loginAttempts 컬렉션
+          echo "Fetching loginAttempts..."
+          curl -sf "${BASE_URL}/loginAttempts?key=${API_KEY}&orderBy=timestamp%20desc&pageSize=500" \
+            -o "${BACKUP_DIR}/loginAttempts.json" || echo '{"documents":[]}' > "${BACKUP_DIR}/loginAttempts.json"
+
+          # config/shop 문서
+          echo "Fetching config/shop..."
+          curl -sf "${BASE_URL}/config/shop?key=${API_KEY}" \
+            -o "${BACKUP_DIR}/config_shop.json" || echo '{}' > "${BACKUP_DIR}/config_shop.json"
+
+          # config/blockedDevices 문서
+          echo "Fetching config/blockedDevices..."
+          curl -sf "${BASE_URL}/config/blockedDevices?key=${API_KEY}" \
+            -o "${BACKUP_DIR}/config_blockedDevices.json" || echo '{}' > "${BACKUP_DIR}/config_blockedDevices.json"
+
+          # 백업 메타정보
+          cat > "${BACKUP_DIR}/meta.json" << EOF
+          {
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "collections": ["styles", "auditLogs", "loginAttempts", "config_shop", "config_blockedDevices"]
+          }
+          EOF
+
+          echo "=== Backup complete ==="
+          ls -la "${BACKUP_DIR}/"
+
+      - name: Cleanup old backups (keep 7 days)
+        run: |
+          if [ -d "backups" ]; then
+            CUTOFF=$(date -u -d "7 days ago" +"%Y-%m-%d")
+            for dir in backups/*/; do
+              [ -d "$dir" ] || continue
+              DIRNAME=$(basename "$dir")
+              if [[ "$DIRNAME" < "$CUTOFF" ]]; then
+                echo "Removing old backup: ${dir}"
+                rm -rf "$dir"
+              fi
+            done
+          fi
+
+      - name: Commit and push
+        run: |
+          git add backups/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "backup: ${TIMESTAMP}"
+            git push origin backups
+          fi

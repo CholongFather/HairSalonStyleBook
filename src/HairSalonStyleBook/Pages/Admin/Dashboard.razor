@@ -600,60 +600,96 @@
         return (gender, genderKr, length, service, _promptStyle.Title, mood, angle, angleKr);
     }
 
+    // 랜덤 배경/얼굴 변형
+    private static readonly Random _rng = new();
+    private static readonly string[] _backgrounds = new[]
+    {
+        "salon mirrors and styling chairs",
+        "salon waiting area with magazines",
+        "salon wash station with shampoo bottles",
+        "salon reception desk area",
+        "salon window with street view outside",
+        "salon product shelf display",
+        "salon styling station with hair tools",
+    };
+    private static readonly string[] _backgroundsKr = new[]
+    {
+        "미용실 거울과 스타일링 의자",
+        "미용실 대기석과 잡지",
+        "미용실 샴푸대와 제품들",
+        "미용실 프론트 데스크",
+        "미용실 창가, 바깥 거리가 보이는",
+        "미용실 제품 진열대",
+        "미용실 시술대와 도구들",
+    };
+    private static readonly string[] _faces = new[]
+    {
+        "round face", "oval face", "long face", "square jaw", "heart-shaped face",
+        "small face", "high cheekbones",
+    };
+    private static readonly string[] _facesKr = new[]
+    {
+        "둥근 얼굴형", "계란형 얼굴", "긴 얼굴형", "각진 턱", "하트형 얼굴",
+        "작은 얼굴", "높은 광대",
+    };
+
     private string GetGeneratedPrompt()
     {
         if (_promptStyle == null) return "";
         var p = GetPromptParts();
+        var bgIdx = _rng.Next(_backgrounds.Length);
+        var faceIdx = _rng.Next(_faces.Length);
 
         return _promptAi switch
         {
-            "nanobanana" => GetNanoBananaPrompt(p),
-            "gemini" => GetGeminiPrompt(p),
-            "chatgpt" => GetChatGptPrompt(p),
-            _ => GetNanoBananaPrompt(p)
+            "nanobanana" => GetNanoBananaPrompt(p, _backgrounds[bgIdx], _faces[faceIdx]),
+            "gemini" => GetGeminiPrompt(p, _backgroundsKr[bgIdx], _facesKr[faceIdx]),
+            "chatgpt" => GetChatGptPrompt(p, _backgrounds[bgIdx], _faces[faceIdx]),
+            _ => GetNanoBananaPrompt(p, _backgrounds[bgIdx], _faces[faceIdx])
         };
     }
 
-    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
+    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
     {
         var fn = GetSuggestedFilename();
-        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. f/8 deep depth of field, everything in focus, absolutely NO background blur, NO bokeh effect at all, background must be sharp and clear. Soft natural window light, warm tones, no retouching, visible skin pores, real salon background with mirrors and chairs clearly visible, imperfect and authentic looking. Add a small subtle watermark text ""늘~오던"" in the bottom-right corner, semi-transparent white, very small font --ar 3:4 --style raw
+        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. Add a small subtle watermark text ""always hair salon"" in the bottom-left corner, semi-transparent white, very small font --ar 3:4 --style raw
 
 Save the file as: {fn}";
     }
 
-    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
+    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bgKr, string faceKr)
     {
         return $@"실제 미용실에서 촬영한 것 같은 자연스러운 헤어 사진을 만들어주세요. AI가 만든 것처럼 보이면 안 됩니다.
 
-모델: 한국인 {p.genderKr}, {_promptAge}, {_promptMood} 분위기
+모델: 한국인 {p.genderKr}, {_promptAge}, {faceKr}, {_promptMood} 분위기
 헤어스타일: ""{p.title}"" ({p.service}, {p.length})
 촬영 앵글: {p.angleKr}
+배경: {bgKr}
 
 중요한 점:
 - 오래된 스마트폰으로 찍은 듯한 낮은 해상도
 - 약간의 이미지 노이즈와 그레인이 있어야 함
 - 윤곽선이 너무 선명하면 안 됨, 자연스럽게 부드러운 경계
 - 과도한 보정 없이 자연스러운 피부와 머릿결
-- 실제 미용실 배경 (거울, 의자, 조명이 보이게)
+- 배경에 {bgKr}이 보이게
 - 배경 흐림(보케) 효과 금지, 배경도 포커스 안에
 - 창문에서 들어오는 자연광 위주
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 완벽하지 않고 실제 사진 같은 느낌이 중요
-- 이미지 오른쪽 하단에 ""늘~오던"" 워터마크를 작고 반투명한 흰색으로 살짝 넣어주세요
+- 이미지 왼쪽 하단에 ""always hair salon"" 워터마크를 작고 반투명한 흰색으로 살짝 넣어주세요
 
 세로 비율(3:4)로 생성해주세요.
 
 저장 파일명: {GetSuggestedFilename()}";
     }
 
-    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
+    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
     {
         return $@"Create a natural-looking photo that could pass as a real hair salon snapshot, not an AI-generated image.
 
-Subject: Korean {p.gender} in their {_promptAge}, {p.mood} expression, shot {p.angle}
+Subject: Korean {p.gender} with {face} in their {_promptAge}, {p.mood} expression, shot {p.angle}
 Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair
-Setting: Real hair salon interior, mirrors, salon chairs visible in background
+Setting: Real hair salon interior, background showing {bg}
 
 Key requirements:
 - Shot on an older smartphone, lower resolution, NOT ultra-sharp or high-res
@@ -661,11 +697,11 @@ Key requirements:
 - Soft edges, do NOT make outlines too crisp or defined
 - Natural window lighting, warm tones
 - No retouching, visible skin pores and natural texture
-- No bokeh, background in focus with salon mirrors and chairs visible
+- No bokeh, background in focus showing {bg}
 - Hair should look real, not digitally perfect
 - Imperfect and authentic, as if casually taken by salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
-- Add a small subtle watermark text ""늘~오던"" in the bottom-right corner, semi-transparent white, very small font
+- Add a small subtle watermark text ""always hair salon"" in the bottom-left corner, semi-transparent white, very small font
 
 Vertical 3:4 aspect ratio.
 
