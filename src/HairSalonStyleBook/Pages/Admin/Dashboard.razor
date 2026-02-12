@@ -841,20 +841,40 @@
         };
     }
 
+    private string GetStyleDescription()
+    {
+        if (_promptStyle == null || string.IsNullOrEmpty(_promptStyle.Description)) return "";
+        var desc = _promptStyle.Description;
+        // "쉽게 말하면?" 섹션 추출
+        var startTag = "<h3>쉽게 말하면?</h3>";
+        var startIdx = desc.IndexOf(startTag, StringComparison.OrdinalIgnoreCase);
+        if (startIdx < 0) return "";
+        var contentStart = startIdx + startTag.Length;
+        // 다음 h3 태그까지 또는 끝까지
+        var endIdx = desc.IndexOf("<h3>", contentStart, StringComparison.OrdinalIgnoreCase);
+        var section = endIdx > 0 ? desc[contentStart..endIdx] : desc[contentStart..];
+        // HTML 태그 제거
+        return System.Text.RegularExpressions.Regex.Replace(section, "<[^>]+>", "").Trim();
+    }
+
     private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
     {
         var fn = GetSuggestedFilename();
-        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. Add a small subtle watermark text ""always hair salon"" in the bottom-left corner, semi-transparent white, very small font --ar 3:4 --style raw
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $" This hairstyle is: {desc}" : "";
+        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair).{descPart} {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. WATERMARK: You MUST render the text ""always hair salon"" in the bottom-left corner of the image. Position it exactly at the lower-left, small font size, semi-transparent white color, clearly readable but subtle. This watermark is mandatory. --ar 3:4 --style raw
 
 Save the file as: {fn}";
     }
 
     private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bgKr, string faceKr)
     {
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $"\n스타일 설명: {desc}" : "";
         return $@"실제 미용실에서 촬영한 것 같은 자연스러운 헤어 사진을 만들어주세요. AI가 만든 것처럼 보이면 안 됩니다.
 
 모델: 한국인 {p.genderKr}, {_promptAge}, {faceKr}, {_promptMood} 분위기
-헤어스타일: ""{p.title}"" ({p.service}, {p.length})
+헤어스타일: ""{p.title}"" ({p.service}, {p.length}){descPart}
 촬영 앵글: {p.angleKr}
 배경: {bgKr}
 
@@ -868,7 +888,11 @@ Save the file as: {fn}";
 - 창문에서 들어오는 자연광 위주
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 완벽하지 않고 실제 사진 같은 느낌이 중요
-- 이미지 왼쪽 하단에 ""always hair salon"" 워터마크를 작고 반투명한 흰색으로 살짝 넣어주세요
+
+워터마크 (필수):
+- 이미지 왼쪽 하단 모서리에 ""always hair salon"" 텍스트를 반드시 넣어주세요
+- 위치: 왼쪽 아래 구석 (하단에서 약간 위, 왼쪽에서 약간 오른쪽)
+- 스타일: 반투명 흰색, 아주 작은 폰트, 읽을 수 있되 눈에 띄지 않게
 
 세로 비율(3:4)로 생성해주세요.
 
@@ -877,10 +901,12 @@ Save the file as: {fn}";
 
     private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
     {
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $"\nStyle description: {desc}" : "";
         return $@"Create a natural-looking photo that could pass as a real hair salon snapshot, not an AI-generated image.
 
 Subject: Korean {p.gender} with {face} in their {_promptAge}, {p.mood} expression, shot {p.angle}
-Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair
+Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair{descPart}
 Setting: Real hair salon interior, background showing {bg}
 
 Key requirements:
@@ -893,7 +919,11 @@ Key requirements:
 - Hair should look real, not digitally perfect
 - Imperfect and authentic, as if casually taken by salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
-- Add a small subtle watermark text ""always hair salon"" in the bottom-left corner, semi-transparent white, very small font
+
+WATERMARK (mandatory):
+- Render the text ""always hair salon"" in the bottom-left corner of the image
+- Position: lower-left corner, small font, semi-transparent white
+- Must be clearly readable but subtle, not obstructing the image
 
 Vertical 3:4 aspect ratio.
 
@@ -2963,18 +2993,6 @@ Save the file as: {GetSuggestedFilename()}";
                 Hashtags = new() { "클리닉펌", "산성펌", "손상모펌", "탈색후펌", "약산성시술" },
                 RecommendedHairTypes = new() { "가는모", "부드러운모", "반곱슬", "곱슬", "숱적은" },
                 StylingTip = "시술 후 단백질 트리트먼트를 주 1회 사용하면 컬도 오래가고 머릿결도 좋아요",
-                IsPublished = false
-            },
-            new()
-            {
-                Title = "복구 매직 (손상모 매직)",
-                Category = StyleCategory.여성롱,
-                Service = ServiceType.펌,
-                Description = "<h3>쉽게 말하면?</h3><p>탈색이나 반복 시술로 심하게 손상된 머리카락을 복구하면서 동시에 매직(스트레이트)을 하는 시술이에요. 일반 매직은 이미 손상된 머리에 하면 더 상하는데, 복구 매직은 영양을 보충하면서 펴주기 때문에 오히려 머릿결이 좋아져요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 건강해진 느낌이에요. 뻣뻣하고 거칠었던 머릿결이 실크처럼 매끄러워지면서 곱슬기도 잡혀요. '복구 + 스트레이트' 두 가지를 동시에 해결할 수 있어요.</p>",
-                ImageUrls = new(),
-                Hashtags = new() { "복구매직", "손상모매직", "복구시술", "탈색후매직", "영양매직" },
-                RecommendedHairTypes = new() { "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
-                StylingTip = "시술 후 2주간은 단백질 팩과 보습 에센스를 꼭 사용해주세요",
                 IsPublished = false
             }
         };
