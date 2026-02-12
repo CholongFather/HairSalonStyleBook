@@ -1,0 +1,25 @@
+{
+  "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
+  "fields": {
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    }
+  },
+  "createTime": "2026-02-11T14:07:24.228539Z",
+  "updateTime": "2026-02-11T14:07:24.228539Z"
+}
