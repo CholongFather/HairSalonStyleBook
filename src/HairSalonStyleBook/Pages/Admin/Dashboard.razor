@@ -428,6 +428,44 @@
                 updated = true;
             }
 
+            // 추천 대상 자동 생성
+            if (!style.RecommendedFor.Any())
+            {
+                var recs = new List<string>();
+                switch (style.Service)
+                {
+                    case ServiceType.펌:
+                        if (style.RecommendedHairTypes.Any(t => t is "가는모" or "부드러운모" or "숱적은"))
+                            recs.Add("볼륨이 부족해 고민인 분");
+                        else
+                            recs.Add("자연스러운 웨이브를 원하는 분");
+                        recs.Add("매일 고데기가 귀찮은 분");
+                        break;
+                    case ServiceType.염색:
+                        recs.Add("분위기 변화를 원하는 분");
+                        recs.Add("개성 있는 스타일을 원하는 분");
+                        break;
+                    case ServiceType.커트:
+                        if (style.Category == StyleCategory.남성)
+                            recs.Add("깔끔한 인상을 원하는 분");
+                        else if (style.Category == StyleCategory.여성숏)
+                            recs.Add("가볍고 시원한 스타일을 원하는 분");
+                        else
+                            recs.Add("세련된 이미지를 원하는 분");
+                        recs.Add("스타일 변화를 원하는 분");
+                        break;
+                }
+                if (style.RecommendedHairTypes.Any(t => t.Contains("곱슬")))
+                    recs.Add("곱슬기를 살리고 싶은 분");
+                if (style.RecommendedHairTypes.Contains("숱많은"))
+                    recs.Add("숱 정리가 필요한 분");
+                if (style.RecommendedHairTypes.Contains("숱적은") && !recs.Contains("볼륨이 부족해 고민인 분"))
+                    recs.Add("풍성해 보이고 싶은 분");
+
+                style.RecommendedFor = recs.Take(3).ToList();
+                updated = true;
+            }
+
             if (updated)
             {
                 await StyleService.UpdateAsync(style);

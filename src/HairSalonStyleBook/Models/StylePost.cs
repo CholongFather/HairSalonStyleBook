@@ -48,6 +48,11 @@ public class StylePost
     /// </summary>
     public List<string> RecommendedHairTypes { get; set; } = new();
 
+    /// <summary>
+    /// 추천 대상 (예: "볼륨이 부족해 고민인 분", "매일 고데기가 귀찮은 분")
+    /// </summary>
+    public List<string> RecommendedFor { get; set; } = new();
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = "admin";

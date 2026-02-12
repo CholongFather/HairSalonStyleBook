@@ -78,13 +78,13 @@
             </div>
         }
 
-        <!-- 한눈에 보기 -->
+        <!-- 스타일 포인트 -->
         @if (HasQuickInfo)
         {
             <div class="quick-info-card">
                 <div class="quick-info-header">
-                    <i class="bi bi-lightbulb"></i>
-                    <span>한눈에 보기</span>
+                    <i class="bi bi-stars"></i>
+                    <span>스타일 포인트</span>
                 </div>
                 <div class="quick-info-body">
                     @if (_style.RecommendedHairTypes.Any())
@@ -95,6 +95,21 @@
                         </div>
                     }
                 </div>
+                @if (_style.RecommendedFor.Any())
+                {
+                    <div class="quick-info-recommend">
+                        <div class="quick-info-recommend-label">
+                            <i class="bi bi-person-check"></i>
+                            <span>이런 분께 추천</span>
+                        </div>
+                        <div class="quick-info-recommend-tags">
+                            @foreach (var rec in _style.RecommendedFor)
+                            {
+                                <span class="recommend-tag">@rec</span>
+                            }
+                        </div>
+                    </div>
+                }
                 @if (!string.IsNullOrEmpty(_style.StylingTip))
                 {
                     <div class="quick-info-tip">
@@ -161,6 +176,7 @@
 
     private bool HasQuickInfo => _style != null && (
         _style.RecommendedHairTypes.Any() ||
+        _style.RecommendedFor.Any() ||
         !string.IsNullOrEmpty(_style.StylingTip));
 
     private void GoBack() => Nav.NavigateTo("");
@@ -458,6 +474,46 @@
         flex-shrink: 0;
     }
 
+    /* 이런 분께 추천 */
+    .quick-info-recommend {
+        padding: 0.7rem 1rem;
+        border-top: 1px solid rgba(232, 227, 220, 0.4);
+    }
+
+    .quick-info-recommend-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: var(--font-serif);
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--salon-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .quick-info-recommend-label i {
+        color: var(--salon-rose);
+        font-size: 0.85rem;
+    }
+
+    .quick-info-recommend-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .recommend-tag {
+        font-family: var(--font-serif);
+        font-size: 0.72rem;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(212, 160, 160, 0.12) 0%, rgba(212, 160, 160, 0.06) 100%);
+        border: 1px solid rgba(212, 160, 160, 0.25);
+        color: var(--salon-dark);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
     @@media (max-width: 576px) {
         .detail-title {
             font-size: 1.2rem;
@@ -536,6 +592,19 @@
         .quick-info-tip {
             font-size: 0.9rem;
             padding: 0.8rem 1.2rem;
+        }
+
+        .quick-info-recommend {
+            padding: 0.8rem 1.2rem;
+        }
+
+        .quick-info-recommend-label {
+            font-size: 0.88rem;
+        }
+
+        .recommend-tag {
+            font-size: 0.8rem;
+            padding: 5px 14px;
         }
     }
 </style>

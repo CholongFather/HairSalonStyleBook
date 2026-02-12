@@ -111,6 +111,23 @@
             </div>
         </div>
 
+        <!-- 추천 대상 -->
+        <div class="mb-3">
+            <label class="form-label">이런 분께 추천</label>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var rf in _recommendedForOptions)
+                {
+                    var r = rf;
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               id="rf_@r" checked="@(_style.RecommendedFor.Contains(r))"
+                               @onchange="e => ToggleListItem(_style.RecommendedFor, r, (bool)(e.Value ?? false))" />
+                        <label class="form-check-label" for="rf_@r">@r</label>
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- 스타일링 팁 -->
         <div class="mb-3">
             <label class="form-label">스타일링 팁</label>
@@ -219,6 +236,12 @@
     private bool _showRelatedDropdown;
 
     private static readonly string[] _hairTypeOptions = { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" };
+    private static readonly string[] _recommendedForOptions = {
+        "매일 고데기가 귀찮은 분", "자연스러운 웨이브를 원하는 분", "볼륨이 부족해 고민인 분",
+        "숱이 적어 고민인 분", "깔끔한 인상을 원하는 분", "분위기 변화를 원하는 분",
+        "스타일 변화를 원하는 분", "곱슬기를 살리고 싶은 분", "숱 정리가 필요한 분",
+        "세련된 이미지를 원하는 분", "가볍고 시원한 스타일을 원하는 분", "풍성해 보이고 싶은 분"
+    };
 
     private void ToggleListItem(List<string> list, string item, bool isChecked)
     {
