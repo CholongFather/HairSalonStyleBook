@@ -56,12 +56,15 @@
         <div class="mb-3">
             <label class="form-label">이미지</label>
 
-            <!-- 업로드 버튼 -->
-            <div class="upload-area">
+            <!-- 업로드 영역 (드래그앤드랍 + 클릭) -->
+            <div class="upload-area @(_dragOver ? "drag-over" : "")"
+                 @ondragover="OnDragOver" @ondragover:preventDefault
+                 @ondragleave="() => _dragOver = false"
+                 @ondrop="OnDrop" @ondrop:preventDefault>
                 <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="upload-input" id="imageUpload" />
                 <label for="imageUpload" class="upload-label">
-                    <i class="bi bi-cloud-arrow-up"></i>
-                    <span>이미지 선택 (여러장 가능)</span>
+                    <i class="bi @(_dragOver ? "bi-cloud-arrow-down-fill" : "bi-cloud-arrow-up")"></i>
+                    <span>이미지를 드래그하거나 클릭하여 선택</span>
                     <small>JPG, PNG, WebP / 최대 5MB</small>
                 </label>
             </div>
@@ -75,14 +78,26 @@
                 </div>
             }
 
-            <!-- 업로드된 이미지 미리보기 -->
+            @if (_imageSaved)
+            {
+                <div class="upload-progress mt-2" style="color: var(--salon-green);">
+                    <i class="bi bi-check-circle-fill me-1"></i> 저장됨
+                </div>
+            }
+
+            <!-- 업로드된 이미지 미리보기 (드래그 순서 변경) -->
             @if (_style.ImageUrls.Any())
             {
                 <div class="uploaded-images mt-2">
-                    @foreach (var url in _style.ImageUrls)
+                    @for (var i = 0; i < _style.ImageUrls.Count; i++)
                     {
-                        var idx = _style.ImageUrls.IndexOf(url);
-                        <div class="uploaded-item">
+                        var idx = i;
+                        var url = _style.ImageUrls[idx];
+                        <div class="uploaded-item @(_dragIdx == idx ? "dragging" : "") @(_dropTargetIdx == idx ? "drop-target" : "")"
+                             draggable="true"
+                             @ondragstart="() => OnImageDragStart(idx)"
+                             @ondragover="() => OnImageDragOver(idx)" @ondragover:preventDefault
+                             @ondragend="OnImageDragEnd" @ondrop:preventDefault>
                             <img src="@url" alt="업로드 이미지" loading="lazy" />
                             <div class="uploaded-order">@(idx + 1)</div>
                             <button type="button" class="uploaded-remove" @onclick="() => RemoveImage(url)">
@@ -231,6 +246,10 @@
     private bool _uploading;
     private int _uploadedCount;
     private int _totalUploadCount;
+    private bool _imageSaved;
+    private bool _dragOver;
+    private int _dragIdx = -1;
+    private int _dropTargetIdx = -1;
     private List<StylePost> _allPosts = new();
     private string _relatedSearchText = "";
     private bool _showRelatedDropdown;
@@ -305,12 +324,53 @@
         }
 
         _uploading = false;
-        StateHasChanged();
+        await AutoSaveImages();
     }
 
-    private void RemoveImage(string url)
+    private async Task RemoveImage(string url)
     {
         _style.ImageUrls.Remove(url);
+        await AutoSaveImages();
+    }
+
+    private async Task AutoSaveImages()
+    {
+        if (_isEdit)
+        {
+            await StyleService.UpdateAsync(_style);
+            _imageSaved = true;
+            StateHasChanged();
+            await Task.Delay(1500);
+            _imageSaved = false;
+            StateHasChanged();
+        }
+    }
+
+    // 드래그앤드랍 - 파일 업로드
+    private void OnDragOver(DragEventArgs e) => _dragOver = true;
+
+    private async Task OnDrop(DragEventArgs e)
+    {
+        _dragOver = false;
+        // InputFile이 처리 (브라우저 기본 동작)
+    }
+
+    // 드래그앤드랍 - 이미지 순서 변경
+    private void OnImageDragStart(int idx) => _dragIdx = idx;
+
+    private void OnImageDragOver(int idx) => _dropTargetIdx = idx;
+
+    private async Task OnImageDragEnd()
+    {
+        if (_dragIdx >= 0 && _dropTargetIdx >= 0 && _dragIdx != _dropTargetIdx)
+        {
+            var item = _style.ImageUrls[_dragIdx];
+            _style.ImageUrls.RemoveAt(_dragIdx);
+            _style.ImageUrls.Insert(_dropTargetIdx, item);
+            await AutoSaveImages();
+        }
+        _dragIdx = -1;
+        _dropTargetIdx = -1;
     }
 
     private void AddRelatedPost(StylePost post)
@@ -431,6 +491,13 @@
         font-family: var(--font-serif);
     }
 
+    .upload-area.drag-over .upload-label {
+        border-color: var(--salon-green);
+        color: var(--salon-green);
+        background: rgba(123, 163, 131, 0.1);
+        border-style: solid;
+    }
+
     .upload-label:hover {
         border-color: var(--salon-green);
         color: var(--salon-green);
@@ -492,6 +559,20 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
+    }
+
+    .uploaded-item[draggable="true"] {
+        cursor: grab;
+    }
+
+    .uploaded-item.dragging {
+        opacity: 0.4;
+    }
+
+    .uploaded-item.drop-target {
+        border-color: var(--salon-green);
+        border-width: 2px;
+        box-shadow: 0 0 0 2px rgba(123, 163, 131, 0.3);
     }
 
     .uploaded-remove {

@@ -90,10 +90,10 @@
                 <table class="table admin-table">
                     <thead>
                         <tr>
-                            <th>제목</th>
-                            <th>카테고리</th>
-                            <th>게시</th>
-                            <th>생성일</th>
+                            <th class="sortable-th" @onclick='() => ToggleSort("title")'>제목 @SortIcon("title")</th>
+                            <th class="sortable-th" @onclick='() => ToggleSort("category")'>카테고리 @SortIcon("category")</th>
+                            <th class="sortable-th" @onclick='() => ToggleSort("published")'>게시 @SortIcon("published")</th>
+                            <th class="sortable-th" @onclick='() => ToggleSort("date")'>생성일 @SortIcon("date")</th>
                             <th>관리</th>
                         </tr>
                     </thead>
@@ -462,6 +462,8 @@
     private int _adminTab;
     private string _searchText = "";
     private bool? _publishFilter; // null=전체, true=게시, false=미게시
+    private string _sortField = "date"; // title, category, published, date
+    private bool _sortAsc; // false=내림차순(기본)
 
     // AI 프롬프트
     private StylePost? _promptStyle;
@@ -496,6 +498,17 @@
                     MatchText(s.Title, q, isChoseong) ||
                     s.Hashtags.Any(h => MatchText(h, q, isChoseong)));
             }
+            result = (_sortField, _sortAsc) switch
+            {
+                ("title", true) => result.OrderBy(s => s.Title),
+                ("title", false) => result.OrderByDescending(s => s.Title),
+                ("category", true) => result.OrderBy(s => s.Category),
+                ("category", false) => result.OrderByDescending(s => s.Category),
+                ("published", true) => result.OrderBy(s => s.IsPublished),
+                ("published", false) => result.OrderByDescending(s => s.IsPublished),
+                ("date", true) => result.OrderBy(s => s.CreatedAt),
+                _ => result.OrderByDescending(s => s.CreatedAt),
+            };
             return result;
         }
     }
@@ -504,6 +517,23 @@
     {
         // null → true → false → null 순환
         _publishFilter = _publishFilter switch { null => true, true => false, false => null };
+    }
+
+    private void ToggleSort(string field)
+    {
+        if (_sortField == field)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortField = field;
+            _sortAsc = field == "title" || field == "category"; // 텍스트는 오름차순 기본
+        }
+    }
+
+    private MarkupString SortIcon(string field)
+    {
+        if (_sortField != field) return new("");
+        return new(_sortAsc ? "<i class=\"bi bi-caret-up-fill sort-icon\"></i>" : "<i class=\"bi bi-caret-down-fill sort-icon\"></i>");
     }
 
     // 초성 검색
@@ -995,12 +1025,12 @@ Save the file as: {GetSuggestedFilename()}";
                 style.Mood = GetRecommendedMood(style);
         }
 
-        // 2단계: 같은 스타일의 기존 이미지 복원
+        // 2단계: 같은 스타일의 기존 이미지 복원 (중복 URL 제거)
         foreach (var style in styles)
         {
             var key = $"{style.Category}|{style.Title}";
             if (existingImageMap.TryGetValue(key, out var images))
-                style.ImageUrls = images;
+                style.ImageUrls = images.Distinct().ToList();
         }
 
         // 3단계: 병렬 생성 (5개씩 배치)
@@ -3598,6 +3628,23 @@ Save the file as: {GetSuggestedFilename()}";
         font-size: 0.72rem;
         color: var(--salon-gray);
         white-space: nowrap;
+    }
+
+    /* 정렬 헤더 */
+    .sortable-th {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .sortable-th:hover {
+        color: var(--salon-green);
+    }
+
+    .sort-icon {
+        font-size: 0.65rem;
+        margin-left: 2px;
+        vertical-align: middle;
     }
 
     /* 게시 필터 */
