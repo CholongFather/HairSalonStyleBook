@@ -612,7 +612,7 @@
 
     private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
-        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on film, soft natural window light, slightly warm tones, no heavy retouching, visible skin pores and natural hair texture, real salon background with mirrors and chairs, not overly polished --ar 3:4 --style raw";
+        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on a smartphone, deep depth of field with sharp background, no bokeh, everything in focus. Soft natural window light, slightly warm tones, no retouching, visible skin pores and natural hair texture, real salon background with mirrors and chairs clearly visible and sharp, not overly polished --ar 3:4 --style raw";
     }
 
     private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
@@ -625,10 +625,12 @@
 
 중요한 점:
 - 과도한 보정 없이 자연스러운 피부와 머릿결
-- 실제 미용실 배경 (거울, 의자, 조명이 보이게)
+- 실제 미용실 배경 (거울, 의자, 조명이 선명하게 보이게)
+- 배경을 흐리게 처리하지 마세요! 배경도 선명하게, 심도가 깊은 사진
+- 보케(bokeh) 효과 절대 금지, 모든 영역이 포커스 안에 있어야 함
 - 창문에서 들어오는 자연광 위주
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
-- 스마트폰으로 찍은 듯한 캐주얼한 느낌도 좋음
+- 스마트폰으로 찍은 듯한 캐주얼한 느낌
 
 세로 비율(3:4)로 생성해주세요.";
     }
@@ -644,8 +646,10 @@ Setting: Real hair salon interior, mirrors, salon chairs visible in background
 Key requirements:
 - Natural window lighting, slightly warm tones
 - No heavy skin retouching, visible pores and natural texture
+- Deep depth of field, sharp background, NO bokeh or blurred background at all
+- Everything in focus including salon mirrors, chairs, and background details
 - Hair should look like it was just styled by a hairdresser, not digitally perfect
-- Candid feel, as if taken on a phone camera by a salon staff
+- Candid feel, as if taken on a smartphone camera by a salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
 
 Vertical 3:4 aspect ratio.";
