@@ -616,7 +616,10 @@
 
     private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
     {
-        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp, deep depth of field with no bokeh. Soft natural window light, warm tones, no retouching, visible skin pores, real salon background with mirrors and chairs, imperfect and authentic looking --ar 3:4 --style raw";
+        var fn = GetSuggestedFilename();
+        return $@"A candid photo of a Korean {p.gender} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair). {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. f/8 deep depth of field, everything in focus, absolutely NO background blur, NO bokeh effect at all, background must be sharp and clear. Soft natural window light, warm tones, no retouching, visible skin pores, real salon background with mirrors and chairs clearly visible, imperfect and authentic looking --ar 3:4 --style raw
+
+Save the file as: {fn}";
     }
 
     private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
@@ -638,7 +641,9 @@
 - {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
 - 완벽하지 않고 실제 사진 같은 느낌이 중요
 
-세로 비율(3:4)로 생성해주세요.";
+세로 비율(3:4)로 생성해주세요.
+
+저장 파일명: {GetSuggestedFilename()}";
     }
 
     private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p)
@@ -660,7 +665,9 @@ Key requirements:
 - Imperfect and authentic, as if casually taken by salon staff
 - The hairstyle should be clearly visible from the {_promptAngle} angle
 
-Vertical 3:4 aspect ratio.";
+Vertical 3:4 aspect ratio.
+
+Save the file as: {GetSuggestedFilename()}";
     }
 
     private async Task CopyPrompt()
