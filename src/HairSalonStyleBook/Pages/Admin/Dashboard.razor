@@ -50,9 +50,6 @@
                 <a href="admin/audit" class="btn btn-salon-outline">
                     <i class="bi bi-clock-history"></i> 감사 로그
                 </a>
-                <button class="btn btn-salon-outline" @onclick="HandleLogout">
-                    <i class="bi bi-box-arrow-right"></i> 로그아웃
-                </button>
             </div>
         </div>
 
@@ -596,12 +593,6 @@ The model is facing the camera with a front view composition. Vertical aspect ra
         _styles.Remove(style);
     }
 
-    private async Task HandleLogout()
-    {
-        await AuthService.LogoutAsync();
-        ((AdminAuthStateProvider)AuthStateProvider).NotifyAuthStateChanged();
-        Nav.NavigateTo("login", forceLoad: true);
-    }
 
     private async Task SeedInitialData()
     {
