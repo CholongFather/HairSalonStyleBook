@@ -109,7 +109,13 @@
                         @foreach (var style in FilteredStyles)
                         {
                             <tr>
-                                <td>@style.Title</td>
+                                <td>
+                                    @style.Title
+                                    @if (style.ImageUrls.Count > 0)
+                                    {
+                                        <span class="badge-img-count"><i class="bi bi-image"></i> @style.ImageUrls.Count</span>
+                                    }
+                                </td>
                                 <td><span class="badge-category">@style.Category.ToFullName()</span></td>
                                 <td>
                                     <button class="btn btn-sm admin-publish-toggle @(style.IsPublished ? "published" : "unpublished")"
@@ -3628,6 +3634,18 @@ Save the file as: {GetSuggestedFilename()}";
         font-size: 0.72rem;
         color: var(--salon-gray);
         white-space: nowrap;
+    }
+
+    /* 이미지 개수 뱃지 */
+    .badge-img-count {
+        display: inline-block;
+        font-size: 0.65rem;
+        padding: 0.1rem 0.35rem;
+        background: var(--salon-light-gray);
+        color: var(--salon-gray);
+        border-radius: 4px;
+        margin-left: 0.3rem;
+        vertical-align: middle;
     }
 
     /* 정렬 헤더 */
