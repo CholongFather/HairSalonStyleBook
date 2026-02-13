@@ -47,7 +47,7 @@
                         var t = tag;
                         <span class="gd-hashtag-chip">
                             #@t
-                            <button class="gd-hashtag-remove" @onclick="() => _editHashtags.Remove(t)">
+                            <button class="gd-hashtag-remove" @onclick="() => RemoveHashtag(t)">
                                 <i class="bi bi-x"></i>
                             </button>
                         </span>
@@ -299,7 +299,7 @@
 
     #region 해시태그 입력
 
-    private void OnHashtagKeyDown(KeyboardEventArgs e)
+    private async Task OnHashtagKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newHashtag))
         {
@@ -307,14 +307,30 @@
             if (tag.Length > 0 && !_editHashtags.Contains(tag))
                 _editHashtags.Add(tag);
             _newHashtag = "";
+            await SaveMetadataAsync();
         }
+    }
+
+    private async Task RemoveHashtag(string tag)
+    {
+        _editHashtags.Remove(tag);
+        await SaveMetadataAsync();
     }
 
     #endregion
 
-    private void OnVisitDateChange(ChangeEventArgs e)
+    private async Task OnVisitDateChange(ChangeEventArgs e)
     {
         _editVisitDate = DateTime.TryParse(e.Value?.ToString(), out var dt) ? dt : null;
+        await SaveMetadataAsync();
+    }
+
+    /// <summary>방문일자/해시태그만 즉시 저장 (꾸미기 히스토리 없이)</summary>
+    private async Task SaveMetadataAsync()
+    {
+        Item.VisitDate = _editVisitDate;
+        Item.Hashtags = new List<string>(_editHashtags);
+        await OnSave.InvokeAsync(Item);
     }
 
     private async Task SaveDecoration()
