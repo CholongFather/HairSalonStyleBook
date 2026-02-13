@@ -490,13 +490,22 @@
     <div class="gallery-edit-overlay" @onclick="CloseGalleryEdit">
         <div class="gallery-edit-panel" @onclick:stopPropagation>
             <div class="gallery-edit-header">
-                <h5><i class="bi bi-palette"></i> 사진 꾸미기</h5>
+                <h5>
+                    <i class="bi bi-palette"></i> 사진 꾸미기
+                    @if (_galleryEditItem.IsLocked)
+                    {
+                        <span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;">
+                            <i class="bi bi-lock-fill"></i> 잠금
+                        </span>
+                    }
+                </h5>
                 <button class="btn-close" @onclick="CloseGalleryEdit"></button>
             </div>
-            <div class="gallery-edit-body">
-                <GalleryDecorator Item="_galleryEditItem" EditMode="true"
+            <div class="gallery-edit-body" style="position:relative;">
+                <GalleryDecorator Item="_galleryEditItem" EditMode="@(!_galleryEditItem.IsLocked)"
                                   OnSave="SaveGalleryDecoration"
                                   OnCancel="CloseGalleryEdit" />
+                <div class="gallery-detail-watermark">늘~오던</div>
             </div>
         </div>
     </div>
@@ -1974,6 +1983,21 @@
     }
 
     .gallery-edit-body { padding: 1rem; }
+
+    .gallery-detail-watermark {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        font-family: 'Noto Serif KR', serif;
+        font-size: 1rem;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.75);
+        text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        pointer-events: none;
+        z-index: 10;
+        letter-spacing: 1px;
+        user-select: none;
+    }
 
     @@keyframes slideUp {
         from { transform: translateY(100%); }

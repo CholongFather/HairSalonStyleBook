@@ -20,6 +20,8 @@ public class GalleryItem
     public DateTime? VisitDate { get; set; }
     /// <summary>노출 여부 (기본 비노출)</summary>
     public bool IsPublished { get; set; } = false;
+    /// <summary>유저 편집 잠금 (true면 유저가 수정 불가)</summary>
+    public bool IsLocked { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

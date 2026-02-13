@@ -118,6 +118,7 @@ public class FirestoreGalleryService : IGalleryService
                 History = MapHistoryFrom(fields),
                 VisitDate = GetNullableTimestamp(fields, "visitDate"),
                 IsPublished = GetBool(fields, "isPublished", true),
+                IsLocked = GetBool(fields, "isLocked", false),
                 CreatedAt = GetTimestamp(fields, "createdAt"),
                 UpdatedAt = GetTimestamp(fields, "updatedAt"),
             };
@@ -170,6 +171,7 @@ public class FirestoreGalleryService : IGalleryService
                     ? new() { TimestampValue = item.VisitDate.Value.ToString("o") }
                     : new() { NullValue = "NULL_VALUE" },
                 ["isPublished"] = new() { BooleanValue = item.IsPublished },
+                ["isLocked"] = new() { BooleanValue = item.IsLocked },
                 ["createdAt"] = new() { TimestampValue = item.CreatedAt.ToString("o") },
                 ["updatedAt"] = new() { TimestampValue = item.UpdatedAt.ToString("o") },
             }

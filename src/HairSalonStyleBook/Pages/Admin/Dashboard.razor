@@ -428,7 +428,8 @@
                             {
                                 <button class="faq-cat-tab @(_faqCategoryFilter == cat ? "active" : "")"
                                         @onclick="() => _faqCategoryFilter = cat">
-                                    <i class="bi @GetFaqCategoryIcon(cat)"></i> @cat
+                                    <span class="faq-cat-dot" style="background:@GetFaqCategoryColor(cat);"></span>
+                                    @cat
                                     <span class="faq-cat-count">@(_faqItems.Count(f => f.Category == cat))</span>
                                 </button>
                             }
@@ -451,7 +452,8 @@
                     {
                         @foreach (var faq in FilteredFaqItems)
                             {
-                                <div class="faq-acc-item @(_expandedFaqId == faq.Id ? "expanded" : "")">
+                                <div class="faq-acc-item @(_expandedFaqId == faq.Id ? "expanded" : "")"
+                                     style="@GetFaqCategoryStyle(faq.Category)">
                                     <div class="faq-acc-header" @onclick="() => ToggleFaqAccordion(faq.Id)">
                                         <div class="faq-acc-title">
                                             @faq.Title
@@ -723,7 +725,18 @@
         <div class="admin-header">
             <h2 class="admin-title">갤러리</h2>
             <div class="admin-actions">
-                <span class="text-muted" style="font-size: 0.8rem;">@(_galleryItems.Count)장</span>
+                <div class="gallery-filter-bar">
+                    <button class="gallery-filter-chip @(_galleryPublishFilter == "" ? "active" : "")"
+                            @onclick='() => _galleryPublishFilter = ""'>전체 @(_galleryItems.Count)</button>
+                    <button class="gallery-filter-chip @(_galleryPublishFilter == "published" ? "active" : "")"
+                            @onclick='() => _galleryPublishFilter = "published"'>
+                        <i class="bi bi-eye-fill"></i> 노출 @(_galleryItems.Count(g => g.IsPublished))
+                    </button>
+                    <button class="gallery-filter-chip @(_galleryPublishFilter == "hidden" ? "active" : "")"
+                            @onclick='() => _galleryPublishFilter = "hidden"'>
+                        <i class="bi bi-eye-slash"></i> 비노출 @(_galleryItems.Count(g => !g.IsPublished))
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -781,7 +794,7 @@
         else
         {
             <div class="gallery-admin-grid">
-                @foreach (var item in _galleryItems)
+                @foreach (var item in FilteredAdminGalleryItems)
                 {
                     <div class="gallery-admin-card @(_selectedGalleryIds.Contains(item.Id) ? "selected" : "")"
                          @onclick="() => ToggleGallerySelect(item.Id)">
@@ -816,9 +829,17 @@
                                 @onclick:stopPropagation @onclick="() => ToggleGalleryPublish(item)">
                             <i class="bi @(item.IsPublished ? "bi-eye-fill" : "bi-eye-slash")"></i>
                         </button>
+                        <button class="gallery-lock-btn @(item.IsLocked ? "locked" : "")"
+                                @onclick:stopPropagation @onclick="() => ToggleGalleryLock(item)">
+                            <i class="bi @(item.IsLocked ? "bi-lock-fill" : "bi-unlock")"></i>
+                        </button>
                         @if (!item.IsPublished)
                         {
                             <div class="gallery-hidden-badge">비노출</div>
+                        }
+                        @if (item.IsLocked)
+                        {
+                            <div class="gallery-locked-badge">잠금</div>
                         }
                     </div>
                 }
@@ -1136,6 +1157,27 @@
             ? _faqItems.OrderBy(f => f.Order)
             : _faqItems.Where(f => f.Category == _faqCategoryFilter).OrderBy(f => f.Order);
 
+    // FAQ 카테고리별 색상 (왼쪽 바 + 배경 tint)
+    private static readonly string[] _faqCategoryColors = new[]
+    {
+        "#7ba383", "#6b8eb5", "#e8847c", "#c9b1d4", "#d4a574",
+        "#4d96ff", "#ff6b9d", "#ffd93d", "#6bcb77", "#a855f7",
+    };
+
+    private string GetFaqCategoryColor(string category)
+    {
+        if (string.IsNullOrEmpty(category)) return _faqCategoryColors[0];
+        var cats = _faqItems.Select(f => f.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
+        var idx = cats.IndexOf(category);
+        return _faqCategoryColors[idx >= 0 ? idx % _faqCategoryColors.Length : 0];
+    }
+
+    private string GetFaqCategoryStyle(string category)
+    {
+        var color = GetFaqCategoryColor(category);
+        return $"border-left: 4px solid {color};";
+    }
+
     // 갤러리
     private List<GalleryItem> _galleryItems = new();
     private HashSet<string> _selectedGalleryIds = new();
@@ -1143,6 +1185,14 @@
     private int _galleryUploadedCount;
     private int _galleryTotalUploadCount;
     private string _galleryUploadDesc = "";
+    private string _galleryPublishFilter = ""; // "", "published", "hidden"
+
+    private IEnumerable<GalleryItem> FilteredAdminGalleryItems => _galleryPublishFilter switch
+    {
+        "published" => _galleryItems.Where(g => g.IsPublished),
+        "hidden" => _galleryItems.Where(g => !g.IsPublished),
+        _ => _galleryItems
+    };
     private bool _galleryLoaded;
     private GalleryItem? _adminGalleryEditItem;
 
@@ -1525,6 +1575,13 @@
     private async Task ToggleGalleryPublish(GalleryItem item)
     {
         item.IsPublished = !item.IsPublished;
+        await GalleryService.UpdateAsync(item);
+        StateHasChanged();
+    }
+
+    private async Task ToggleGalleryLock(GalleryItem item)
+    {
+        item.IsLocked = !item.IsLocked;
         await GalleryService.UpdateAsync(item);
         StateHasChanged();
     }
@@ -4943,6 +5000,14 @@ Save the file as: {GetSuggestedFilename()}";
         color: #555;
     }
 
+    .faq-cat-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
     .faq-cat-count {
         font-size: 0.65rem;
         background: #f0f0f0;
@@ -4993,6 +5058,29 @@ Save the file as: {GetSuggestedFilename()}";
     .gallery-upload-label small {
         font-size: 0.7rem;
         color: #aaa;
+    }
+
+    .gallery-filter-bar {
+        display: flex;
+        gap: 0.3rem;
+    }
+    .gallery-filter-chip {
+        padding: 2px 8px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+        font-size: 0.7rem;
+        color: #666;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .gallery-filter-chip.active {
+        border-color: var(--salon-primary, #7ba383);
+        background: rgba(123,163,131,0.1);
+        color: var(--salon-primary, #7ba383);
+        font-weight: 600;
     }
 
     .gallery-toolbar {
@@ -5161,6 +5249,44 @@ Save the file as: {GetSuggestedFilename()}";
         font-size: 0.7rem;
         padding: 0.2rem 0.6rem;
         border-radius: 12px;
+        pointer-events: none;
+    }
+
+    /* 잠금 버튼 */
+    .gallery-admin-card:hover .gallery-lock-btn {
+        opacity: 1;
+    }
+    .gallery-lock-btn {
+        position: absolute;
+        bottom: 6px;
+        right: 38px;
+        background: rgba(0,0,0,0.5);
+        border: none;
+        color: #fff;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .gallery-lock-btn.locked {
+        opacity: 1;
+        background: rgba(255, 152, 0, 0.8);
+    }
+    .gallery-locked-badge {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
+        background: rgba(255, 152, 0, 0.8);
+        color: #fff;
+        font-size: 0.55rem;
+        padding: 1px 5px;
+        border-radius: 8px;
         pointer-events: none;
     }
 
