@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject IStyleService StyleService
 @inject IShopConfigService ShopConfigService
+@inject IFaqService FaqService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -124,7 +125,7 @@
         {
             <!-- 탭 1: 매장 -->
             <div class="tab-panel tab-fade-in">
-                <!-- 서브탭: WiFi / 계좌 -->
+                <!-- 서브탭: WiFi / 계좌 / FAQ -->
                 <div class="sub-tab-bar">
                     <button class="sub-tab-item @(_shopTab == 0 ? "active" : "")" @onclick="() => _shopTab = 0">
                         <i class="bi bi-wifi"></i> WiFi
@@ -132,6 +133,12 @@
                     <button class="sub-tab-item @(_shopTab == 1 ? "active" : "")" @onclick="() => _shopTab = 1">
                         <i class="bi bi-credit-card"></i> 계좌
                     </button>
+                    @if (_faqItems.Any())
+                    {
+                        <button class="sub-tab-item @(_shopTab == 2 ? "active" : "")" @onclick="() => _shopTab = 2">
+                            <i class="bi bi-question-circle"></i> FAQ
+                        </button>
+                    }
                 </div>
 
                 @if (_shopTab == 0)
@@ -181,7 +188,7 @@
                         </p>
                     </div>
                 }
-                else
+                else if (_shopTab == 1)
                 {
                     <!-- 계좌 정보 -->
                     <div class="info-card">
@@ -217,6 +224,34 @@
                         </p>
                     </div>
                 }
+                else if (_shopTab == 2)
+                {
+                    <!-- FAQ -->
+                    <div class="faq-list">
+                        @foreach (var faq in _faqItems.OrderBy(f => f.Order))
+                        {
+                            <div class="faq-card" @onclick="() => ToggleFaq(faq.Id)">
+                                <div class="faq-card-header">
+                                    <div class="faq-card-q">Q</div>
+                                    <div class="faq-card-title">@faq.Title</div>
+                                    <i class="bi @(_expandedFaqId == faq.Id ? "bi-chevron-up" : "bi-chevron-down") faq-card-arrow"></i>
+                                </div>
+                                @if (_expandedFaqId == faq.Id)
+                                {
+                                    <div class="faq-card-body">
+                                        @if (!string.IsNullOrEmpty(faq.ImageUrl))
+                                        {
+                                            <div class="faq-card-image">
+                                                <img src="@faq.ImageUrl" alt="@faq.Title" loading="lazy" />
+                                            </div>
+                                        }
+                                        <div class="faq-card-desc">@faq.Description</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         }
         else if (_activeTab == 2)
@@ -224,63 +259,96 @@
             <!-- 탭 2: SNS (QR 코드 관리) -->
             <div class="tab-panel tab-fade-in">
                 <p class="sns-guide-text"><i class="bi bi-qr-code-scan"></i> 고객이 핸드폰으로 QR을 스캔하면 해당 페이지로 이동합니다</p>
-                <div class="sns-qr-grid">
-                    @if (!string.IsNullOrEmpty(_shopConfig.InstagramQrUrl))
-                    {
-                        <div class="sns-qr-card">
-                            <div class="sns-qr-card-header sns-instagram">
-                                <i class="bi bi-instagram"></i>
-                                <span>Instagram</span>
-                            </div>
-                            <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.InstagramQrUrl)">
-                                <img src="@_shopConfig.InstagramQrUrl" alt="Instagram QR" loading="lazy" />
-                            </div>
-                            <p class="sns-qr-card-desc">실시간 스타일 업데이트</p>
-                        </div>
-                    }
 
-                    @if (!string.IsNullOrEmpty(_shopConfig.NaverPlaceQrUrl))
-                    {
-                        <div class="sns-qr-card">
-                            <div class="sns-qr-card-header sns-naver">
-                                <span class="naver-n">N</span>
-                                <span>네이버 플레이스</span>
-                            </div>
-                            <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverPlaceQrUrl)">
-                                <img src="@_shopConfig.NaverPlaceQrUrl" alt="네이버 플레이스 QR" loading="lazy" />
-                            </div>
-                            <p class="sns-qr-card-desc">매장 정보 & 예약</p>
+                @if (_shopConfig.SnsInstagramEnabled && !string.IsNullOrEmpty(_shopConfig.InstagramQrUrl))
+                {
+                    <div class="sns-section">
+                        <div class="sns-section-header">
+                            <i class="bi bi-instagram"></i>
+                            <span>Instagram</span>
                         </div>
-                    }
+                        <div class="sns-qr-grid sns-qr-single">
+                            <div class="sns-qr-card">
+                                <div class="sns-qr-card-header sns-instagram">
+                                    <i class="bi bi-instagram"></i>
+                                    <span>Instagram</span>
+                                </div>
+                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.InstagramQrUrl)">
+                                    <img src="@_shopConfig.InstagramQrUrl" alt="Instagram QR" loading="lazy" />
+                                </div>
+                                <p class="sns-qr-card-desc">실시간 스타일 업데이트</p>
+                            </div>
+                        </div>
+                        <p class="sns-section-cta">팔로우 부탁드려요!</p>
+                    </div>
+                }
 
-                    @if (!string.IsNullOrEmpty(_shopConfig.NaverReviewQrUrl))
-                    {
-                        <div class="sns-qr-card">
-                            <div class="sns-qr-card-header sns-review">
-                                <i class="bi bi-chat-heart"></i>
-                                <span>리뷰</span>
-                            </div>
-                            <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverReviewQrUrl)">
-                                <img src="@_shopConfig.NaverReviewQrUrl" alt="리뷰 QR" loading="lazy" />
-                            </div>
-                            <p class="sns-qr-card-desc">고객님들의 솔직한 후기</p>
+                @if (_shopConfig.SnsKakaoEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoChannelQrUrl))
+                {
+                    <div class="sns-section">
+                        <div class="sns-section-header">
+                            <i class="bi bi-chat-dots-fill sns-kakao-icon"></i>
+                            <span>카카오톡 채널</span>
                         </div>
-                    }
+                        <div class="sns-qr-grid sns-qr-single">
+                            <div class="sns-qr-card">
+                                <div class="sns-qr-card-header sns-kakao">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                    <span>카카오톡 채널</span>
+                                </div>
+                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.KakaoChannelQrUrl)">
+                                    <img src="@_shopConfig.KakaoChannelQrUrl" alt="카카오톡 채널 QR" loading="lazy" />
+                                </div>
+                                <p class="sns-qr-card-desc">채널 추가하고 소식 받기</p>
+                            </div>
+                        </div>
+                        <p class="sns-section-cta">채널 추가 부탁드려요!</p>
+                    </div>
+                }
 
-                    @if (!string.IsNullOrEmpty(_shopConfig.NaverMapQrUrl))
-                    {
-                        <div class="sns-qr-card">
-                            <div class="sns-qr-card-header sns-map">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <span>네이버 지도</span>
-                            </div>
-                            <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverMapQrUrl)">
-                                <img src="@_shopConfig.NaverMapQrUrl" alt="네이버 지도 QR" loading="lazy" />
-                            </div>
-                            <p class="sns-qr-card-desc">오시는 길 안내</p>
+                @{
+                    var showNaverPlace = _shopConfig.SnsNaverPlaceEnabled && !string.IsNullOrEmpty(_shopConfig.NaverPlaceQrUrl);
+                    var showNaverReview = _shopConfig.SnsNaverReviewEnabled && !string.IsNullOrEmpty(_shopConfig.NaverReviewQrUrl);
+                }
+                @if (showNaverPlace || showNaverReview)
+                {
+                    <div class="sns-section">
+                        <div class="sns-section-header">
+                            <span class="naver-n">N</span>
+                            <span>네이버</span>
                         </div>
-                    }
-                </div>
+                        <div class="sns-qr-grid @(showNaverPlace && showNaverReview ? "" : "sns-qr-single")">
+                            @if (showNaverPlace)
+                            {
+                                <div class="sns-qr-card">
+                                    <div class="sns-qr-card-header sns-naver">
+                                        <span class="naver-n">N</span>
+                                        <span>네이버 플레이스</span>
+                                    </div>
+                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverPlaceQrUrl)">
+                                        <img src="@_shopConfig.NaverPlaceQrUrl" alt="네이버 플레이스 QR" loading="lazy" />
+                                    </div>
+                                    <p class="sns-qr-card-desc">매장 정보 & 예약</p>
+                                </div>
+                            }
+
+                            @if (showNaverReview)
+                            {
+                                <div class="sns-qr-card">
+                                    <div class="sns-qr-card-header sns-review">
+                                        <i class="bi bi-chat-heart"></i>
+                                        <span>리뷰</span>
+                                    </div>
+                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverReviewQrUrl)">
+                                        <img src="@_shopConfig.NaverReviewQrUrl" alt="리뷰 QR" loading="lazy" />
+                                    </div>
+                                    <p class="sns-qr-card-desc">고객님들의 솔직한 후기</p>
+                                </div>
+                            }
+                        </div>
+                        <p class="sns-section-cta">알림설정도 해주세요!</p>
+                    </div>
+                }
             </div>
         }
     </div>
@@ -335,6 +403,10 @@
     // 매장 정보 (캐시에서 로드)
     private ShopConfig _shopConfig = new();
 
+    // FAQ
+    private List<FaqItem> _faqItems = new();
+    private string? _expandedFaqId;
+
     private string QrScaleStyle =>
         $"transform: scale({_qrScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)})";
 
@@ -351,8 +423,10 @@
         // 병렬 로드 (캐시 히트 시 즉시 반환)
         var loadStylesTask = LoadStyles();
         var loadShopTask = ShopConfigService.GetAsync();
-        await Task.WhenAll(loadStylesTask, loadShopTask);
+        var loadFaqTask = FaqService.GetAllAsync();
+        await Task.WhenAll(loadStylesTask, loadShopTask, loadFaqTask);
         _shopConfig = loadShopTask.Result;
+        _faqItems = loadFaqTask.Result.Where(f => f.IsPublished).ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -385,6 +459,11 @@
     private void SwitchTab(int tab)
     {
         _activeTab = tab;
+    }
+
+    private void ToggleFaq(string id)
+    {
+        _expandedFaqId = _expandedFaqId == id ? null : id;
     }
 
     private void OpenQr(string url)
@@ -1301,8 +1380,56 @@
         background: linear-gradient(135deg, #ff6b6b, #ee5a24);
     }
 
-    .sns-map {
-        background: linear-gradient(135deg, #03C75A, #00a046);
+    .sns-kakao {
+        background: #FEE500;
+        color: #3C1E1E !important;
+    }
+
+    .sns-kakao-icon {
+        color: #FEE500;
+    }
+
+    .sns-section {
+        margin-bottom: 1.2rem;
+    }
+
+    .sns-section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: var(--font-serif);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--salon-dark);
+        padding: 0 0.3rem 0.5rem;
+        border-bottom: 1px solid var(--salon-light-gray);
+        margin-bottom: 0.8rem;
+    }
+
+    .sns-section-header i {
+        font-size: 1rem;
+        background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .sns-section-header .naver-n {
+        color: #03C75A;
+    }
+
+    .sns-section-cta {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-accent);
+        text-align: center;
+        margin: 0.5rem 0 0;
+        font-weight: 600;
+    }
+
+    .sns-qr-single {
+        grid-template-columns: 1fr !important;
+        max-width: 200px;
+        margin: 0 auto;
     }
 
     .sns-qr-card-body {
@@ -1352,5 +1479,86 @@
             width: 140px;
             height: 140px;
         }
+    }
+
+    /* FAQ */
+    .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .faq-card {
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: box-shadow 0.2s;
+    }
+
+    .faq-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .faq-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.8rem 1rem;
+    }
+
+    .faq-card-q {
+        width: 26px;
+        height: 26px;
+        background: var(--salon-primary, #c9a96e);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+
+    .faq-card-title {
+        flex: 1;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .faq-card-arrow {
+        color: #aaa;
+        font-size: 0.8rem;
+        transition: transform 0.2s;
+    }
+
+    .faq-card-body {
+        padding: 0 1rem 1rem 1rem;
+        border-top: 1px solid #f0f0f0;
+    }
+
+    .faq-card-image {
+        margin: 0.8rem 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .faq-card-image img {
+        width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+        background: #f8f8f8;
+    }
+
+    .faq-card-desc {
+        font-size: 0.85rem;
+        color: #555;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        padding-top: 0.6rem;
     }
 </style>

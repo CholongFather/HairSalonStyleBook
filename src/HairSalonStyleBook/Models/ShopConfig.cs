@@ -17,11 +17,20 @@ public class ShopConfig
 
     // SNS
     public string InstagramUrl { get; set; } = "";
+    public string KakaoChannelUrl { get; set; } = "";
     public string NaverPlaceId { get; set; } = "1883331965";
-    public string NaverPlaceUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://m.place.naver.com/hairshop/{NaverPlaceId}/home";
+    public string NaverSearchKeyword { get; set; } = "산척동 미용실";
+    public string NaverPlaceUrl => string.IsNullOrEmpty(NaverPlaceId) ? ""
+        : string.IsNullOrEmpty(NaverSearchKeyword)
+            ? $"https://m.place.naver.com/hairshop/{NaverPlaceId}/home"
+            : $"https://map.naver.com/p/search/{Uri.EscapeDataString(NaverSearchKeyword)}/place/{NaverPlaceId}?placePath=/home";
     public string NaverReviewUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://m.place.naver.com/hairshop/{NaverPlaceId}/review/visitor";
-    public string NaverMapSearchKeyword { get; set; } = "산척동 미용실";
-    public string NaverMapUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://map.naver.com/p/search/{Uri.EscapeDataString(NaverMapSearchKeyword)}/place/{NaverPlaceId}?placePath=/home";
+
+    // SNS 활성/비활성
+    public bool SnsInstagramEnabled { get; set; } = true;
+    public bool SnsKakaoEnabled { get; set; } = true;
+    public bool SnsNaverPlaceEnabled { get; set; } = true;
+    public bool SnsNaverReviewEnabled { get; set; } = true;
 
     // QR 코드 URL 자동 생성
     public string Wifi5GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName5G};P:{WifiPassword};;")}";
@@ -29,7 +38,7 @@ public class ShopConfig
     // 계좌 QR → 결제 페이지 URL로 연결 (텍스트 QR은 폰에서 복사 불가)
     public string AccountQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("https://cholongfather.github.io/HairSalonStyleBook/pay")}";
     public string InstagramQrUrl => string.IsNullOrEmpty(InstagramUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(InstagramUrl)}";
+    public string KakaoChannelQrUrl => string.IsNullOrEmpty(KakaoChannelUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(KakaoChannelUrl)}";
     public string NaverPlaceQrUrl => string.IsNullOrEmpty(NaverPlaceUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverPlaceUrl)}";
     public string NaverReviewQrUrl => string.IsNullOrEmpty(NaverReviewUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverReviewUrl)}";
-    public string NaverMapQrUrl => string.IsNullOrEmpty(NaverMapUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverMapUrl)}";
 }

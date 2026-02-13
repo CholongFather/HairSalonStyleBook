@@ -5,6 +5,8 @@
 @inject IAuthService AuthService
 @inject IShopConfigService ShopConfigService
 @inject ILoginSecurityService LoginSecurityService
+@inject IFaqService FaqService
+@inject IImageService ImageService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
@@ -194,20 +196,77 @@
         <div class="shop-section">
             <div class="shop-section-header">
                 <i class="bi bi-share"></i>
-                <h3>SNS / 네이버</h3>
+                <h3>SNS 관리</h3>
             </div>
-            <div class="shop-edit-grid">
-                <div class="shop-edit-group">
-                    <label class="form-label">Instagram URL</label>
+
+            <!-- Instagram -->
+            <div class="sns-admin-item">
+                <div class="sns-admin-toggle">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsInstagramEnabled" id="snsInstagram" />
+                        <label class="form-check-label fw-bold" for="snsInstagram">
+                            <i class="bi bi-instagram" style="color:#E1306C"></i> Instagram
+                        </label>
+                    </div>
+                </div>
+                <div class="shop-edit-group mt-1">
                     <input type="text" class="form-control form-control-sm" @bind="_shopConfig.InstagramUrl"
                            placeholder="https://www.instagram.com/yourshop" />
                 </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">네이버 플레이스 ID</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPlaceId"
-                           placeholder="1883331965" />
+            </div>
+
+            <!-- 카카오톡 채널 -->
+            <div class="sns-admin-item">
+                <div class="sns-admin-toggle">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsKakaoEnabled" id="snsKakao" />
+                        <label class="form-check-label fw-bold" for="snsKakao">
+                            <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오톡 채널
+                        </label>
+                    </div>
+                </div>
+                <div class="shop-edit-group mt-1">
+                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.KakaoChannelUrl"
+                           placeholder="https://pf.kakao.com/yourshop" />
                 </div>
             </div>
+
+            <!-- 네이버 플레이스 -->
+            <div class="sns-admin-item">
+                <div class="sns-admin-toggle">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverPlaceEnabled" id="snsNaverPlace" />
+                        <label class="form-check-label fw-bold" for="snsNaverPlace">
+                            <span style="color:#03C75A;font-weight:900">N</span> 네이버 플레이스
+                        </label>
+                    </div>
+                </div>
+                <div class="shop-edit-grid mt-1">
+                    <div class="shop-edit-group">
+                        <label class="form-label">플레이스 ID</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPlaceId"
+                               placeholder="1883331965" />
+                    </div>
+                    <div class="shop-edit-group">
+                        <label class="form-label">검색어</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverSearchKeyword"
+                               placeholder="산척동 미용실" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- 네이버 리뷰 -->
+            <div class="sns-admin-item">
+                <div class="sns-admin-toggle">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverReviewEnabled" id="snsNaverReview" />
+                        <label class="form-check-label fw-bold" for="snsNaverReview">
+                            <i class="bi bi-chat-heart" style="color:#ff6b6b"></i> 네이버 리뷰
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <button class="btn btn-salon mt-2" @onclick="SaveShopConfig" disabled="@_shopSaving">
                 @if (_shopSaving)
                 {
@@ -246,6 +305,136 @@
                 <p><i class="bi bi-telephone"></i> 문의: 화성시 자원순환과 031-5189-6801</p>
             </div>
         </div>
+
+        <!-- FAQ 관리 -->
+        <div class="shop-section">
+            <div class="shop-section-header">
+                <i class="bi bi-question-circle"></i>
+                <h3>FAQ 관리</h3>
+                <button class="btn btn-salon btn-sm ms-auto" @onclick="ShowFaqEditor">
+                    <i class="bi bi-plus-lg"></i> 추가
+                </button>
+            </div>
+
+            @if (_faqLoading)
+            {
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm"></div>
+                </div>
+            }
+            else if (!_faqItems.Any())
+            {
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-info-circle"></i> 등록된 FAQ가 없습니다
+                </div>
+            }
+            else
+            {
+                <div class="faq-admin-list">
+                    @foreach (var faq in _faqItems.OrderBy(f => f.Order))
+                    {
+                        <div class="faq-admin-item">
+                            <div class="faq-admin-header">
+                                <div class="faq-admin-order">@(faq.Order + 1)</div>
+                                <div class="faq-admin-title">
+                                    <strong>@faq.Title</strong>
+                                    @if (!faq.IsPublished)
+                                    {
+                                        <span class="badge bg-secondary ms-1">비공개</span>
+                                    }
+                                </div>
+                                <div class="faq-admin-actions">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)" title="수정">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFaq(faq)" title="삭제">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(faq.ImageUrl))
+                            {
+                                <div class="faq-admin-image">
+                                    <img src="@faq.ImageUrl" alt="@faq.Title" />
+                                </div>
+                            }
+                            <div class="faq-admin-desc">@faq.Description</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* FAQ 편집 모달 *@
+        @if (_faqEditing != null)
+        {
+            <div class="modal-backdrop fade show"></div>
+            <div class="modal fade show d-block" tabindex="-1" @onclick="CloseFaqEditor" @onclick:stopPropagation="false">
+                <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">@(_faqIsNew ? "FAQ 추가" : "FAQ 수정")</h5>
+                            <button type="button" class="btn-close" @onclick="CloseFaqEditor"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">제목</label>
+                                <input type="text" class="form-control" @bind="_faqEditing.Title" placeholder="예: Wi-Fi 연결 방법" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">상세 설명</label>
+                                <textarea class="form-control" rows="5" @bind="_faqEditing.Description"
+                                          placeholder="고객에게 보여줄 상세 설명을 입력하세요"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">스크린샷 / 이미지</label>
+                                @if (!string.IsNullOrEmpty(_faqEditing.ImageUrl))
+                                {
+                                    <div class="faq-edit-image-preview mb-2">
+                                        <img src="@_faqEditing.ImageUrl" alt="미리보기" />
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFaqImage">
+                                            <i class="bi bi-x-lg"></i> 제거
+                                        </button>
+                                    </div>
+                                }
+                                <InputFile OnChange="OnFaqImageSelected" accept="image/*" class="form-control form-control-sm" />
+                                @if (_faqUploading)
+                                {
+                                    <div class="mt-1 text-muted small">
+                                        <span class="spinner-border spinner-border-sm me-1"></span> 업로드 중...
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">순서</label>
+                                    <input type="number" class="form-control form-control-sm" @bind="_faqEditing.Order" min="0" />
+                                </div>
+                                <div class="col-6 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" @bind="_faqEditing.IsPublished" id="faqPublished" />
+                                        <label class="form-check-label" for="faqPublished">게시</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" @onclick="CloseFaqEditor">취소</button>
+                            <button class="btn btn-salon" @onclick="SaveFaq" disabled="@(_faqSaving || string.IsNullOrWhiteSpace(_faqEditing.Title))">
+                                @if (_faqSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-check-lg"></i> 저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
     else if (_adminTab == 2)
     {
@@ -662,6 +851,14 @@
     private bool _shopSaving;
     private bool _shopSaved;
 
+    // FAQ
+    private List<FaqItem> _faqItems = new();
+    private bool _faqLoading = false;
+    private FaqItem? _faqEditing;
+    private bool _faqIsNew;
+    private bool _faqSaving;
+    private bool _faqUploading;
+
     // 쓰레기 배출 스케줄
     private readonly List<TrashScheduleItem> _trashSchedule = new()
     {
@@ -795,9 +992,11 @@
         InitChecklist();
         var stylesTask = StyleService.GetAllAsync();
         var shopTask = ShopConfigService.GetAsync();
-        await Task.WhenAll(stylesTask, shopTask);
+        var faqTask = FaqService.GetAllAsync();
+        await Task.WhenAll(stylesTask, shopTask, faqTask);
         _styles = stylesTask.Result.OrderByDescending(s => s.CreatedAt).ToList();
         _shopConfig = shopTask.Result;
+        _faqItems = faqTask.Result;
         _loading = false;
     }
 
@@ -813,6 +1012,88 @@
         await Task.Delay(2000);
         _shopSaved = false;
         StateHasChanged();
+    }
+
+    // FAQ 메서드
+    private void ShowFaqEditor()
+    {
+        _faqEditing = new FaqItem { Order = _faqItems.Count };
+        _faqIsNew = true;
+    }
+
+    private void EditFaq(FaqItem faq)
+    {
+        // 복사본 편집
+        _faqEditing = new FaqItem
+        {
+            Id = faq.Id,
+            Title = faq.Title,
+            Description = faq.Description,
+            ImageUrl = faq.ImageUrl,
+            Order = faq.Order,
+            IsPublished = faq.IsPublished,
+            CreatedAt = faq.CreatedAt,
+        };
+        _faqIsNew = false;
+    }
+
+    private void CloseFaqEditor() => _faqEditing = null;
+
+    private async Task SaveFaq()
+    {
+        if (_faqEditing == null) return;
+        _faqSaving = true;
+        StateHasChanged();
+
+        if (_faqIsNew)
+            await FaqService.CreateAsync(_faqEditing);
+        else
+            await FaqService.UpdateAsync(_faqEditing);
+
+        _faqItems = await FaqService.GetAllAsync();
+        _faqSaving = false;
+        _faqEditing = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteFaq(FaqItem faq)
+    {
+        if (!string.IsNullOrEmpty(faq.ImageUrl))
+        {
+            try { await ImageService.DeleteAsync(faq.ImageUrl); } catch { }
+        }
+        await FaqService.DeleteAsync(faq.Id);
+        _faqItems = await FaqService.GetAllAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnFaqImageSelected(InputFileChangeEventArgs e)
+    {
+        if (_faqEditing == null) return;
+        var file = e.File;
+        if (file.Size > 5 * 1024 * 1024) return; // 5MB 제한
+
+        _faqUploading = true;
+        StateHasChanged();
+
+        try
+        {
+            var buffer = new byte[file.Size];
+            await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            await stream.ReadExactlyAsync(buffer);
+            var url = await ImageService.UploadAsync($"faq_{file.Name}", buffer, file.ContentType);
+            _faqEditing.ImageUrl = url;
+        }
+        catch { }
+
+        _faqUploading = false;
+        StateHasChanged();
+    }
+
+    private void RemoveFaqImage()
+    {
+        if (_faqEditing != null)
+            _faqEditing.ImageUrl = "";
     }
 
     private void ShowPrompt(StylePost style)
@@ -3544,6 +3825,23 @@ Save the file as: {GetSuggestedFilename()}";
         margin-bottom: 0.15rem;
     }
 
+    .sns-admin-item {
+        background: var(--salon-bg);
+        border: 1px solid var(--salon-light-gray);
+        border-radius: 10px;
+        padding: 0.7rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .sns-admin-toggle .form-check-label {
+        font-size: 0.8rem;
+    }
+
+    .sns-admin-toggle .form-switch .form-check-input:checked {
+        background-color: var(--salon-accent);
+        border-color: var(--salon-accent);
+    }
+
     .trash-schedule {
         display: flex;
         flex-direction: column;
@@ -3885,6 +4183,101 @@ Save the file as: {GetSuggestedFilename()}";
 
     .security-table .attempt-blocked {
         opacity: 0.6;
+    }
+
+    /* FAQ 관리 */
+    .faq-admin-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .faq-admin-item {
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 0.8rem;
+        transition: box-shadow 0.2s;
+    }
+
+    .faq-admin-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .faq-admin-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .faq-admin-order {
+        width: 24px;
+        height: 24px;
+        background: var(--salon-primary, #c9a96e);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .faq-admin-title {
+        flex: 1;
+        font-size: 0.9rem;
+    }
+
+    .faq-admin-actions {
+        display: flex;
+        gap: 0.3rem;
+    }
+
+    .faq-admin-actions .btn {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .faq-admin-image {
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .faq-admin-image img {
+        width: 100%;
+        max-height: 200px;
+        object-fit: cover;
+    }
+
+    .faq-admin-desc {
+        font-size: 0.82rem;
+        color: #666;
+        white-space: pre-wrap;
+        line-height: 1.5;
+    }
+
+    .faq-edit-image-preview {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .faq-edit-image-preview img {
+        width: 100%;
+        max-height: 250px;
+        object-fit: contain;
+        background: #f8f8f8;
+    }
+
+    .faq-edit-image-preview .btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
     }
 
     @@media (max-width: 576px) {

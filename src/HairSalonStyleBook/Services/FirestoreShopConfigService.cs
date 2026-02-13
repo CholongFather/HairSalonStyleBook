@@ -61,7 +61,13 @@ public class FirestoreShopConfigService : IShopConfigService
                 AccountNumber = GetStr(doc.Fields, "accountNumber", "-"),
                 AccountHolder = GetStr(doc.Fields, "accountHolder", "정*경"),
                 InstagramUrl = GetStr(doc.Fields, "instagramUrl", ""),
-                NaverPlaceId = GetStr(doc.Fields, "naverPlaceId", "1883331965")
+                KakaoChannelUrl = GetStr(doc.Fields, "kakaoChannelUrl", ""),
+                NaverPlaceId = GetStr(doc.Fields, "naverPlaceId", "1883331965"),
+                NaverSearchKeyword = GetStr(doc.Fields, "naverSearchKeyword", "산척동 미용실"),
+                SnsInstagramEnabled = GetBool(doc.Fields, "snsInstagramEnabled", true),
+                SnsKakaoEnabled = GetBool(doc.Fields, "snsKakaoEnabled", true),
+                SnsNaverPlaceEnabled = GetBool(doc.Fields, "snsNaverPlaceEnabled", true),
+                SnsNaverReviewEnabled = GetBool(doc.Fields, "snsNaverReviewEnabled", true)
             };
             return _cache;
         }
@@ -83,7 +89,13 @@ public class FirestoreShopConfigService : IShopConfigService
             ["accountNumber"] = new() { StringValue = config.AccountNumber },
             ["accountHolder"] = new() { StringValue = config.AccountHolder },
             ["instagramUrl"] = new() { StringValue = config.InstagramUrl ?? "" },
-            ["naverPlaceId"] = new() { StringValue = config.NaverPlaceId ?? "" }
+            ["kakaoChannelUrl"] = new() { StringValue = config.KakaoChannelUrl ?? "" },
+            ["naverPlaceId"] = new() { StringValue = config.NaverPlaceId ?? "" },
+            ["naverSearchKeyword"] = new() { StringValue = config.NaverSearchKeyword ?? "산척동 미용실" },
+            ["snsInstagramEnabled"] = new() { BooleanValue = config.SnsInstagramEnabled },
+            ["snsKakaoEnabled"] = new() { BooleanValue = config.SnsKakaoEnabled },
+            ["snsNaverPlaceEnabled"] = new() { BooleanValue = config.SnsNaverPlaceEnabled },
+            ["snsNaverReviewEnabled"] = new() { BooleanValue = config.SnsNaverReviewEnabled }
         };
 
         var body = new FirestoreFields { Fields = fields };
@@ -95,4 +107,7 @@ public class FirestoreShopConfigService : IShopConfigService
 
     private static string GetStr(Dictionary<string, FirestoreValue> fields, string key, string fallback)
         => fields.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v.StringValue) ? v.StringValue : fallback;
+
+    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool fallback)
+        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : fallback;
 }
