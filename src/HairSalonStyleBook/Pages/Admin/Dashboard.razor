@@ -6,6 +6,7 @@
 @inject IShopConfigService ShopConfigService
 @inject ILoginSecurityService LoginSecurityService
 @inject IFaqService FaqService
+@inject IGalleryService GalleryService
 @inject IImageService ImageService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
@@ -17,13 +18,13 @@
     <!-- 관리자 탭 -->
     <div class="admin-tab-bar">
         <button class="admin-tab @(_adminTab == 0 ? "active" : "")" @onclick="() => _adminTab = 0">
-            <i class="bi bi-scissors"></i> 스타일 관리
+            <i class="bi bi-scissors"></i> 스타일
+        </button>
+        <button class="admin-tab @(_adminTab == 4 ? "active" : "")" @onclick="() => { _adminTab = 4; _ = LoadGalleryIfNeeded(); }">
+            <i class="bi bi-images"></i> 갤러리
         </button>
         <button class="admin-tab @(_adminTab == 1 ? "active" : "")" @onclick="() => _adminTab = 1">
             <i class="bi bi-shop"></i> 매장
-        </button>
-        <button class="admin-tab @(_adminTab == 2 ? "active" : "")" @onclick="() => _adminTab = 2">
-            <i class="bi bi-check2-square"></i> 마감
         </button>
         <button class="admin-tab @(_adminTab == 3 ? "active" : "")" @onclick="OpenSecurityTab">
             <i class="bi bi-shield-lock"></i> 보안
@@ -171,6 +172,9 @@
                 <i class="bi bi-question-circle"></i> FAQ
             </button>
             <button class="shop-sub-tab @(_shopAdminTab == 3 ? "active" : "")" @onclick="() => _shopAdminTab = 3">
+                <i class="bi bi-check2-square"></i> 마감
+            </button>
+            <button class="shop-sub-tab @(_shopAdminTab == 4 ? "active" : "")" @onclick="() => _shopAdminTab = 4">
                 <i class="bi bi-trash3"></i> 기타
             </button>
         </div>
@@ -409,6 +413,28 @@
                         </button>
                     </div>
 
+                    <!-- FAQ 카테고리 탭 -->
+                    @{
+                        var faqCategories = _faqItems.Select(f => f.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
+                    }
+                    @if (faqCategories.Any())
+                    {
+                        <div class="faq-category-tabs">
+                            <button class="faq-cat-tab @(_faqCategoryFilter == "전체" ? "active" : "")"
+                                    @onclick='() => _faqCategoryFilter = "전체"'>
+                                전체 <span class="faq-cat-count">@(_faqItems.Count)</span>
+                            </button>
+                            @foreach (var cat in faqCategories)
+                            {
+                                <button class="faq-cat-tab @(_faqCategoryFilter == cat ? "active" : "")"
+                                        @onclick="() => _faqCategoryFilter = cat">
+                                    <i class="bi @GetFaqCategoryIcon(cat)"></i> @cat
+                                    <span class="faq-cat-count">@(_faqItems.Count(f => f.Category == cat))</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
                     @if (_faqLoading)
                     {
                         <div class="text-center py-3">
@@ -423,17 +449,7 @@
                     }
                     else
                     {
-                        @foreach (var group in _faqItems.OrderBy(f => f.Order).GroupBy(f => f.Category).OrderBy(g => g.Key))
-                        {
-                            @if (!string.IsNullOrEmpty(group.Key))
-                            {
-                                <div class="faq-acc-group-header">
-                                    <i class="bi @GetFaqCategoryIcon(group.Key)"></i>
-                                    @group.Key
-                                    <span class="faq-acc-group-count">@group.Count()</span>
-                                </div>
-                            }
-                            @foreach (var faq in group.OrderBy(f => f.Order))
+                        @foreach (var faq in FilteredFaqItems)
                             {
                                 <div class="faq-acc-item @(_expandedFaqId == faq.Id ? "expanded" : "")">
                                     <div class="faq-acc-header" @onclick="() => ToggleFaqAccordion(faq.Id)">
@@ -468,12 +484,55 @@
                                     }
                                 </div>
                             }
-                        }
                     }
                 </div>
             }
         }
         else if (_shopAdminTab == 3)
+        {
+            <!-- 마감 체크리스트 (매장 서브탭) -->
+            <div class="shop-section">
+                <div class="shop-section-header">
+                    <i class="bi bi-check2-square"></i>
+                    <h3>마감 체크리스트</h3>
+                    <span class="checklist-date ms-auto" style="font-size:0.75rem;">
+                        <i class="bi bi-calendar3"></i> @DateTime.Now.ToString("MM.dd (ddd)")
+                    </span>
+                    <button class="btn btn-salon-outline btn-sm ms-1" @onclick="ResetChecklist">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+
+                <div class="checklist-container">
+                    @foreach (var group in _checklistGroups)
+                    {
+                        <div class="checklist-group">
+                            <div class="checklist-group-header">
+                                <i class="bi @group.Icon" style="color: @group.Color;"></i>
+                                <span>@group.Name</span>
+                            </div>
+                            @foreach (var item in group.Items)
+                            {
+                                <div class="checklist-item @(item.Checked ? "checked" : "")" @onclick="() => ToggleCheck(item)">
+                                    <div class="checklist-checkbox">
+                                        <i class="bi @(item.Checked ? "bi-check-square-fill" : "bi-square")"></i>
+                                    </div>
+                                    <span class="checklist-text">@item.Text</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="checklist-progress">
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill" style="width: @ChecklistProgress%"></div>
+                    </div>
+                    <span class="progress-text">@CheckedCount / @TotalCount 완료</span>
+                </div>
+            </div>
+        }
+        else if (_shopAdminTab == 4)
         {
             <!-- 쓰레기 배출일 안내 -->
             <div class="shop-section">
@@ -506,50 +565,6 @@
             </div>
         }
 
-    }
-    else if (_adminTab == 2)
-    {
-        <!-- 마감 체크리스트 탭 -->
-        <div class="admin-header">
-            <h2 class="admin-title">마감 체크리스트</h2>
-            <div class="admin-actions">
-                <span class="checklist-date">
-                    <i class="bi bi-calendar3"></i> @DateTime.Now.ToString("yyyy.MM.dd (ddd)")
-                </span>
-                <button class="btn btn-salon-outline" @onclick="ResetChecklist">
-                    <i class="bi bi-arrow-counterclockwise"></i> 초기화
-                </button>
-            </div>
-        </div>
-
-        <div class="checklist-container">
-            @foreach (var group in _checklistGroups)
-            {
-                <div class="checklist-group">
-                    <div class="checklist-group-header">
-                        <i class="bi @group.Icon" style="color: @group.Color;"></i>
-                        <span>@group.Name</span>
-                    </div>
-                    @foreach (var item in group.Items)
-                    {
-                        <div class="checklist-item @(item.Checked ? "checked" : "")" @onclick="() => ToggleCheck(item)">
-                            <div class="checklist-checkbox">
-                                <i class="bi @(item.Checked ? "bi-check-square-fill" : "bi-square")"></i>
-                            </div>
-                            <span class="checklist-text">@item.Text</span>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-
-        <!-- 진행률 -->
-        <div class="checklist-progress">
-            <div class="progress-bar-wrap">
-                <div class="progress-bar-fill" style="width: @ChecklistProgress%"></div>
-            </div>
-            <span class="progress-text">@CheckedCount / @TotalCount 완료</span>
-        </div>
     }
     else if (_adminTab == 3)
     {
@@ -702,7 +717,159 @@
             </div>
         }
     }
+    else if (_adminTab == 4)
+    {
+        <!-- 갤러리 관리 탭 -->
+        <div class="admin-header">
+            <h2 class="admin-title">갤러리</h2>
+            <div class="admin-actions">
+                <span class="text-muted" style="font-size: 0.8rem;">@(_galleryItems.Count)장</span>
+            </div>
+        </div>
+
+        <!-- 업로드 영역 -->
+        <div class="gallery-upload-area">
+            <InputFile OnChange="OnGalleryFilesSelected" multiple accept="image/*"
+                       class="gallery-upload-input" id="galleryUpload" />
+            <label for="galleryUpload" class="gallery-upload-label">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span>사진을 클릭하여 업로드</span>
+                <small>JPG, PNG, WebP / 최대 5MB / 여러 장 가능</small>
+            </label>
+        </div>
+
+        @if (_galleryUploading)
+        {
+            <div class="text-center py-2">
+                <span class="spinner-border spinner-border-sm me-1"></span>
+                <span style="font-size:0.8rem;">업로드 중... @_galleryUploadedCount/@_galleryTotalUploadCount</span>
+            </div>
+        }
+
+        <!-- 설명 입력 (업로드 시) -->
+        <div class="mb-2">
+            <input type="text" class="form-control form-control-sm" placeholder="사진 설명 (선택)"
+                   @bind="_galleryUploadDesc" maxlength="100" />
+        </div>
+
+        <!-- 선택 모드 툴바 -->
+        @if (_galleryItems.Any())
+        {
+            <div class="gallery-toolbar">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleGallerySelectAll">
+                    <i class="bi @(_selectedGalleryIds.Count == _galleryItems.Count ? "bi-check-square-fill" : "bi-square")"></i>
+                    전체
+                </button>
+                @if (_selectedGalleryIds.Any())
+                {
+                    <span class="text-muted" style="font-size: 0.75rem;">@(_selectedGalleryIds.Count)장</span>
+                    <button class="btn btn-sm btn-salon" @onclick="OpenStyleSearchModal">
+                        <i class="bi bi-arrow-right-square"></i> 스타일에 적용
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="DeleteSelectedGallery">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                }
+            </div>
+        }
+
+        <!-- 사진 그리드 -->
+        @if (!_galleryItems.Any() && !_galleryUploading)
+        {
+            <div class="text-center text-muted py-4" style="font-size:0.85rem;">갤러리에 사진이 없습니다.</div>
+        }
+        else
+        {
+            <div class="gallery-admin-grid">
+                @foreach (var item in _galleryItems)
+                {
+                    <div class="gallery-admin-card @(_selectedGalleryIds.Contains(item.Id) ? "selected" : "")"
+                         @onclick="() => ToggleGallerySelect(item.Id)">
+                        <div class="frame-@item.Decoration.FrameType" style="width:100%;height:100%;position:relative;">
+                            <img src="@item.ImageUrl" alt="@item.Description" loading="lazy" />
+                            @if (!string.IsNullOrEmpty(item.Decoration.TextContent))
+                            {
+                                <div class="gd-text-overlay gd-text-@item.Decoration.TextPosition gd-font-@item.Decoration.TextFont"
+                                     style="color: @item.Decoration.TextColor; font-size:0.6rem;">
+                                    @item.Decoration.TextContent
+                                </div>
+                            }
+                        </div>
+                        <div class="gallery-check">
+                            <i class="bi @(_selectedGalleryIds.Contains(item.Id) ? "bi-check-circle-fill" : "bi-circle")"></i>
+                        </div>
+                        @if (!string.IsNullOrEmpty(item.Description))
+                        {
+                            <div class="gallery-admin-memo">@item.Description</div>
+                        }
+                        <button class="gallery-edit-btn" @onclick:stopPropagation @onclick="() => OpenAdminGalleryEdit(item)">
+                            <i class="bi bi-palette"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    }
 </div>
+
+<!-- 스타일 검색 모달 (갤러리→스타일 적용) -->
+@if (_showStyleSearchModal)
+{
+    <div class="modal-overlay" @onclick="CloseStyleSearchModal">
+        <div class="style-search-modal" @onclick:stopPropagation>
+            <div class="style-search-modal-header">
+                <h5>스타일 선택</h5>
+                <button class="btn-close" @onclick="CloseStyleSearchModal"></button>
+            </div>
+            <div class="style-search-modal-body">
+                <input type="text" class="form-control form-control-sm mb-2" placeholder="스타일 검색..."
+                       @bind="_galleryStyleSearch" @bind:event="oninput" />
+                <div class="style-search-results">
+                    @foreach (var style in FilteredStylesForGallery)
+                    {
+                        <div class="style-search-item" @onclick="() => ApplyPhotosToStyle(style)">
+                            @if (!string.IsNullOrEmpty(style.ThumbnailUrl))
+                            {
+                                <img src="@style.ThumbnailUrl" alt="" class="style-search-thumb" />
+                            }
+                            else
+                            {
+                                <div class="style-search-thumb-empty"><i class="bi bi-image"></i></div>
+                            }
+                            <div>
+                                <div class="style-search-title">@style.Title</div>
+                                <div class="style-search-meta">
+                                    @style.Category.ToDisplayName() / @style.Service
+                                    <span class="ms-1"><i class="bi bi-image"></i> @style.ImageUrls.Count</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (!FilteredStylesForGallery.Any())
+                    {
+                        <div class="text-center text-muted py-3" style="font-size:0.8rem;">검색 결과 없음</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- 갤러리 편집 오버레이 (Admin) -->
+@if (_adminGalleryEditItem != null)
+{
+    <div class="gallery-edit-overlay" @onclick="() => _adminGalleryEditItem = null">
+        <div class="gallery-edit-panel" @onclick:stopPropagation>
+            <div class="gallery-edit-header">
+                <h5><i class="bi bi-palette"></i> 사진 꾸미기</h5>
+                <button class="btn-close" @onclick="() => _adminGalleryEditItem = null"></button>
+            </div>
+            <div class="gallery-edit-body">
+                <GalleryDecorator Item="_adminGalleryEditItem" EditMode="true" OnSave="SaveAdminGalleryDecoration" />
+            </div>
+        </div>
+    </div>
+}
 
 <!-- AI 프롬프트 모달 -->
 @if (_promptStyle != null)
@@ -933,6 +1100,26 @@
     private bool _faqSaving;
     private bool _faqUploading;
     private string? _expandedFaqId;
+    private string _faqCategoryFilter = "전체";
+
+    private IEnumerable<FaqItem> FilteredFaqItems =>
+        _faqCategoryFilter == "전체"
+            ? _faqItems.OrderBy(f => f.Order)
+            : _faqItems.Where(f => f.Category == _faqCategoryFilter).OrderBy(f => f.Order);
+
+    // 갤러리
+    private List<GalleryItem> _galleryItems = new();
+    private HashSet<string> _selectedGalleryIds = new();
+    private bool _galleryUploading;
+    private int _galleryUploadedCount;
+    private int _galleryTotalUploadCount;
+    private string _galleryUploadDesc = "";
+    private bool _galleryLoaded;
+    private GalleryItem? _adminGalleryEditItem;
+
+    // 스타일 검색 모달 (갤러리→스타일)
+    private bool _showStyleSearchModal;
+    private string _galleryStyleSearch = "";
 
     // 쓰레기 배출 스케줄
     private readonly List<TrashScheduleItem> _trashSchedule = new()
@@ -1182,6 +1369,119 @@
     {
         if (_faqEditing != null)
             _faqEditing.ImageUrl = "";
+    }
+
+    // ─── 갤러리 메서드 ───
+
+    private async Task LoadGalleryIfNeeded()
+    {
+        if (_galleryLoaded) return;
+        _galleryLoaded = true;
+        _galleryItems = await GalleryService.GetAllAsync();
+        _galleryItems = _galleryItems.OrderByDescending(g => g.CreatedAt).ToList();
+        StateHasChanged();
+    }
+
+    private async Task OnGalleryFilesSelected(InputFileChangeEventArgs e)
+    {
+        var files = e.GetMultipleFiles(20);
+        if (!files.Any()) return;
+
+        _galleryUploading = true;
+        _galleryUploadedCount = 0;
+        _galleryTotalUploadCount = files.Count;
+        StateHasChanged();
+
+        foreach (var file in files)
+        {
+            if (file.Size > 5 * 1024 * 1024) { _galleryUploadedCount++; continue; }
+            try
+            {
+                var buffer = new byte[file.Size];
+                await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+                await stream.ReadExactlyAsync(buffer);
+                var url = await ImageService.UploadAsync(file.Name, buffer, file.ContentType, "gallery");
+
+                var item = new GalleryItem
+                {
+                    ImageUrl = url,
+                    Description = _galleryUploadDesc,
+                };
+                await GalleryService.CreateAsync(item);
+                _galleryItems.Insert(0, item);
+            }
+            catch { }
+            _galleryUploadedCount++;
+            StateHasChanged();
+        }
+
+        _galleryUploading = false;
+        _galleryUploadDesc = "";
+        StateHasChanged();
+    }
+
+    private void ToggleGallerySelect(string id)
+    {
+        if (!_selectedGalleryIds.Remove(id))
+            _selectedGalleryIds.Add(id);
+    }
+
+    private void ToggleGallerySelectAll()
+    {
+        if (_selectedGalleryIds.Count == _galleryItems.Count)
+            _selectedGalleryIds.Clear();
+        else
+            _selectedGalleryIds = _galleryItems.Select(g => g.Id).ToHashSet();
+    }
+
+    private void OpenStyleSearchModal()
+    {
+        _galleryStyleSearch = "";
+        _showStyleSearchModal = true;
+    }
+
+    private void CloseStyleSearchModal() => _showStyleSearchModal = false;
+
+    private IEnumerable<StylePost> FilteredStylesForGallery =>
+        _styles.Where(s =>
+            string.IsNullOrEmpty(_galleryStyleSearch) ||
+            s.Title.Contains(_galleryStyleSearch, StringComparison.OrdinalIgnoreCase) ||
+            s.Hashtags.Any(h => h.Contains(_galleryStyleSearch, StringComparison.OrdinalIgnoreCase)));
+
+    private async Task ApplyPhotosToStyle(StylePost style)
+    {
+        var selectedItems = _galleryItems.Where(g => _selectedGalleryIds.Contains(g.Id)).ToList();
+        foreach (var item in selectedItems)
+        {
+            if (!style.ImageUrls.Contains(item.ImageUrl))
+                style.ImageUrls.Add(item.ImageUrl);
+        }
+        await StyleService.UpdateAsync(style);
+        _showStyleSearchModal = false;
+        _selectedGalleryIds.Clear();
+        StateHasChanged();
+    }
+
+    private async Task DeleteSelectedGallery()
+    {
+        var toDelete = _galleryItems.Where(g => _selectedGalleryIds.Contains(g.Id)).ToList();
+        foreach (var item in toDelete)
+        {
+            try { await ImageService.DeleteAsync(item.ImageUrl); } catch { }
+            await GalleryService.DeleteAsync(item.Id);
+            _galleryItems.Remove(item);
+        }
+        _selectedGalleryIds.Clear();
+        StateHasChanged();
+    }
+
+    private void OpenAdminGalleryEdit(GalleryItem item) => _adminGalleryEditItem = item;
+
+    private async Task SaveAdminGalleryDecoration(GalleryItem item)
+    {
+        await GalleryService.UpdateAsync(item);
+        _adminGalleryEditItem = null;
+        StateHasChanged();
     }
 
     private void ShowPrompt(StylePost style)
@@ -4552,5 +4852,313 @@ Save the file as: {GetSuggestedFilename()}";
         max-height: 150px;
         border-radius: 6px;
         border: 1px solid #eee;
+    }
+
+    /* ─── FAQ 카테고리 탭 ─── */
+    .faq-category-tabs {
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        margin-bottom: 0.8rem;
+        border-bottom: 1px solid #e5e7eb;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .faq-cat-tab {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.75rem;
+        color: #888;
+        white-space: nowrap;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: all 0.2s;
+    }
+
+    .faq-cat-tab.active {
+        color: var(--salon-primary, #7ba383);
+        border-bottom-color: var(--salon-primary, #7ba383);
+        font-weight: 600;
+    }
+
+    .faq-cat-tab:hover {
+        color: #555;
+    }
+
+    .faq-cat-count {
+        font-size: 0.65rem;
+        background: #f0f0f0;
+        padding: 0 0.35rem;
+        border-radius: 10px;
+        color: #999;
+    }
+
+    .faq-cat-tab.active .faq-cat-count {
+        background: rgba(123, 163, 131, 0.15);
+        color: var(--salon-primary, #7ba383);
+    }
+
+    /* ─── 갤러리 스타일 ─── */
+    .gallery-upload-area {
+        border: 2px dashed #d0d5dd;
+        border-radius: 12px;
+        text-align: center;
+        padding: 1.5rem;
+        margin-bottom: 0.8rem;
+        background: #fafbfc;
+        transition: border-color 0.2s;
+    }
+
+    .gallery-upload-area:hover {
+        border-color: var(--salon-primary, #7ba383);
+    }
+
+    .gallery-upload-input {
+        display: none;
+    }
+
+    .gallery-upload-label {
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        color: #888;
+        font-size: 0.85rem;
+    }
+
+    .gallery-upload-label i {
+        font-size: 2rem;
+        color: var(--salon-primary, #7ba383);
+    }
+
+    .gallery-upload-label small {
+        font-size: 0.7rem;
+        color: #aaa;
+    }
+
+    .gallery-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .gallery-admin-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .gallery-admin-card {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+
+    .gallery-admin-card.selected {
+        border-color: var(--salon-primary, #7ba383);
+    }
+
+    .gallery-admin-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .gallery-check {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.9);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .gallery-admin-card.selected .gallery-check {
+        color: var(--salon-primary, #7ba383);
+    }
+
+    .gallery-admin-memo {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.6));
+        color: #fff;
+        font-size: 0.65rem;
+        padding: 1rem 0.4rem 0.3rem;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .gallery-edit-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(0,0,0,0.5);
+        border: none;
+        color: #fff;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .gallery-admin-card:hover .gallery-edit-btn {
+        opacity: 1;
+    }
+
+    /* 스타일 검색 모달 */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .style-search-modal {
+        background: #fff;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 420px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .style-search-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .style-search-modal-header h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .style-search-modal-body {
+        padding: 1rem 1.2rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .style-search-results {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .style-search-item {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.6rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .style-search-item:hover {
+        background: #f5f5f5;
+    }
+
+    .style-search-thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 6px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .style-search-thumb-empty {
+        width: 44px;
+        height: 44px;
+        border-radius: 6px;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ccc;
+        flex-shrink: 0;
+    }
+
+    .style-search-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .style-search-meta {
+        font-size: 0.7rem;
+        color: #999;
+    }
+
+    /* 갤러리 편집 오버레이 */
+    .gallery-edit-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1060;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .gallery-edit-panel {
+        background: #fff;
+        border-radius: 20px 20px 0 0;
+        width: 100%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .gallery-edit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .gallery-edit-header h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .gallery-edit-body {
+        padding: 1rem;
+    }
+
+    @@media (max-width: 480px) {
+        .gallery-admin-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
     }
 </style>

@@ -19,10 +19,12 @@ public class FirebaseStorageService : IImageService
         _bucket = config["Firebase:StorageBucket"] ?? $"{projectId}.firebasestorage.app";
     }
 
-    public async Task<string> UploadAsync(string fileName, byte[] data, string contentType)
+    public Task<string> UploadAsync(string fileName, byte[] data, string contentType)
+        => UploadAsync(fileName, data, contentType, "styles");
+
+    public async Task<string> UploadAsync(string fileName, byte[] data, string contentType, string folder)
     {
-        // 파일 경로: styles/{timestamp}_{fileName}
-        var storagePath = $"styles/{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{fileName}";
+        var storagePath = $"{folder}/{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{fileName}";
         var encodedPath = Uri.EscapeDataString(storagePath);
 
         var uploadUrl = $"https://firebasestorage.googleapis.com/v0/b/{_bucket}/o?uploadType=media&name={encodedPath}";

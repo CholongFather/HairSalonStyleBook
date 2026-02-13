@@ -11,6 +11,11 @@ public interface IImageService
     Task<string> UploadAsync(string fileName, byte[] data, string contentType);
 
     /// <summary>
+    /// 이미지 업로드 (폴더 지정). 성공 시 다운로드 URL 반환
+    /// </summary>
+    Task<string> UploadAsync(string fileName, byte[] data, string contentType, string folder);
+
+    /// <summary>
     /// 이미지 삭제
     /// </summary>
     Task DeleteAsync(string imageUrl);

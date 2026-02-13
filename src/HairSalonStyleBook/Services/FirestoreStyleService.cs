@@ -270,6 +270,12 @@ public class FirestoreValue
     public bool? BooleanValue { get; set; }
     public string? TimestampValue { get; set; }
     public FirestoreArrayValue? ArrayValue { get; set; }
+    public FirestoreMapValue? MapValue { get; set; }
+}
+
+public class FirestoreMapValue
+{
+    public Dictionary<string, FirestoreValue>? Fields { get; set; }
 }
 
 public class FirestoreArrayValue

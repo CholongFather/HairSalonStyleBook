@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject IStyleService StyleService
 @inject IShopConfigService ShopConfigService
+@inject IGalleryService GalleryService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -22,6 +23,10 @@
         <button class="tab-item @(_activeTab == 2 ? "active" : "")" @onclick="() => SwitchTab(2)">
             <i class="bi bi-share"></i>
             <span>SNS</span>
+        </button>
+        <button class="tab-item @(_activeTab == 3 ? "active" : "")" @onclick="() => SwitchTab(3)">
+            <i class="bi bi-images"></i>
+            <span>갤러리</span>
         </button>
     </div>
 
@@ -316,8 +321,68 @@
                 }
             </div>
         }
+        else if (_activeTab == 3)
+        {
+            <!-- 탭 3: 갤러리 -->
+            <div class="tab-panel tab-fade-in">
+                @if (_galleryLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border spinner-border-sm"></div>
+                    </div>
+                }
+                else if (!_galleryItems.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="bi bi-images"></i></div>
+                        <p class="empty-text">갤러리에 사진이 없습니다</p>
+                        <p class="empty-sub">새로운 사진이 곧 업데이트됩니다</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="result-count"><span>@_galleryItems.Count</span>장의 사진</div>
+                    <div class="gallery-grid">
+                        @foreach (var item in _galleryItems)
+                        {
+                            <div class="gallery-card frame-@item.Decoration.FrameType" @onclick="() => OpenGalleryEdit(item)">
+                                <img src="@item.ImageUrl" alt="@item.Description" loading="lazy"
+                                     onload="this.classList.add('loaded')" />
+                                @if (!string.IsNullOrEmpty(item.Decoration.TextContent))
+                                {
+                                    <div class="gd-text-overlay gd-text-@item.Decoration.TextPosition gd-font-@item.Decoration.TextFont"
+                                         style="color: @item.Decoration.TextColor;">
+                                        @item.Decoration.TextContent
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(item.Description))
+                                {
+                                    <div class="gallery-desc">@item.Description</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
+
+<!-- 갤러리 편집 오버레이 -->
+@if (_galleryEditItem != null)
+{
+    <div class="gallery-edit-overlay" @onclick="CloseGalleryEdit">
+        <div class="gallery-edit-panel" @onclick:stopPropagation>
+            <div class="gallery-edit-header">
+                <h5><i class="bi bi-palette"></i> 사진 꾸미기</h5>
+                <button class="btn-close" @onclick="CloseGalleryEdit"></button>
+            </div>
+            <div class="gallery-edit-body">
+                <GalleryDecorator Item="_galleryEditItem" EditMode="true" OnSave="SaveGalleryDecoration" />
+            </div>
+        </div>
+    </div>
+}
 
 <!-- QR 확대 오버레이 -->
 @if (_showQrOverlay)
@@ -368,6 +433,11 @@
     // 매장 정보 (캐시에서 로드)
     private ShopConfig _shopConfig = new();
 
+    // 갤러리
+    private List<GalleryItem> _galleryItems = new();
+    private bool _galleryLoading;
+    private GalleryItem? _galleryEditItem;
+
     private string QrScaleStyle =>
         $"transform: scale({_qrScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)})";
 
@@ -384,7 +454,8 @@
         // 병렬 로드 (캐시 히트 시 즉시 반환)
         var loadStylesTask = LoadStyles();
         var loadShopTask = ShopConfigService.GetAsync();
-        await Task.WhenAll(loadStylesTask, loadShopTask);
+        var loadGalleryTask = LoadGallery();
+        await Task.WhenAll(loadStylesTask, loadShopTask, loadGalleryTask);
         _shopConfig = loadShopTask.Result;
     }
 
@@ -414,6 +485,31 @@
     }
 
     public void Dispose() { }
+
+    private async Task LoadGallery()
+    {
+        _galleryLoading = true;
+        try { _galleryItems = (await GalleryService.GetAllAsync()).OrderByDescending(g => g.CreatedAt).ToList(); }
+        catch { _galleryItems = new(); }
+        _galleryLoading = false;
+    }
+
+    private void OpenGalleryEdit(GalleryItem item)
+    {
+        _galleryEditItem = item;
+    }
+
+    private void CloseGalleryEdit()
+    {
+        _galleryEditItem = null;
+    }
+
+    private async Task SaveGalleryDecoration(GalleryItem item)
+    {
+        await GalleryService.UpdateAsync(item);
+        _galleryEditItem = null;
+        _galleryItems = (await GalleryService.GetAllAsync()).OrderByDescending(g => g.CreatedAt).ToList();
+    }
 
     private void SwitchTab(int tab)
     {
@@ -1433,6 +1529,95 @@
             width: 140px;
             height: 140px;
         }
+    }
+
+    /* ── 갤러리 탭 ── */
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        padding: 0 0.5rem;
+    }
+
+    .gallery-card {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 8px;
+        cursor: pointer;
+        background: var(--salon-light-gray);
+    }
+
+    .gallery-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .gallery-card img.loaded { opacity: 1; }
+
+    .gallery-desc {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 4px 6px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.6));
+        color: #fff;
+        font-size: 0.65rem;
+        font-family: var(--font-serif);
+    }
+
+    /* 갤러리 편집 오버레이 */
+    .gallery-edit-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 9999;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .gallery-edit-panel {
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        width: 100%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease;
+    }
+
+    .gallery-edit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .gallery-edit-header h5 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 0.95rem;
+    }
+
+    .gallery-edit-body { padding: 1rem; }
+
+    @@keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
+    @@media (min-width: 768px) {
+        .gallery-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @@media (max-width: 480px) {
+        .gallery-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
 </style>
