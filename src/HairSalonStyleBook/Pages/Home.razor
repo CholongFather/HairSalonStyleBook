@@ -501,11 +501,11 @@
                 </h5>
                 <button class="btn-close" @onclick="CloseGalleryEdit"></button>
             </div>
-            <div class="gallery-edit-body" style="position:relative;">
+            <div class="gallery-edit-body">
                 <GalleryDecorator Item="_galleryEditItem" EditMode="@(!_galleryEditItem.IsLocked)"
+                                  ShowWatermark="true"
                                   OnSave="SaveGalleryDecoration"
                                   OnCancel="CloseGalleryEdit" />
-                <div class="gallery-detail-watermark">늘~오던</div>
             </div>
         </div>
     </div>
@@ -1954,18 +1954,19 @@
         background: rgba(0,0,0,0.6);
         z-index: 9999;
         display: flex;
-        align-items: flex-end;
+        align-items: center;
         justify-content: center;
+        padding: 1rem;
     }
 
     .gallery-edit-panel {
         background: #fff;
-        border-radius: 16px 16px 0 0;
+        border-radius: 16px;
         width: 100%;
         max-width: 500px;
         max-height: 90vh;
         overflow-y: auto;
-        animation: slideUp 0.3s ease;
+        animation: fadeScaleIn 0.25s ease;
     }
 
     .gallery-edit-header {
@@ -1984,24 +1985,9 @@
 
     .gallery-edit-body { padding: 1rem; }
 
-    .gallery-detail-watermark {
-        position: absolute;
-        bottom: 12px;
-        right: 12px;
-        font-family: 'Noto Serif KR', serif;
-        font-size: 1rem;
-        font-weight: 900;
-        color: rgba(255, 255, 255, 0.75);
-        text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-        pointer-events: none;
-        z-index: 10;
-        letter-spacing: 1px;
-        user-select: none;
-    }
-
-    @@keyframes slideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+    @@keyframes fadeScaleIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
     }
 
     @@media (min-width: 768px) {

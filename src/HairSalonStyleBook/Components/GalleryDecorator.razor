@@ -25,6 +25,10 @@
                 @_editDeco.Sticker
             </div>
         }
+        @if (ShowWatermark)
+        {
+            <div class="gd-watermark">늘~오던</div>
+        }
     </div>
 
     @if (EditMode)
@@ -188,6 +192,7 @@
 @code {
     [Parameter] public GalleryItem Item { get; set; } = new();
     [Parameter] public bool EditMode { get; set; }
+    [Parameter] public bool ShowWatermark { get; set; }
     [Parameter] public EventCallback<GalleryItem> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
@@ -442,6 +447,22 @@
         z-index: 4;
     }
     .gd-free-sticker.dragging { cursor: grabbing; opacity: 0.8; }
+
+    /* 워터마크 (이미지 위) */
+    .gd-watermark {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        font-family: 'Noto Serif KR', serif;
+        font-size: 0.9rem;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.75);
+        letter-spacing: 1px;
+        pointer-events: none;
+        z-index: 5;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        user-select: none;
+    }
 
     /* 글씨체 (8종) */
     .gd-font-default { font-family: 'Noto Serif KR', serif; }
