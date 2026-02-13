@@ -337,6 +337,10 @@
                             <div class="faq-admin-header">
                                 <div class="faq-admin-order">@(faq.Order + 1)</div>
                                 <div class="faq-admin-title">
+                                    @if (!string.IsNullOrEmpty(faq.Category))
+                                    {
+                                        <span class="badge bg-info text-dark me-1" style="font-size:0.65rem">@faq.Category</span>
+                                    }
                                     <strong>@faq.Title</strong>
                                     @if (!faq.IsPublished)
                                     {
@@ -378,8 +382,20 @@
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">
+                                <label class="form-label fw-bold">카테고리</label>
+                                <input type="text" class="form-control form-control-sm" @bind="_faqEditing.Category"
+                                       list="faqCategories" placeholder="예: 네이버 플레이스, 톡톡 파트너스, 카카오 채널" />
+                                <datalist id="faqCategories">
+                                    <option value="네이버 플레이스" />
+                                    <option value="톡톡 파트너스" />
+                                    <option value="카카오 채널" />
+                                    <option value="매장 운영" />
+                                </datalist>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-bold">제목</label>
-                                <input type="text" class="form-control" @bind="_faqEditing.Title" placeholder="예: Wi-Fi 연결 방법" />
+                                <input type="text" class="form-control" @bind="_faqEditing.Title" placeholder="예: 휴무일 설정 방법" />
                             </div>
 
                             <div class="mb-3">

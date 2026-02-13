@@ -46,6 +46,7 @@
                     // 비활성 자동 리셋 (5분)
                     var IDLE_TIMEOUT = 5 * 60 * 1000;
                     var idleTimer = null;
+                    var basePath = document.querySelector('base')?.getAttribute('href') || '/';
                     function resetIdleTimer() {
                         clearTimeout(idleTimer);
                         idleTimer = setTimeout(function() {
@@ -54,10 +55,10 @@
                                 // 관리자: 로그아웃 후 로그인 페이지로
                                 localStorage.removeItem('salon_auth');
                                 localStorage.removeItem('salon_role');
-                                window.location.href = '/login';
+                                window.location.href = basePath + 'login';
                             } else {
                                 window.scrollTo(0, 0);
-                                window.location.href = '/';
+                                window.location.href = basePath;
                             }
                         }, IDLE_TIMEOUT);
                     }

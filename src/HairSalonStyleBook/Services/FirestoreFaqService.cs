@@ -100,6 +100,7 @@ public class FirestoreFaqService : IFaqService
                 Id = id,
                 Title = GetStr(fields, "title"),
                 Description = GetStr(fields, "description"),
+                Category = GetStr(fields, "category"),
                 ImageUrl = GetStr(fields, "imageUrl"),
                 Order = GetInt(fields, "order"),
                 IsPublished = GetBool(fields, "isPublished", true),
@@ -121,6 +122,7 @@ public class FirestoreFaqService : IFaqService
             {
                 ["title"] = new() { StringValue = item.Title },
                 ["description"] = new() { StringValue = item.Description },
+                ["category"] = new() { StringValue = item.Category },
                 ["imageUrl"] = new() { StringValue = item.ImageUrl },
                 ["order"] = new() { IntegerValue = item.Order.ToString() },
                 ["isPublished"] = new() { BooleanValue = item.IsPublished },

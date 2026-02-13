@@ -10,6 +10,11 @@ public class FaqItem
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
+    /// 카테고리 (예: "네이버 플레이스", "톡톡 파트너스", "카카오 채널")
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>
     /// 스크린샷/이미지 URL (Firebase Storage)
     /// </summary>
     public string ImageUrl { get; set; } = string.Empty;
