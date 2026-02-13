@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @inject IStyleService StyleService
 @inject IShopConfigService ShopConfigService
-@inject IFaqService FaqService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -125,7 +124,7 @@
         {
             <!-- 탭 1: 매장 -->
             <div class="tab-panel tab-fade-in">
-                <!-- 서브탭: WiFi / 계좌 / FAQ -->
+                <!-- 서브탭: WiFi / 계좌 -->
                 <div class="sub-tab-bar">
                     <button class="sub-tab-item @(_shopTab == 0 ? "active" : "")" @onclick="() => _shopTab = 0">
                         <i class="bi bi-wifi"></i> WiFi
@@ -133,12 +132,6 @@
                     <button class="sub-tab-item @(_shopTab == 1 ? "active" : "")" @onclick="() => _shopTab = 1">
                         <i class="bi bi-credit-card"></i> 계좌
                     </button>
-                    @if (_faqItems.Any())
-                    {
-                        <button class="sub-tab-item @(_shopTab == 2 ? "active" : "")" @onclick="() => _shopTab = 2">
-                            <i class="bi bi-question-circle"></i> FAQ
-                        </button>
-                    }
                 </div>
 
                 @if (_shopTab == 0)
@@ -223,78 +216,6 @@
                             시술 후 계좌이체도 가능합니다
                         </p>
                     </div>
-                }
-                else if (_shopTab == 2)
-                {
-                    <!-- FAQ -->
-                    <div class="faq-search-wrap">
-                        <i class="bi bi-search"></i>
-                        <input type="text" class="faq-search-input" placeholder="검색..."
-                               @bind="_faqSearch" @bind:event="oninput" />
-                        @if (!string.IsNullOrEmpty(_faqSearch))
-                        {
-                            <button class="faq-search-clear" @onclick="() => _faqSearch = string.Empty">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </button>
-                        }
-                    </div>
-
-                    <!-- 카테고리 필터 -->
-                    <div class="faq-category-bar">
-                        <button class="faq-cat-btn @(string.IsNullOrEmpty(_faqCategoryFilter) ? "active" : "")"
-                                @onclick="() => _faqCategoryFilter = string.Empty">전체</button>
-                        @foreach (var cat in FaqCategories)
-                        {
-                            <button class="faq-cat-btn @(_faqCategoryFilter == cat ? "active" : "")"
-                                    @onclick="() => _faqCategoryFilter = cat">@cat</button>
-                        }
-                    </div>
-
-                    @if (!FilteredFaqs.Any())
-                    {
-                        <div class="text-center text-muted py-3">
-                            <i class="bi bi-search"></i> 검색 결과가 없습니다
-                        </div>
-                    }
-                    else
-                    {
-                        @foreach (var group in FilteredFaqs.GroupBy(f => f.Category).OrderBy(g => g.Key))
-                        {
-                            <div class="faq-group">
-                                @if (!string.IsNullOrEmpty(group.Key))
-                                {
-                                    <div class="faq-group-header">
-                                        <i class="bi @GetFaqCategoryIcon(group.Key)"></i>
-                                        <span>@group.Key</span>
-                                    </div>
-                                }
-                                <div class="faq-list">
-                                    @foreach (var faq in group.OrderBy(f => f.Order))
-                                    {
-                                        <div class="faq-card" @onclick="() => ToggleFaq(faq.Id)">
-                                            <div class="faq-card-header">
-                                                <div class="faq-card-q">Q</div>
-                                                <div class="faq-card-title">@faq.Title</div>
-                                                <i class="bi @(_expandedFaqId == faq.Id ? "bi-chevron-up" : "bi-chevron-down") faq-card-arrow"></i>
-                                            </div>
-                                            @if (_expandedFaqId == faq.Id)
-                                            {
-                                                <div class="faq-card-body">
-                                                    @if (!string.IsNullOrEmpty(faq.ImageUrl))
-                                                    {
-                                                        <div class="faq-card-image">
-                                                            <img src="@faq.ImageUrl" alt="@faq.Title" loading="lazy" />
-                                                        </div>
-                                                    }
-                                                    <div class="faq-card-desc">@faq.Description</div>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    }
                 }
             </div>
         }
@@ -447,42 +368,6 @@
     // 매장 정보 (캐시에서 로드)
     private ShopConfig _shopConfig = new();
 
-    // FAQ
-    private List<FaqItem> _faqItems = new();
-    private string? _expandedFaqId;
-    private string _faqSearch = "";
-    private string _faqCategoryFilter = "";
-
-    private IEnumerable<string> FaqCategories =>
-        _faqItems.Select(f => f.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c);
-
-    private IEnumerable<FaqItem> FilteredFaqs
-    {
-        get
-        {
-            IEnumerable<FaqItem> result = _faqItems;
-            if (!string.IsNullOrEmpty(_faqCategoryFilter))
-                result = result.Where(f => f.Category == _faqCategoryFilter);
-            if (!string.IsNullOrWhiteSpace(_faqSearch))
-            {
-                var q = _faqSearch.Trim();
-                result = result.Where(f =>
-                    f.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    f.Description.Contains(q, StringComparison.OrdinalIgnoreCase));
-            }
-            return result;
-        }
-    }
-
-    private static string GetFaqCategoryIcon(string category) => category switch
-    {
-        "네이버 플레이스" => "bi-geo-alt-fill",
-        "톡톡 파트너스" => "bi-chat-dots-fill",
-        "카카오 채널" => "bi-chat-heart-fill",
-        "매장 운영" => "bi-shop",
-        _ => "bi-question-circle"
-    };
-
     private string QrScaleStyle =>
         $"transform: scale({_qrScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)})";
 
@@ -499,10 +384,8 @@
         // 병렬 로드 (캐시 히트 시 즉시 반환)
         var loadStylesTask = LoadStyles();
         var loadShopTask = ShopConfigService.GetAsync();
-        var loadFaqTask = FaqService.GetAllAsync();
-        await Task.WhenAll(loadStylesTask, loadShopTask, loadFaqTask);
+        await Task.WhenAll(loadStylesTask, loadShopTask);
         _shopConfig = loadShopTask.Result;
-        _faqItems = loadFaqTask.Result.Where(f => f.IsPublished).ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -535,11 +418,6 @@
     private void SwitchTab(int tab)
     {
         _activeTab = tab;
-    }
-
-    private void ToggleFaq(string id)
-    {
-        _expandedFaqId = _expandedFaqId == id ? null : id;
     }
 
     private void OpenQr(string url)
@@ -1557,158 +1435,4 @@
         }
     }
 
-    /* FAQ */
-    .faq-search-wrap {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        padding: 0.5rem 0.8rem;
-        margin-bottom: 0.6rem;
-    }
-
-    .faq-search-wrap i { color: #aaa; }
-
-    .faq-search-input {
-        flex: 1;
-        border: none;
-        outline: none;
-        font-size: 0.85rem;
-        background: transparent;
-    }
-
-    .faq-search-clear {
-        background: none;
-        border: none;
-        color: #ccc;
-        cursor: pointer;
-        padding: 0;
-    }
-
-    .faq-category-bar {
-        display: flex;
-        gap: 0.4rem;
-        margin-bottom: 0.8rem;
-        overflow-x: auto;
-        padding-bottom: 0.2rem;
-    }
-
-    .faq-cat-btn {
-        white-space: nowrap;
-        border: 1px solid #ddd;
-        background: white;
-        border-radius: 20px;
-        padding: 0.3rem 0.7rem;
-        font-size: 0.78rem;
-        color: #666;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .faq-cat-btn.active {
-        background: var(--salon-primary, #c9a96e);
-        border-color: var(--salon-primary, #c9a96e);
-        color: white;
-    }
-
-    .faq-group {
-        margin-bottom: 1rem;
-    }
-
-    .faq-group-header {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #555;
-        margin-bottom: 0.5rem;
-        padding-left: 0.2rem;
-    }
-
-    .faq-group-header i {
-        color: var(--salon-primary, #c9a96e);
-    }
-
-    .faq-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-    }
-
-    .faq-card {
-        background: white;
-        border: 1px solid #eee;
-        border-radius: 12px;
-        overflow: hidden;
-        cursor: pointer;
-        transition: box-shadow 0.2s;
-    }
-
-    .faq-card:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-
-    .faq-card-header {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.8rem 1rem;
-    }
-
-    .faq-card-q {
-        width: 26px;
-        height: 26px;
-        background: var(--salon-primary, #c9a96e);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: 800;
-        flex-shrink: 0;
-    }
-
-    .faq-card-title {
-        flex: 1;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .faq-card-arrow {
-        color: #aaa;
-        font-size: 0.8rem;
-        transition: transform 0.2s;
-    }
-
-    .faq-card-body {
-        padding: 0 1rem 1rem 1rem;
-        border-top: 1px solid #f0f0f0;
-    }
-
-    .faq-card-image {
-        margin: 0.8rem 0;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #eee;
-    }
-
-    .faq-card-image img {
-        width: 100%;
-        max-height: 300px;
-        object-fit: contain;
-        background: #f8f8f8;
-    }
-
-    .faq-card-desc {
-        font-size: 0.85rem;
-        color: #555;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        padding-top: 0.6rem;
-    }
 </style>

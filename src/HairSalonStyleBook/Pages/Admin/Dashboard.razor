@@ -90,6 +90,7 @@
                     <thead>
                         <tr>
                             <th class="sortable-th" @onclick='() => ToggleSort("title")'>제목 @SortIcon("title")</th>
+                            <th class="sortable-th" @onclick='() => ToggleSort("images")'>사진 @SortIcon("images")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("category")'>카테고리 @SortIcon("category")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("published")'>게시 @SortIcon("published")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("date")'>생성일 @SortIcon("date")</th>
@@ -100,7 +101,7 @@
                         @if (!FilteredStyles.Any())
                         {
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     @(string.IsNullOrEmpty(_searchText) ? "등록된 스타일이 없습니다." : "검색 결과가 없습니다.")
                                 </td>
                             </tr>
@@ -108,11 +109,15 @@
                         @foreach (var style in FilteredStyles)
                         {
                             <tr>
-                                <td>
-                                    @style.Title
+                                <td>@style.Title</td>
+                                <td class="text-center">
                                     @if (style.ImageUrls.Count > 0)
                                     {
                                         <span class="badge-img-count"><i class="bi bi-image"></i> @style.ImageUrls.Count</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
                                     }
                                 </td>
                                 <td><span class="badge-category">@style.Category.ToFullName()</span></td>
@@ -154,220 +159,263 @@
             <h2 class="admin-title">매장 관리</h2>
         </div>
 
-        <!-- WiFi / 계좌 정보 편집 -->
-        <div class="shop-section">
-            <div class="shop-section-header">
-                <i class="bi bi-wifi"></i>
-                <h3>WiFi / 계좌 정보</h3>
-                @if (_shopSaved)
-                {
-                    <span class="badge bg-success ms-2">저장됨</span>
-                }
-            </div>
-            <div class="shop-edit-grid">
-                <div class="shop-edit-group">
-                    <label class="form-label">WiFi 5G 이름</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName5G" />
-                </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">WiFi 2.4G 이름</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName24G" />
-                </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">WiFi 비밀번호</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiPassword" />
-                </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">은행</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.BankName" />
-                </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">계좌번호</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountNumber" />
-                </div>
-                <div class="shop-edit-group">
-                    <label class="form-label">예금주</label>
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountHolder" />
-                </div>
-            </div>
+        <!-- 매장 서브탭 -->
+        <div class="shop-sub-tab-bar">
+            <button class="shop-sub-tab @(_shopAdminTab == 0 ? "active" : "")" @onclick="() => _shopAdminTab = 0">
+                <i class="bi bi-wifi"></i> 기본정보
+            </button>
+            <button class="shop-sub-tab @(_shopAdminTab == 1 ? "active" : "")" @onclick="() => _shopAdminTab = 1">
+                <i class="bi bi-share"></i> SNS
+            </button>
+            <button class="shop-sub-tab @(_shopAdminTab == 2 ? "active" : "")" @onclick="() => _shopAdminTab = 2">
+                <i class="bi bi-question-circle"></i> FAQ
+            </button>
+            <button class="shop-sub-tab @(_shopAdminTab == 3 ? "active" : "")" @onclick="() => _shopAdminTab = 3">
+                <i class="bi bi-trash3"></i> 기타
+            </button>
         </div>
 
-        <!-- SNS 정보 -->
-        <div class="shop-section">
-            <div class="shop-section-header">
-                <i class="bi bi-share"></i>
-                <h3>SNS 관리</h3>
-            </div>
-
-            <!-- Instagram -->
-            <div class="sns-admin-item">
-                <div class="sns-admin-toggle">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsInstagramEnabled" id="snsInstagram" />
-                        <label class="form-check-label fw-bold" for="snsInstagram">
-                            <i class="bi bi-instagram" style="color:#E1306C"></i> Instagram
-                        </label>
-                    </div>
+        @if (_shopAdminTab == 0)
+        {
+            <!-- WiFi 정보 -->
+            <div class="shop-section">
+                <div class="shop-section-header">
+                    <i class="bi bi-wifi"></i>
+                    <h3>WiFi 정보</h3>
                 </div>
-                <div class="shop-edit-group mt-1">
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.InstagramUrl"
-                           placeholder="https://www.instagram.com/yourshop" />
-                </div>
-            </div>
-
-            <!-- 카카오톡 채널 -->
-            <div class="sns-admin-item">
-                <div class="sns-admin-toggle">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsKakaoEnabled" id="snsKakao" />
-                        <label class="form-check-label fw-bold" for="snsKakao">
-                            <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오톡 채널
-                        </label>
-                    </div>
-                </div>
-                <div class="shop-edit-group mt-1">
-                    <input type="text" class="form-control form-control-sm" @bind="_shopConfig.KakaoChannelUrl"
-                           placeholder="https://pf.kakao.com/yourshop" />
-                </div>
-            </div>
-
-            <!-- 네이버 플레이스 -->
-            <div class="sns-admin-item">
-                <div class="sns-admin-toggle">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverPlaceEnabled" id="snsNaverPlace" />
-                        <label class="form-check-label fw-bold" for="snsNaverPlace">
-                            <span style="color:#03C75A;font-weight:900">N</span> 네이버 플레이스
-                        </label>
-                    </div>
-                </div>
-                <div class="shop-edit-grid mt-1">
+                <div class="shop-edit-grid">
                     <div class="shop-edit-group">
-                        <label class="form-label">플레이스 ID</label>
-                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPlaceId"
-                               placeholder="1883331965" />
+                        <label class="form-label">WiFi 5G 이름</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName5G" />
                     </div>
                     <div class="shop-edit-group">
-                        <label class="form-label">검색어</label>
-                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverSearchKeyword"
-                               placeholder="산척동 미용실" />
+                        <label class="form-label">WiFi 2.4G 이름</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiName24G" />
+                    </div>
+                    <div class="shop-edit-group">
+                        <label class="form-label">WiFi 비밀번호</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.WifiPassword" />
                     </div>
                 </div>
             </div>
 
-            <!-- 네이버 리뷰 -->
-            <div class="sns-admin-item">
-                <div class="sns-admin-toggle">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverReviewEnabled" id="snsNaverReview" />
-                        <label class="form-check-label fw-bold" for="snsNaverReview">
-                            <i class="bi bi-chat-heart" style="color:#ff6b6b"></i> 네이버 리뷰
-                        </label>
+            <!-- 계좌 정보 -->
+            <div class="shop-section" style="margin-top: 1rem;">
+                <div class="shop-section-header">
+                    <i class="bi bi-credit-card"></i>
+                    <h3>계좌 정보</h3>
+                </div>
+                <div class="shop-edit-grid">
+                    <div class="shop-edit-group">
+                        <label class="form-label">은행</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.BankName" />
+                    </div>
+                    <div class="shop-edit-group">
+                        <label class="form-label">계좌번호</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountNumber" />
+                    </div>
+                    <div class="shop-edit-group">
+                        <label class="form-label">예금주</label>
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.AccountHolder" />
                     </div>
                 </div>
             </div>
 
-            <button class="btn btn-salon mt-2" @onclick="SaveShopConfig" disabled="@_shopSaving">
+            <button class="btn btn-salon mt-3" @onclick="SaveShopConfig" disabled="@_shopSaving">
                 @if (_shopSaving)
                 {
                     <span class="spinner-border spinner-border-sm me-1"></span>
                 }
+                @if (_shopSaved)
+                {
+                    <span class="badge bg-success me-1">저장됨</span>
+                }
                 <i class="bi bi-check-lg"></i> 저장
             </button>
-        </div>
+        }
+        else if (_shopAdminTab == 1)
+        {
+            <!-- SNS 관리 -->
+            <div class="shop-section">
+                <div class="shop-section-header">
+                    <i class="bi bi-share"></i>
+                    <h3>SNS 관리</h3>
+                </div>
 
-        <!-- 쓰레기 배출일 안내 -->
-        <div class="shop-section">
-            <div class="shop-section-header">
-                <i class="bi bi-trash3"></i>
-                <h3>쓰레기 배출일 안내</h3>
-                <span class="shop-section-sub">화성시 동탄 산척동</span>
+                <!-- Instagram -->
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsInstagramEnabled" id="snsInstagram" />
+                            <label class="form-check-label fw-bold" for="snsInstagram">
+                                <i class="bi bi-instagram" style="color:#E1306C"></i> Instagram
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-group mt-1">
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.InstagramUrl"
+                               placeholder="https://www.instagram.com/yourshop" />
+                    </div>
+                </div>
+
+                <!-- 카카오톡 채널 -->
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsKakaoEnabled" id="snsKakao" />
+                            <label class="form-check-label fw-bold" for="snsKakao">
+                                <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오톡 채널
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-group mt-1">
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.KakaoChannelUrl"
+                               placeholder="https://pf.kakao.com/yourshop" />
+                    </div>
+                </div>
+
+                <!-- 네이버 플레이스 -->
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverPlaceEnabled" id="snsNaverPlace" />
+                            <label class="form-check-label fw-bold" for="snsNaverPlace">
+                                <span style="color:#03C75A;font-weight:900">N</span> 네이버 플레이스
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-grid mt-1">
+                        <div class="shop-edit-group">
+                            <label class="form-label">플레이스 ID</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPlaceId"
+                                   placeholder="1883331965" />
+                        </div>
+                        <div class="shop-edit-group">
+                            <label class="form-label">검색어</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverSearchKeyword"
+                                   placeholder="산척동 미용실" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 네이버 리뷰 -->
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.SnsNaverReviewEnabled" id="snsNaverReview" />
+                            <label class="form-check-label fw-bold" for="snsNaverReview">
+                                <i class="bi bi-chat-heart" style="color:#ff6b6b"></i> 네이버 리뷰
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-salon mt-2" @onclick="SaveShopConfig" disabled="@_shopSaving">
+                    @if (_shopSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="bi bi-check-lg"></i> 저장
+                </button>
             </div>
+        }
+        else if (_shopAdminTab == 2)
+        {
+            <!-- FAQ 관리 -->
+            <div class="shop-section">
+                <div class="shop-section-header">
+                    <i class="bi bi-question-circle"></i>
+                    <h3>FAQ 관리</h3>
+                    <button class="btn btn-salon btn-sm ms-auto" @onclick="ShowFaqEditor">
+                        <i class="bi bi-plus-lg"></i> 추가
+                    </button>
+                </div>
 
-            <div class="trash-schedule">
-                @foreach (var item in _trashSchedule)
+                @if (_faqLoading)
                 {
-                    <div class="trash-item">
-                        <div class="trash-icon" style="background: @item.Color;">
-                            <i class="bi @item.Icon"></i>
-                        </div>
-                        <div class="trash-info">
-                            <span class="trash-type">@item.Type</span>
-                            <span class="trash-days">@item.Days</span>
-                        </div>
-                        <div class="trash-time">@item.Time</div>
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm"></div>
+                    </div>
+                }
+                else if (!_faqItems.Any())
+                {
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-info-circle"></i> 등록된 FAQ가 없습니다
+                    </div>
+                }
+                else
+                {
+                    <div class="faq-admin-list">
+                        @foreach (var faq in _faqItems.OrderBy(f => f.Order))
+                        {
+                            <div class="faq-admin-item">
+                                <div class="faq-admin-header">
+                                    <div class="faq-admin-order">@(faq.Order + 1)</div>
+                                    <div class="faq-admin-title">
+                                        @if (!string.IsNullOrEmpty(faq.Category))
+                                        {
+                                            <span class="badge bg-info text-dark me-1" style="font-size:0.65rem">@faq.Category</span>
+                                        }
+                                        <strong>@faq.Title</strong>
+                                        @if (!faq.IsPublished)
+                                        {
+                                            <span class="badge bg-secondary ms-1">비공개</span>
+                                        }
+                                    </div>
+                                    <div class="faq-admin-actions">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)" title="수정">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFaq(faq)" title="삭제">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(faq.ImageUrl))
+                                {
+                                    <div class="faq-admin-image">
+                                        <img src="@faq.ImageUrl" alt="@faq.Title" />
+                                    </div>
+                                }
+                                <div class="faq-admin-desc">@faq.Description</div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
-
-            <div class="trash-notes">
-                <p><i class="bi bi-info-circle"></i> 공휴일에는 수거하지 않습니다</p>
-                <p><i class="bi bi-telephone"></i> 문의: 화성시 자원순환과 031-5189-6801</p>
-            </div>
-        </div>
-
-        <!-- FAQ 관리 -->
-        <div class="shop-section">
-            <div class="shop-section-header">
-                <i class="bi bi-question-circle"></i>
-                <h3>FAQ 관리</h3>
-                <button class="btn btn-salon btn-sm ms-auto" @onclick="ShowFaqEditor">
-                    <i class="bi bi-plus-lg"></i> 추가
-                </button>
-            </div>
-
-            @if (_faqLoading)
-            {
-                <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm"></div>
+        }
+        else if (_shopAdminTab == 3)
+        {
+            <!-- 쓰레기 배출일 안내 -->
+            <div class="shop-section">
+                <div class="shop-section-header">
+                    <i class="bi bi-trash3"></i>
+                    <h3>쓰레기 배출일 안내</h3>
+                    <span class="shop-section-sub">화성시 동탄 산척동</span>
                 </div>
-            }
-            else if (!_faqItems.Any())
-            {
-                <div class="text-center text-muted py-3">
-                    <i class="bi bi-info-circle"></i> 등록된 FAQ가 없습니다
-                </div>
-            }
-            else
-            {
-                <div class="faq-admin-list">
-                    @foreach (var faq in _faqItems.OrderBy(f => f.Order))
+
+                <div class="trash-schedule">
+                    @foreach (var item in _trashSchedule)
                     {
-                        <div class="faq-admin-item">
-                            <div class="faq-admin-header">
-                                <div class="faq-admin-order">@(faq.Order + 1)</div>
-                                <div class="faq-admin-title">
-                                    @if (!string.IsNullOrEmpty(faq.Category))
-                                    {
-                                        <span class="badge bg-info text-dark me-1" style="font-size:0.65rem">@faq.Category</span>
-                                    }
-                                    <strong>@faq.Title</strong>
-                                    @if (!faq.IsPublished)
-                                    {
-                                        <span class="badge bg-secondary ms-1">비공개</span>
-                                    }
-                                </div>
-                                <div class="faq-admin-actions">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)" title="수정">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFaq(faq)" title="삭제">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
+                        <div class="trash-item">
+                            <div class="trash-icon" style="background: @item.Color;">
+                                <i class="bi @item.Icon"></i>
                             </div>
-                            @if (!string.IsNullOrEmpty(faq.ImageUrl))
-                            {
-                                <div class="faq-admin-image">
-                                    <img src="@faq.ImageUrl" alt="@faq.Title" />
-                                </div>
-                            }
-                            <div class="faq-admin-desc">@faq.Description</div>
+                            <div class="trash-info">
+                                <span class="trash-type">@item.Type</span>
+                                <span class="trash-days">@item.Days</span>
+                            </div>
+                            <div class="trash-time">@item.Time</div>
                         </div>
                     }
                 </div>
-            }
-        </div>
+
+                <div class="trash-notes">
+                    <p><i class="bi bi-info-circle"></i> 공휴일에는 수거하지 않습니다</p>
+                    <p><i class="bi bi-telephone"></i> 문의: 화성시 자원순환과 031-5189-6801</p>
+                </div>
+            </div>
+        }
 
         @* FAQ 편집 모달 *@
         @if (_faqEditing != null)
@@ -748,6 +796,7 @@
     private int _seedProgress;
     private int _seedTotal;
     private int _adminTab;
+    private int _shopAdminTab;
     private string _searchText = "";
     private bool? _publishFilter; // null=전체, true=게시, false=미게시
     private string _sortField = "date"; // title, category, published, date
@@ -790,6 +839,8 @@
             {
                 ("title", true) => result.OrderBy(s => s.Title),
                 ("title", false) => result.OrderByDescending(s => s.Title),
+                ("images", true) => result.OrderBy(s => s.ImageUrls.Count),
+                ("images", false) => result.OrderByDescending(s => s.ImageUrls.Count),
                 ("category", true) => result.OrderBy(s => s.Category),
                 ("category", false) => result.OrderByDescending(s => s.Category),
                 ("published", true) => result.OrderBy(s => s.IsPublished),
@@ -4319,5 +4370,38 @@ Save the file as: {GetSuggestedFilename()}";
         .security-table td:nth-child(3) {
             display: none;
         }
+    }
+
+    /* -- 매장 관리 서브탭 -- */
+    .shop-sub-tab-bar {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        overflow-x: auto;
+    }
+
+    .shop-sub-tab {
+        padding: 0.45rem 1.2rem;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .shop-sub-tab:hover {
+        border-color: var(--salon-green, #7ba383);
+        color: #333;
+    }
+
+    .shop-sub-tab.active {
+        background: var(--salon-green, #7ba383);
+        border-color: var(--salon-green, #7ba383);
+        color: #fff;
     }
 </style>
