@@ -271,6 +271,7 @@ public class FirestoreValue
     public string? TimestampValue { get; set; }
     public FirestoreArrayValue? ArrayValue { get; set; }
     public FirestoreMapValue? MapValue { get; set; }
+    public double? DoubleValue { get; set; }
     public string? NullValue { get; set; }
 }
 

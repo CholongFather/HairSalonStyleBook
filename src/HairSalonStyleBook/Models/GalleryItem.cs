@@ -29,20 +29,32 @@ public class GalleryItem
 /// </summary>
 public class GalleryDecoration
 {
-    /// <summary>액자 타입: none, polaroid, vintage, film, elegant, simple</summary>
+    /// <summary>액자 타입: none, polaroid, vintage, film, elegant, simple, shadow, rounded, magazine, neon</summary>
     public string FrameType { get; set; } = "none";
     /// <summary>오버레이 텍스트</summary>
     public string TextContent { get; set; } = "";
-    /// <summary>글씨체: default, handwrite, cute, brush, elegant</summary>
+    /// <summary>글씨체</summary>
     public string TextFont { get; set; } = "default";
-    /// <summary>텍스트 위치: top, center, bottom</summary>
+    /// <summary>텍스트 위치 (레거시): top, center, bottom</summary>
     public string TextPosition { get; set; } = "bottom";
     /// <summary>텍스트 색상 (hex)</summary>
     public string TextColor { get; set; } = "#ffffff";
-    /// <summary>스티커 (이모지 or 키)</summary>
+    /// <summary>텍스트 X 좌표 (%, 0~100)</summary>
+    public double TextX { get; set; } = 50;
+    /// <summary>텍스트 Y 좌표 (%, 0~100)</summary>
+    public double TextY { get; set; } = 85;
+    /// <summary>텍스트 크기 배율 (0.5~3.0)</summary>
+    public double TextScale { get; set; } = 1.0;
+    /// <summary>스티커 (이모지)</summary>
     public string Sticker { get; set; } = "";
-    /// <summary>스티커 위치: top-left, top-right, center, bottom-left, bottom-right</summary>
+    /// <summary>스티커 위치 (레거시)</summary>
     public string StickerPosition { get; set; } = "bottom-right";
+    /// <summary>스티커 X 좌표 (%, 0~100)</summary>
+    public double StickerX { get; set; } = 80;
+    /// <summary>스티커 Y 좌표 (%, 0~100)</summary>
+    public double StickerY { get; set; } = 80;
+    /// <summary>스티커 크기 배율 (0.5~3.0)</summary>
+    public double StickerScale { get; set; } = 1.0;
 }
 
 /// <summary>

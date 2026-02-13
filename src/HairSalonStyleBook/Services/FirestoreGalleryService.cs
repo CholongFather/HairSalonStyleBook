@@ -147,16 +147,7 @@ public class FirestoreGalleryService : IGalleryService
                 {
                     MapValue = new FirestoreMapValue
                     {
-                        Fields = new Dictionary<string, FirestoreValue>
-                        {
-                            ["frameType"] = new() { StringValue = item.Decoration.FrameType },
-                            ["textContent"] = new() { StringValue = item.Decoration.TextContent },
-                            ["textFont"] = new() { StringValue = item.Decoration.TextFont },
-                            ["textPosition"] = new() { StringValue = item.Decoration.TextPosition },
-                            ["textColor"] = new() { StringValue = item.Decoration.TextColor },
-                            ["sticker"] = new() { StringValue = item.Decoration.Sticker },
-                            ["stickerPosition"] = new() { StringValue = item.Decoration.StickerPosition },
-                        }
+                        Fields = MapDecoFieldsToFirestore(item.Decoration)
                     }
                 },
                 ["history"] = new()
@@ -167,16 +158,9 @@ public class FirestoreGalleryService : IGalleryService
                         {
                             MapValue = new FirestoreMapValue
                             {
-                                Fields = new Dictionary<string, FirestoreValue>
+                                Fields = new Dictionary<string, FirestoreValue>(MapDecoFieldsToFirestore(h.Decoration))
                                 {
                                     ["timestamp"] = new() { TimestampValue = h.Timestamp.ToString("o") },
-                                    ["frameType"] = new() { StringValue = h.Decoration.FrameType },
-                                    ["textContent"] = new() { StringValue = h.Decoration.TextContent },
-                                    ["textFont"] = new() { StringValue = h.Decoration.TextFont },
-                                    ["textPosition"] = new() { StringValue = h.Decoration.TextPosition },
-                                    ["textColor"] = new() { StringValue = h.Decoration.TextColor },
-                                    ["sticker"] = new() { StringValue = h.Decoration.Sticker },
-                                    ["stickerPosition"] = new() { StringValue = h.Decoration.StickerPosition },
                                 }
                             }
                         }).ToList()
@@ -198,16 +182,7 @@ public class FirestoreGalleryService : IGalleryService
             return new GalleryDecoration();
 
         var f = v.MapValue.Fields;
-        return new GalleryDecoration
-        {
-            FrameType = GetStr(f, "frameType"),
-            TextContent = GetStr(f, "textContent"),
-            TextFont = GetStr(f, "textFont"),
-            TextPosition = GetStr(f, "textPosition"),
-            TextColor = GetStr(f, "textColor"),
-            Sticker = GetStr(f, "sticker"),
-            StickerPosition = GetStr(f, "stickerPosition") is { Length: > 0 } sp ? sp : "bottom-right",
-        };
+        return MapDecoFieldsFrom(f);
     }
 
     private static List<DecorationHistory> MapHistoryFrom(Dictionary<string, FirestoreValue> fields)
@@ -223,26 +198,56 @@ public class FirestoreGalleryService : IGalleryService
                 return new DecorationHistory
                 {
                     Timestamp = GetTimestamp(f, "timestamp"),
-                    Decoration = new GalleryDecoration
-                    {
-                        FrameType = GetStr(f, "frameType"),
-                        TextContent = GetStr(f, "textContent"),
-                        TextFont = GetStr(f, "textFont"),
-                        TextPosition = GetStr(f, "textPosition"),
-                        TextColor = GetStr(f, "textColor"),
-                        Sticker = GetStr(f, "sticker"),
-                        StickerPosition = GetStr(f, "stickerPosition") is { Length: > 0 } sp2 ? sp2 : "bottom-right",
-                    }
+                    Decoration = MapDecoFieldsFrom(f)
                 };
             })
             .ToList();
     }
+
+    /// <summary>Decoration 필드를 Firestore dict으로 변환</summary>
+    private static Dictionary<string, FirestoreValue> MapDecoFieldsToFirestore(GalleryDecoration d) => new()
+    {
+        ["frameType"] = new() { StringValue = d.FrameType },
+        ["textContent"] = new() { StringValue = d.TextContent },
+        ["textFont"] = new() { StringValue = d.TextFont },
+        ["textPosition"] = new() { StringValue = d.TextPosition },
+        ["textColor"] = new() { StringValue = d.TextColor },
+        ["textX"] = new() { DoubleValue = d.TextX },
+        ["textY"] = new() { DoubleValue = d.TextY },
+        ["textScale"] = new() { DoubleValue = d.TextScale },
+        ["sticker"] = new() { StringValue = d.Sticker },
+        ["stickerPosition"] = new() { StringValue = d.StickerPosition },
+        ["stickerX"] = new() { DoubleValue = d.StickerX },
+        ["stickerY"] = new() { DoubleValue = d.StickerY },
+        ["stickerScale"] = new() { DoubleValue = d.StickerScale },
+    };
+
+    /// <summary>Firestore dict에서 Decoration 읽기</summary>
+    private static GalleryDecoration MapDecoFieldsFrom(Dictionary<string, FirestoreValue> f) => new()
+    {
+        FrameType = GetStr(f, "frameType"),
+        TextContent = GetStr(f, "textContent"),
+        TextFont = GetStr(f, "textFont"),
+        TextPosition = GetStr(f, "textPosition"),
+        TextColor = GetStr(f, "textColor"),
+        TextX = GetDouble(f, "textX", 50),
+        TextY = GetDouble(f, "textY", 85),
+        TextScale = GetDouble(f, "textScale", 1.0),
+        Sticker = GetStr(f, "sticker"),
+        StickerPosition = GetStr(f, "stickerPosition") is { Length: > 0 } sp ? sp : "bottom-right",
+        StickerX = GetDouble(f, "stickerX", 80),
+        StickerY = GetDouble(f, "stickerY", 80),
+        StickerScale = GetDouble(f, "stickerScale", 1.0),
+    };
 
     private static string GetStr(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
 
     private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool defaultVal = false)
         => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : defaultVal;
+
+    private static double GetDouble(Dictionary<string, FirestoreValue> fields, string key, double defaultVal = 0)
+        => fields.TryGetValue(key, out var v) && v.DoubleValue.HasValue ? v.DoubleValue.Value : defaultVal;
 
     private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;

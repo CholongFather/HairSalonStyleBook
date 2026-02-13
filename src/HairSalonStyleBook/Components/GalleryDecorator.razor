@@ -1,21 +1,27 @@
 @using HairSalonStyleBook.Models
+@inject IJSRuntime JS
 
 <!-- 갤러리 사진 꾸미기 컴포넌트 (공통: Admin + User) -->
 
 <div class="gd-container">
     <!-- 미리보기 영역 -->
-    <div class="gd-preview frame-@(_editDeco.FrameType)">
+    <div class="gd-preview frame-@(_editDeco.FrameType)" @ref="_previewRef"
+         @onpointermove="OnPointerMove" @onpointermove:preventDefault="_isDragging"
+         @onpointerup="OnPointerUp">
         <img src="@Item.ImageUrl" alt="갤러리 이미지" class="gd-image" />
         @if (!string.IsNullOrEmpty(_editDeco.TextContent))
         {
-            <div class="gd-text-overlay gd-text-@(_editDeco.TextPosition) gd-font-@(_editDeco.TextFont)"
-                 style="color: @_editDeco.TextColor;">
+            <div class="gd-free-text gd-font-@(_editDeco.TextFont) @(EditMode && _dragTarget == "text" ? "dragging" : "")"
+                 style="left:@Pct(_editDeco.TextX);top:@Pct(_editDeco.TextY);color:@_editDeco.TextColor;transform:translate(-50%,-50%) scale(@Scl(_editDeco.TextScale));"
+                 @onpointerdown="@(e => OnPointerDown(e, "text"))" @onpointerdown:preventDefault>
                 @_editDeco.TextContent
             </div>
         }
         @if (!string.IsNullOrEmpty(_editDeco.Sticker))
         {
-            <div class="gd-sticker gd-sticker-@(_editDeco.StickerPosition)">
+            <div class="gd-free-sticker @(EditMode && _dragTarget == "sticker" ? "dragging" : "")"
+                 style="left:@Pct(_editDeco.StickerX);top:@Pct(_editDeco.StickerY);transform:translate(-50%,-50%) scale(@Scl(_editDeco.StickerScale));"
+                 @onpointerdown="@(e => OnPointerDown(e, "sticker"))" @onpointerdown:preventDefault>
                 @_editDeco.Sticker
             </div>
         }
@@ -23,8 +29,35 @@
 
     @if (EditMode)
     {
-        <!-- 편집 패널 -->
         <div class="gd-editor">
+            <!-- 방문일자 -->
+            <div class="gd-section">
+                <label class="gd-label"><i class="bi bi-calendar3"></i> 방문일자</label>
+                <input type="date" class="form-control form-control-sm"
+                       value="@(_editVisitDate?.ToString("yyyy-MM-dd"))"
+                       @onchange="OnVisitDateChange" />
+            </div>
+
+            <!-- 해시태그 -->
+            <div class="gd-section">
+                <label class="gd-label"><i class="bi bi-hash"></i> 해시태그</label>
+                <div class="gd-hashtag-wrap">
+                    @foreach (var tag in _editHashtags)
+                    {
+                        var t = tag;
+                        <span class="gd-hashtag-chip">
+                            #@t
+                            <button class="gd-hashtag-remove" @onclick="() => _editHashtags.Remove(t)">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </span>
+                    }
+                    <input type="text" class="gd-hashtag-input" placeholder="태그 입력 후 Enter"
+                           @bind="_newHashtag" @bind:event="oninput"
+                           @onkeydown="OnHashtagKeyDown" />
+                </div>
+            </div>
+
             <!-- 액자 선택 -->
             <div class="gd-section">
                 <label class="gd-label"><i class="bi bi-frame"></i> 액자</label>
@@ -44,13 +77,13 @@
 
             <!-- 텍스트 입력 -->
             <div class="gd-section">
-                <label class="gd-label"><i class="bi bi-fonts"></i> 텍스트</label>
+                <label class="gd-label"><i class="bi bi-fonts"></i> 텍스트 <small class="text-muted">(드래그로 이동)</small></label>
                 <input type="text" class="form-control form-control-sm" maxlength="50"
                        placeholder="텍스트를 입력하세요"
                        @bind="_editDeco.TextContent" @bind:event="oninput" />
             </div>
 
-            <!-- 글씨체 선택 -->
+            <!-- 글씨체 -->
             <div class="gd-section">
                 <label class="gd-label"><i class="bi bi-pen"></i> 글씨체</label>
                 <div class="gd-font-list">
@@ -64,20 +97,8 @@
                 </div>
             </div>
 
-            <!-- 위치 + 색상 -->
+            <!-- 텍스트 색상 + 크기 -->
             <div class="gd-row">
-                <div class="gd-section gd-flex1">
-                    <label class="gd-label">위치</label>
-                    <div class="gd-pos-list">
-                        @foreach (var pos in new[] { ("top", "상단"), ("center", "중앙"), ("bottom", "하단") })
-                        {
-                            <button class="gd-pos-btn @(_editDeco.TextPosition == pos.Item1 ? "active" : "")"
-                                    @onclick="() => _editDeco.TextPosition = pos.Item1">
-                                @pos.Item2
-                            </button>
-                        }
-                    </div>
-                </div>
                 <div class="gd-section gd-flex1">
                     <label class="gd-label">색상</label>
                     <div class="gd-color-list">
@@ -88,11 +109,17 @@
                         }
                     </div>
                 </div>
+                <div class="gd-section" style="min-width:90px;">
+                    <label class="gd-label">크기</label>
+                    <input type="range" class="form-range form-range-sm" min="0.5" max="3" step="0.1"
+                           value="@_editDeco.TextScale"
+                           @oninput="@(e => _editDeco.TextScale = double.TryParse(e.Value?.ToString(), out var v) ? v : 1.0)" />
+                </div>
             </div>
 
             <!-- 스티커 -->
             <div class="gd-section">
-                <label class="gd-label"><i class="bi bi-emoji-smile"></i> 스티커</label>
+                <label class="gd-label"><i class="bi bi-emoji-smile"></i> 스티커 <small class="text-muted">(드래그로 이동)</small></label>
                 <div class="gd-sticker-grid">
                     <button class="gd-sticker-btn @(string.IsNullOrEmpty(_editDeco.Sticker) ? "active" : "")"
                             @onclick="() => _editDeco.Sticker = string.Empty">
@@ -108,14 +135,11 @@
                 </div>
                 @if (!string.IsNullOrEmpty(_editDeco.Sticker))
                 {
-                    <div class="gd-sticker-pos-list">
-                        @foreach (var sp in _stickerPositions)
-                        {
-                            <button class="gd-pos-btn @(_editDeco.StickerPosition == sp.Key ? "active" : "")"
-                                    @onclick="() => _editDeco.StickerPosition = sp.Key">
-                                @sp.Name
-                            </button>
-                        }
+                    <div class="gd-section" style="margin-top:0.3rem;">
+                        <label class="gd-label">스티커 크기</label>
+                        <input type="range" class="form-range form-range-sm" min="0.5" max="3" step="0.1"
+                               value="@_editDeco.StickerScale"
+                               @oninput="@(e => _editDeco.StickerScale = double.TryParse(e.Value?.ToString(), out var v) ? v : 1.0)" />
                     </div>
                 }
             </div>
@@ -144,7 +168,7 @@
                 </div>
             }
 
-            <!-- 저장/취소 버튼 -->
+            <!-- 저장/취소 -->
             <div class="gd-actions">
                 <button class="btn btn-salon btn-sm" @onclick="SaveDecoration" disabled="@_saving">
                     @if (_saving)
@@ -169,33 +193,30 @@
 
     private GalleryDecoration _editDeco = new();
     private bool _saving;
+    private ElementReference _previewRef;
+
+    // 방문일자 / 해시태그 편집용
+    private DateTime? _editVisitDate;
+    private List<string> _editHashtags = new();
+    private string _newHashtag = "";
+
+    // 드래그 상태
+    private bool _isDragging;
+    private string _dragTarget = ""; // "sticker" or "text"
 
     // 액자 프리셋 (10종)
     private static readonly (string Key, string Name)[] _frames = new[]
     {
-        ("none", "없음"),
-        ("polaroid", "폴라로이드"),
-        ("vintage", "빈티지"),
-        ("film", "필름"),
-        ("elegant", "엘레건트"),
-        ("simple", "심플"),
-        ("shadow", "그림자"),
-        ("rounded", "둥근"),
-        ("magazine", "매거진"),
-        ("neon", "네온"),
+        ("none", "없음"), ("polaroid", "폴라로이드"), ("vintage", "빈티지"),
+        ("film", "필름"), ("elegant", "엘레건트"), ("simple", "심플"),
+        ("shadow", "그림자"), ("rounded", "둥근"), ("magazine", "매거진"), ("neon", "네온"),
     };
 
     // 글씨체 (8종)
     private static readonly (string Key, string Preview)[] _fonts = new[]
     {
-        ("default", "기본"),
-        ("handwrite", "손글씨"),
-        ("cute", "귀여운"),
-        ("brush", "붓글씨"),
-        ("elegant", "명조"),
-        ("round", "둥근"),
-        ("bold", "굵은"),
-        ("title", "제목"),
+        ("default", "기본"), ("handwrite", "손글씨"), ("cute", "귀여운"), ("brush", "붓글씨"),
+        ("elegant", "명조"), ("round", "둥근"), ("bold", "굵은"), ("title", "제목"),
     };
 
     // 색상 팔레트 (16색)
@@ -217,19 +238,83 @@
         "\ud83c\udf08", "\ud83e\uddf8", "\ud83d\udc36", "\ud83d\udc31",
     };
 
-    // 스티커 위치
-    private static readonly (string Key, string Name)[] _stickerPositions = new[]
-    {
-        ("top-left", "좌상"),
-        ("top-right", "우상"),
-        ("center", "중앙"),
-        ("bottom-left", "좌하"),
-        ("bottom-right", "우하"),
-    };
-
     protected override void OnParametersSet()
     {
         _editDeco = CloneDeco(Item.Decoration);
+        _editVisitDate = Item.VisitDate;
+        _editHashtags = new List<string>(Item.Hashtags);
+    }
+
+    // % 포맷 헬퍼
+    private static string Pct(double v) => $"{v:F1}%";
+    private static string Scl(double v) => $"{v:F2}";
+
+    #region 드래그 처리
+
+    private void OnPointerDown(PointerEventArgs e, string target)
+    {
+        if (!EditMode) return;
+        _isDragging = true;
+        _dragTarget = target;
+    }
+
+    private async Task OnPointerMove(PointerEventArgs e)
+    {
+        if (!_isDragging) return;
+
+        try
+        {
+            // JS로 preview 영역의 bounds 가져오기
+            var rect = await JS.InvokeAsync<BoundingRect>("gdGetRect", _previewRef);
+            if (rect.Width <= 0 || rect.Height <= 0) return;
+
+            double x = Math.Clamp((e.ClientX - rect.Left) / rect.Width * 100, 0, 100);
+            double y = Math.Clamp((e.ClientY - rect.Top) / rect.Height * 100, 0, 100);
+
+            if (_dragTarget == "sticker")
+            {
+                _editDeco.StickerX = x;
+                _editDeco.StickerY = y;
+            }
+            else if (_dragTarget == "text")
+            {
+                _editDeco.TextX = x;
+                _editDeco.TextY = y;
+            }
+            StateHasChanged();
+        }
+        catch { /* JS interop 실패 시 무시 */ }
+    }
+
+    private void OnPointerUp(PointerEventArgs e)
+    {
+        _isDragging = false;
+        _dragTarget = "";
+    }
+
+    // JS에서 반환할 구조체
+    private record BoundingRect(double Left, double Top, double Width, double Height);
+
+    #endregion
+
+    #region 해시태그 입력
+
+    private void OnHashtagKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newHashtag))
+        {
+            var tag = _newHashtag.Trim().TrimStart('#');
+            if (tag.Length > 0 && !_editHashtags.Contains(tag))
+                _editHashtags.Add(tag);
+            _newHashtag = "";
+        }
+    }
+
+    #endregion
+
+    private void OnVisitDateChange(ChangeEventArgs e)
+    {
+        _editVisitDate = DateTime.TryParse(e.Value?.ToString(), out var dt) ? dt : null;
     }
 
     private async Task SaveDecoration()
@@ -250,6 +335,8 @@
         }
 
         Item.Decoration = CloneDeco(_editDeco);
+        Item.VisitDate = _editVisitDate;
+        Item.Hashtags = new List<string>(_editHashtags);
         await OnSave.InvokeAsync(Item);
         _saving = false;
     }
@@ -257,6 +344,8 @@
     private async Task CancelEdit()
     {
         _editDeco = CloneDeco(Item.Decoration);
+        _editVisitDate = Item.VisitDate;
+        _editHashtags = new List<string>(Item.Hashtags);
         await OnCancel.InvokeAsync();
     }
 
@@ -269,38 +358,35 @@
         TextFont = d.TextFont,
         TextPosition = d.TextPosition,
         TextColor = d.TextColor,
+        TextX = d.TextX,
+        TextY = d.TextY,
+        TextScale = d.TextScale,
         Sticker = d.Sticker,
         StickerPosition = d.StickerPosition,
+        StickerX = d.StickerX,
+        StickerY = d.StickerY,
+        StickerScale = d.StickerScale,
     };
 
     private static bool HasDecoChanged(GalleryDecoration a, GalleryDecoration b) =>
         a.FrameType != b.FrameType || a.TextContent != b.TextContent ||
-        a.TextFont != b.TextFont || a.TextPosition != b.TextPosition ||
-        a.TextColor != b.TextColor || a.Sticker != b.Sticker ||
-        a.StickerPosition != b.StickerPosition;
+        a.TextFont != b.TextFont || a.TextColor != b.TextColor ||
+        a.Sticker != b.Sticker ||
+        Math.Abs(a.TextX - b.TextX) > 0.5 || Math.Abs(a.TextY - b.TextY) > 0.5 ||
+        Math.Abs(a.TextScale - b.TextScale) > 0.05 ||
+        Math.Abs(a.StickerX - b.StickerX) > 0.5 || Math.Abs(a.StickerY - b.StickerY) > 0.5 ||
+        Math.Abs(a.StickerScale - b.StickerScale) > 0.05;
 
     private static string GetFrameName(string key) => key switch
     {
-        "polaroid" => "폴라로이드",
-        "vintage" => "빈티지",
-        "film" => "필름",
-        "elegant" => "엘레건트",
-        "simple" => "심플",
-        "shadow" => "그림자",
-        "rounded" => "둥근",
-        "magazine" => "매거진",
-        "neon" => "네온",
-        _ => ""
+        "polaroid" => "폴라로이드", "vintage" => "빈티지", "film" => "필름",
+        "elegant" => "엘레건트", "simple" => "심플", "shadow" => "그림자",
+        "rounded" => "둥근", "magazine" => "매거진", "neon" => "네온", _ => ""
     };
 }
 
 <style>
-    /* ── 갤러리 꾸미기 컴포넌트 ── */
-    .gd-container {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
+    .gd-container { display: flex; flex-direction: column; gap: 1rem; }
 
     .gd-preview {
         position: relative;
@@ -308,29 +394,38 @@
         max-width: 400px;
         margin: 0 auto;
         overflow: visible;
+        touch-action: none;
+        user-select: none;
     }
 
-    .gd-image {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
+    .gd-image { width: 100%; height: auto; display: block; }
 
-    /* 텍스트 오버레이 */
-    .gd-text-overlay {
+    /* 자유 배치 텍스트 */
+    .gd-free-text {
         position: absolute;
-        left: 0;
-        right: 0;
-        padding: 8px 12px;
+        padding: 4px 10px;
         text-align: center;
         font-size: 1.1rem;
         text-shadow: 0 1px 4px rgba(0,0,0,0.7);
         word-break: keep-all;
+        white-space: nowrap;
+        cursor: grab;
+        pointer-events: auto;
+        z-index: 3;
     }
+    .gd-free-text.dragging { cursor: grabbing; opacity: 0.8; }
 
-    .gd-text-top { top: 8px; }
-    .gd-text-center { top: 50%; transform: translateY(-50%); }
-    .gd-text-bottom { bottom: 8px; }
+    /* 자유 배치 스티커 */
+    .gd-free-sticker {
+        position: absolute;
+        font-size: 2.2rem;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        cursor: grab;
+        pointer-events: auto;
+        z-index: 4;
+    }
+    .gd-free-sticker.dragging { cursor: grabbing; opacity: 0.8; }
 
     /* 글씨체 (8종) */
     .gd-font-default { font-family: 'Noto Serif KR', serif; }
@@ -342,321 +437,105 @@
     .gd-font-bold { font-family: 'Black Han Sans', sans-serif; font-size: 1.2em; }
     .gd-font-title { font-family: 'Do Hyeon', sans-serif; font-size: 1.2em; }
 
-    /* 스티커 오버레이 */
-    .gd-sticker {
-        position: absolute;
-        font-size: 2.2rem;
-        line-height: 1;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        pointer-events: none;
-    }
-    .gd-sticker-top-left { top: 8px; left: 8px; }
-    .gd-sticker-top-right { top: 8px; right: 8px; }
-    .gd-sticker-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-    .gd-sticker-bottom-left { bottom: 8px; left: 8px; }
-    .gd-sticker-bottom-right { bottom: 8px; right: 8px; }
-
     /* ── 액자 스타일 (10종) ── */
     .frame-none { }
-
-    .frame-polaroid {
-        background: white;
-        padding: 12px 12px 40px 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        border-radius: 2px;
-    }
-
-    .frame-vintage {
-        border: 6px solid #d4a574;
-        border-radius: 8px;
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
-    }
-    .frame-vintage .gd-image {
-        filter: sepia(0.3) contrast(0.95);
-    }
-
-    .frame-film {
-        background: #1a1a1a;
-        padding: 20px 8px;
-        position: relative;
-    }
-    .frame-film::before,
-    .frame-film::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 14px;
-        background: repeating-linear-gradient(90deg,
-            transparent, transparent 8px,
-            #333 8px, #333 10px,
-            transparent 10px, transparent 18px);
+    .frame-polaroid { background: white; padding: 12px 12px 40px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 2px; }
+    .frame-vintage { border: 6px solid #d4a574; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
+    .frame-vintage .gd-image { filter: sepia(0.3) contrast(0.95); }
+    .frame-film { background: #1a1a1a; padding: 20px 8px; position: relative; }
+    .frame-film::before, .frame-film::after {
+        content: ''; position: absolute; left: 0; right: 0; height: 14px;
+        background: repeating-linear-gradient(90deg, transparent, transparent 8px, #333 8px, #333 10px, transparent 10px, transparent 18px);
     }
     .frame-film::before { top: 3px; }
     .frame-film::after { bottom: 3px; }
-
-    .frame-elegant {
-        border: 3px solid #c9a96e;
-        outline: 2px solid #c9a96e;
-        outline-offset: 4px;
-        padding: 2px;
-    }
-
-    .frame-simple {
-        border: 2px solid #ddd;
-        border-radius: 12px;
-    }
-    .frame-simple .gd-image {
-        border-radius: 10px;
-    }
-
-    .frame-shadow {
-        border-radius: 8px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .frame-shadow .gd-image {
-        border-radius: 8px;
-    }
-
-    .frame-rounded {
-        border-radius: 24px;
-        border: 4px solid white;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    }
-    .frame-rounded .gd-image {
-        border-radius: 20px;
-    }
-
-    .frame-magazine {
-        background: #111;
-        padding: 4px;
-        box-shadow: 0 6px 24px rgba(0,0,0,0.3);
-    }
-    .frame-magazine .gd-image {
-        filter: contrast(1.1) saturate(1.1);
-    }
-
+    .frame-elegant { border: 3px solid #c9a96e; outline: 2px solid #c9a96e; outline-offset: 4px; padding: 2px; }
+    .frame-simple { border: 2px solid #ddd; border-radius: 12px; }
+    .frame-simple .gd-image { border-radius: 10px; }
+    .frame-shadow { border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.1); }
+    .frame-shadow .gd-image { border-radius: 8px; }
+    .frame-rounded { border-radius: 24px; border: 4px solid white; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .frame-rounded .gd-image { border-radius: 20px; }
+    .frame-magazine { background: #111; padding: 4px; box-shadow: 0 6px 24px rgba(0,0,0,0.3); }
+    .frame-magazine .gd-image { filter: contrast(1.1) saturate(1.1); }
     .frame-neon {
-        border: 3px solid #ff6bcb;
-        border-radius: 4px;
-        box-shadow: 0 0 10px rgba(255,107,203,0.5), 0 0 20px rgba(255,107,203,0.2),
-                    inset 0 0 10px rgba(255,107,203,0.1);
+        border: 3px solid #ff6bcb; border-radius: 4px;
+        box-shadow: 0 0 10px rgba(255,107,203,0.5), 0 0 20px rgba(255,107,203,0.2), inset 0 0 10px rgba(255,107,203,0.1);
     }
 
     /* ── 편집 패널 ── */
-    .gd-editor {
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-        padding: 0.5rem 0;
-    }
-
+    .gd-editor { display: flex; flex-direction: column; gap: 0.8rem; padding: 0.5rem 0; }
     .gd-section { display: flex; flex-direction: column; gap: 0.3rem; }
-    .gd-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #666;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-    }
-
+    .gd-label { font-size: 0.75rem; font-weight: 700; color: #666; display: flex; align-items: center; gap: 0.3rem; }
     .gd-row { display: flex; gap: 1rem; }
     .gd-flex1 { flex: 1; }
 
-    /* 액자 선택 버튼 */
-    .gd-frame-list {
-        display: flex;
-        gap: 0.4rem;
-        overflow-x: auto;
-        padding-bottom: 4px;
-        -webkit-overflow-scrolling: touch;
+    /* 해시태그 */
+    .gd-hashtag-wrap {
+        display: flex; flex-wrap: wrap; gap: 4px; padding: 4px;
+        border: 1px solid #ddd; border-radius: 6px; background: white; min-height: 32px; align-items: center;
+    }
+    .gd-hashtag-chip {
+        display: inline-flex; align-items: center; gap: 2px;
+        background: rgba(123,163,131,0.12); color: #5a8a63; font-size: 0.75rem;
+        padding: 2px 6px; border-radius: 12px;
+    }
+    .gd-hashtag-remove {
+        background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #999; line-height: 1;
+    }
+    .gd-hashtag-input {
+        border: none; outline: none; font-size: 0.8rem; flex: 1; min-width: 80px; background: transparent;
     }
 
+    /* 액자 선택 */
+    .gd-frame-list { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
     .gd-frame-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-        padding: 4px;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        background: none;
-        cursor: pointer;
-        min-width: 52px;
-        font-size: 0.6rem;
-        color: #888;
-        flex-shrink: 0;
+        display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px;
+        border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer;
+        min-width: 52px; font-size: 0.6rem; color: #888; flex-shrink: 0;
     }
-    .gd-frame-btn.active {
-        border-color: #7ba383;
-        color: #7ba383;
-    }
-
-    .gd-frame-thumb {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .gd-frame-inner {
-        width: 28px;
-        height: 28px;
-        background: #eee;
-    }
-
-    .frame-polaroid .gd-frame-inner {
-        background: white;
-        border: 1px solid #ddd;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: -4px;
-    }
-    .frame-vintage .gd-frame-inner {
-        border: 2px solid #d4a574;
-        border-radius: 3px;
-    }
-    .frame-film .gd-frame-inner {
-        background: #1a1a1a;
-        border: 2px solid #333;
-    }
-    .frame-elegant .gd-frame-inner {
-        border: 1px solid #c9a96e;
-        outline: 1px solid #c9a96e;
-        outline-offset: 2px;
-    }
-    .frame-simple .gd-frame-inner {
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-    .frame-shadow .gd-frame-inner {
-        border-radius: 3px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-    }
-    .frame-rounded .gd-frame-inner {
-        border-radius: 10px;
-        border: 2px solid white;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    .frame-magazine .gd-frame-inner {
-        background: #111;
-        border: 1px solid #333;
-    }
-    .frame-neon .gd-frame-inner {
-        border: 2px solid #ff6bcb;
-        box-shadow: 0 0 6px rgba(255,107,203,0.5);
-    }
+    .gd-frame-btn.active { border-color: #7ba383; color: #7ba383; }
+    .gd-frame-thumb { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .gd-frame-inner { width: 28px; height: 28px; background: #eee; }
+    .frame-polaroid .gd-frame-inner { background: white; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: -4px; }
+    .frame-vintage .gd-frame-inner { border: 2px solid #d4a574; border-radius: 3px; }
+    .frame-film .gd-frame-inner { background: #1a1a1a; border: 2px solid #333; }
+    .frame-elegant .gd-frame-inner { border: 1px solid #c9a96e; outline: 1px solid #c9a96e; outline-offset: 2px; }
+    .frame-simple .gd-frame-inner { border: 1px solid #ddd; border-radius: 4px; }
+    .frame-shadow .gd-frame-inner { border-radius: 3px; box-shadow: 0 3px 8px rgba(0,0,0,0.25); }
+    .frame-rounded .gd-frame-inner { border-radius: 10px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .frame-magazine .gd-frame-inner { background: #111; border: 1px solid #333; }
+    .frame-neon .gd-frame-inner { border: 2px solid #ff6bcb; box-shadow: 0 0 6px rgba(255,107,203,0.5); }
 
     /* 글씨체 선택 */
-    .gd-font-list {
-        display: flex;
-        gap: 0.3rem;
-        flex-wrap: wrap;
-    }
-
-    .gd-font-btn {
-        padding: 4px 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        font-size: 0.85rem;
-    }
-    .gd-font-btn.active {
-        border-color: #7ba383;
-        background: rgba(123,163,131,0.08);
-        color: #7ba383;
-    }
-
-    /* 위치 선택 */
-    .gd-pos-list { display: flex; gap: 0.3rem; }
-    .gd-pos-btn {
-        flex: 1;
-        padding: 4px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        font-size: 0.7rem;
-        text-align: center;
-    }
-    .gd-pos-btn.active { border-color: #7ba383; background: rgba(123,163,131,0.08); color: #7ba383; }
+    .gd-font-list { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .gd-font-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; }
+    .gd-font-btn.active { border-color: #7ba383; background: rgba(123,163,131,0.08); color: #7ba383; }
 
     /* 색상 팔레트 */
     .gd-color-list { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-    .gd-color-btn {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        border: 2px solid #ddd;
-        cursor: pointer;
-        padding: 0;
-    }
+    .gd-color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ddd; cursor: pointer; padding: 0; }
     .gd-color-btn.active { border-color: #7ba383; box-shadow: 0 0 0 2px rgba(123,163,131,0.3); }
 
     /* 스티커 그리드 */
-    .gd-sticker-grid {
-        display: flex;
-        gap: 0.3rem;
-        flex-wrap: wrap;
-    }
+    .gd-sticker-grid { display: flex; gap: 0.3rem; flex-wrap: wrap; }
     .gd-sticker-btn {
-        width: 36px;
-        height: 36px;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        background: #f8f8f8;
-        cursor: pointer;
-        font-size: 1.2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
+        width: 36px; height: 36px; border: 2px solid transparent; border-radius: 8px;
+        background: #f8f8f8; cursor: pointer; font-size: 1.2rem;
+        display: flex; align-items: center; justify-content: center; padding: 0;
     }
-    .gd-sticker-btn.active {
-        border-color: #7ba383;
-        background: rgba(123,163,131,0.08);
-    }
-    .gd-sticker-pos-list {
-        display: flex;
-        gap: 0.3rem;
-        margin-top: 0.3rem;
-    }
+    .gd-sticker-btn.active { border-color: #7ba383; background: rgba(123,163,131,0.08); }
 
     /* 히스토리 */
-    .gd-hist-count {
-        font-size: 0.65rem;
-        background: #eee;
-        padding: 1px 5px;
-        border-radius: 8px;
-        margin-left: 4px;
-    }
-    .gd-history-list {
-        max-height: 120px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
+    .gd-hist-count { font-size: 0.65rem; background: #eee; padding: 1px 5px; border-radius: 8px; margin-left: 4px; }
+    .gd-history-list { max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
     .gd-hist-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 4px 8px;
-        border: 1px solid #eee;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        font-size: 0.7rem;
-        text-align: left;
+        display: flex; align-items: center; gap: 0.5rem; padding: 4px 8px;
+        border: 1px solid #eee; border-radius: 6px; background: white; cursor: pointer; font-size: 0.7rem; text-align: left;
     }
     .gd-hist-item:hover { background: rgba(123,163,131,0.05); }
     .gd-hist-time { color: #999; white-space: nowrap; }
     .gd-hist-desc { flex: 1; color: #555; }
 
-    .gd-actions {
-        display: flex;
-        gap: 0.5rem;
-        padding-top: 0.3rem;
-    }
+    .gd-actions { display: flex; gap: 0.5rem; padding-top: 0.3rem; }
 </style>

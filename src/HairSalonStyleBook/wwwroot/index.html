@@ -54,6 +54,13 @@
         <a href="." class="reload">새로고침</a>
         <span class="dismiss">&#10005;</span>
     </div>
+    <script>
+        // 갤러리 데코레이터 드래그용 getBoundingClientRect
+        window.gdGetRect = function(el) {
+            var r = el.getBoundingClientRect();
+            return { left: r.left, top: r.top, width: r.width, height: r.height };
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
