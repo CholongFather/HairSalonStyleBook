@@ -234,11 +234,23 @@
             }
         </div>
 
-        <!-- 게시 여부 -->
+        <!-- 게시 여부 & 배지 -->
         <div class="mb-4">
-            <div class="form-check">
+            <div class="form-check mb-2">
                 <InputCheckbox @bind-Value="_style.IsPublished" class="form-check-input" id="publishCheck" />
                 <label class="form-check-label" for="publishCheck">게시하기</label>
+            </div>
+            <div class="form-check mb-2">
+                <InputCheckbox @bind-Value="_style.IsSignature" class="form-check-input" id="signatureCheck" />
+                <label class="form-check-label" for="signatureCheck" style="color: var(--salon-accent); font-weight: 600;">
+                    <i class="bi bi-award-fill"></i> 시그니처 스타일
+                </label>
+            </div>
+            <div class="form-check">
+                <InputCheckbox @bind-Value="_style.IsFeatured" class="form-check-input" id="featuredCheck" />
+                <label class="form-check-label" for="featuredCheck" style="color: #e53935; font-weight: 600;">
+                    <i class="bi bi-fire"></i> 인기 스타일
+                </label>
             </div>
         </div>
 

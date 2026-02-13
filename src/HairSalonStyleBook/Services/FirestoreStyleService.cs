@@ -183,6 +183,8 @@ public class FirestoreStyleService : IStyleService
                 CreatedAt = GetTimestampValue(fields, "createdAt"),
                 UpdatedAt = GetTimestampValue(fields, "updatedAt"),
                 CreatedBy = GetStringValue(fields, "createdBy"),
+                IsFeatured = GetBoolValue(fields, "isFeatured"),
+                IsSignature = GetBoolValue(fields, "isSignature"),
                 IsPublished = GetBoolValue(fields, "isPublished")
             };
         }
@@ -217,6 +219,8 @@ public class FirestoreStyleService : IStyleService
                 ["createdAt"] = new() { TimestampValue = style.CreatedAt.ToString("o") },
                 ["updatedAt"] = new() { TimestampValue = style.UpdatedAt.ToString("o") },
                 ["createdBy"] = new() { StringValue = style.CreatedBy },
+                ["isFeatured"] = new() { BooleanValue = style.IsFeatured },
+                ["isSignature"] = new() { BooleanValue = style.IsSignature },
                 ["isPublished"] = new() { BooleanValue = style.IsPublished }
             }
         };

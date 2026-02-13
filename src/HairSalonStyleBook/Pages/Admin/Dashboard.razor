@@ -94,6 +94,7 @@
                             <th class="sortable-th" @onclick='() => ToggleSort("images")'>사진 @SortIcon("images")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("category")'>카테고리 @SortIcon("category")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("published")'>게시 @SortIcon("published")</th>
+                            <th>배지</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("date")'>생성일 @SortIcon("date")</th>
                             <th>관리</th>
                         </tr>
@@ -102,7 +103,7 @@
                         @if (!FilteredStyles.Any())
                         {
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
+                                <td colspan="7" class="text-center text-muted py-4">
                                     @(string.IsNullOrEmpty(_searchText) ? "등록된 스타일이 없습니다." : "검색 결과가 없습니다.")
                                 </td>
                             </tr>
@@ -128,6 +129,18 @@
                                         <i class="bi @(style.IsPublished ? "bi-check-circle-fill" : "bi-dash-circle")"></i>
                                         @(style.IsPublished ? "게시" : "비게시")
                                     </button>
+                                </td>
+                                <td>
+                                    <div class="badge-toggle-group">
+                                        <button class="btn btn-sm badge-toggle @(style.IsSignature ? "active-signature" : "")"
+                                                @onclick="() => ToggleSignature(style)" title="시그니처">
+                                            <i class="bi bi-award-fill"></i>
+                                        </button>
+                                        <button class="btn btn-sm badge-toggle @(style.IsFeatured ? "active-featured" : "")"
+                                                @onclick="() => ToggleFeatured(style)" title="인기">
+                                            <i class="bi bi-fire"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>@style.CreatedAt.ToString("yyyy.MM.dd")</td>
                                 <td>
@@ -1839,6 +1852,20 @@ Save the file as: {GetSuggestedFilename()}";
         style.IsPublished = !style.IsPublished;
         await StyleService.UpdateAsync(style);
         await AuditService.LogAsync("Publish", style.Id, style.Title, $"게시 상태 → {(style.IsPublished ? "게시" : "비게시")}");
+    }
+
+    private async Task ToggleFeatured(StylePost style)
+    {
+        style.IsFeatured = !style.IsFeatured;
+        await StyleService.UpdateAsync(style);
+        await AuditService.LogAsync("Update", style.Id, style.Title, $"인기 배지 → {(style.IsFeatured ? "ON" : "OFF")}");
+    }
+
+    private async Task ToggleSignature(StylePost style)
+    {
+        style.IsSignature = !style.IsSignature;
+        await StyleService.UpdateAsync(style);
+        await AuditService.LogAsync("Update", style.Id, style.Title, $"시그니처 배지 → {(style.IsSignature ? "ON" : "OFF")}");
     }
 
     private async Task DeleteStyle(StylePost style)
@@ -4043,6 +4070,44 @@ Save the file as: {GetSuggestedFilename()}";
 
     .admin-publish-toggle:hover {
         transform: scale(1.05);
+    }
+
+    /* 배지 토글 */
+    .badge-toggle-group {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .badge-toggle {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid rgba(156, 163, 175, 0.3);
+        background: rgba(156, 163, 175, 0.05);
+        color: #ccc;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+    }
+
+    .badge-toggle:hover {
+        transform: scale(1.1);
+    }
+
+    .badge-toggle.active-signature {
+        background: linear-gradient(135deg, rgba(232, 168, 64, 0.15), rgba(218, 140, 32, 0.15));
+        border-color: var(--salon-accent);
+        color: var(--salon-accent);
+    }
+
+    .badge-toggle.active-featured {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.15), rgba(229, 57, 53, 0.15));
+        border-color: #e53935;
+        color: #e53935;
     }
 
     /* 관리 버튼 */

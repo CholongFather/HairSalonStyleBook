@@ -63,6 +63,16 @@ public class StylePost
     /// </summary>
     public string Mood { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 인기 스타일 여부 (관리자 수동 토글)
+    /// </summary>
+    public bool IsFeatured { get; set; }
+
+    /// <summary>
+    /// 시그니처 스타일 여부 (관리자 수동 토글)
+    /// </summary>
+    public bool IsSignature { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = "admin";
