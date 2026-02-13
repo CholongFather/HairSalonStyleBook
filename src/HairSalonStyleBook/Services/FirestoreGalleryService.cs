@@ -115,6 +115,7 @@ public class FirestoreGalleryService : IGalleryService
                 Description = GetStr(fields, "description"),
                 Decoration = MapDecorationFrom(fields),
                 History = MapHistoryFrom(fields),
+                IsPublished = GetBool(fields, "isPublished", true),
                 CreatedAt = GetTimestamp(fields, "createdAt"),
                 UpdatedAt = GetTimestamp(fields, "updatedAt"),
             };
@@ -168,6 +169,7 @@ public class FirestoreGalleryService : IGalleryService
                         }).ToList()
                     }
                 },
+                ["isPublished"] = new() { BooleanValue = item.IsPublished },
                 ["createdAt"] = new() { TimestampValue = item.CreatedAt.ToString("o") },
                 ["updatedAt"] = new() { TimestampValue = item.UpdatedAt.ToString("o") },
             }
@@ -218,6 +220,9 @@ public class FirestoreGalleryService : IGalleryService
 
     private static string GetStr(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
+
+    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool defaultVal = false)
+        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : defaultVal;
 
     private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;

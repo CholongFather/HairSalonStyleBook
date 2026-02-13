@@ -14,6 +14,8 @@ public class GalleryItem
     public GalleryDecoration Decoration { get; set; } = new();
     /// <summary>꾸미기 변경 히스토리 (최대 20개)</summary>
     public List<DecorationHistory> History { get; set; } = new();
+    /// <summary>노출 여부</summary>
+    public bool IsPublished { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

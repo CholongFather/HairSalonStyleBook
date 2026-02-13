@@ -489,7 +489,7 @@
     private async Task LoadGallery()
     {
         _galleryLoading = true;
-        try { _galleryItems = (await GalleryService.GetAllAsync()).OrderByDescending(g => g.CreatedAt).ToList(); }
+        try { _galleryItems = (await GalleryService.GetAllAsync()).Where(g => g.IsPublished).OrderByDescending(g => g.CreatedAt).ToList(); }
         catch { _galleryItems = new(); }
         _galleryLoading = false;
     }
@@ -508,7 +508,7 @@
     {
         await GalleryService.UpdateAsync(item);
         _galleryEditItem = null;
-        _galleryItems = (await GalleryService.GetAllAsync()).OrderByDescending(g => g.CreatedAt).ToList();
+        _galleryItems = (await GalleryService.GetAllAsync()).Where(g => g.IsPublished).OrderByDescending(g => g.CreatedAt).ToList();
     }
 
     private void SwitchTab(int tab)
