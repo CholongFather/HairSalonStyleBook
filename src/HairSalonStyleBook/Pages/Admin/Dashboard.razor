@@ -321,68 +321,157 @@
         }
         else if (_shopAdminTab == 2)
         {
-            <!-- FAQ 관리 -->
-            <div class="shop-section">
-                <div class="shop-section-header">
-                    <i class="bi bi-question-circle"></i>
-                    <h3>FAQ 관리</h3>
-                    <button class="btn btn-salon btn-sm ms-auto" @onclick="ShowFaqEditor">
-                        <i class="bi bi-plus-lg"></i> 추가
-                    </button>
-                </div>
-
-                @if (_faqLoading)
-                {
-                    <div class="text-center py-3">
-                        <div class="spinner-border spinner-border-sm"></div>
+            @if (_faqEditing != null)
+            {
+                <!-- FAQ 편집 화면 -->
+                <div class="shop-section">
+                    <div class="shop-section-header">
+                        <button class="btn btn-sm btn-outline-secondary me-2" @onclick="CloseFaqEditor">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <h3>@(_faqIsNew ? "FAQ 추가" : "FAQ 수정")</h3>
                     </div>
-                }
-                else if (!_faqItems.Any())
-                {
-                    <div class="text-center text-muted py-3">
-                        <i class="bi bi-info-circle"></i> 등록된 FAQ가 없습니다
-                    </div>
-                }
-                else
-                {
-                    <div class="faq-admin-list">
-                        @foreach (var faq in _faqItems.OrderBy(f => f.Order))
-                        {
-                            <div class="faq-admin-item">
-                                <div class="faq-admin-header">
-                                    <div class="faq-admin-order">@(faq.Order + 1)</div>
-                                    <div class="faq-admin-title">
-                                        @if (!string.IsNullOrEmpty(faq.Category))
-                                        {
-                                            <span class="badge bg-info text-dark me-1" style="font-size:0.65rem">@faq.Category</span>
-                                        }
-                                        <strong>@faq.Title</strong>
-                                        @if (!faq.IsPublished)
-                                        {
-                                            <span class="badge bg-secondary ms-1">비공개</span>
-                                        }
-                                    </div>
-                                    <div class="faq-admin-actions">
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)" title="수정">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFaq(faq)" title="삭제">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+                    <div class="faq-edit-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">카테고리</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_faqEditing.Category"
+                                   list="faqCategories" placeholder="예: 네이버 플레이스, 톡톡 파트너스, 카카오 채널" />
+                            <datalist id="faqCategories">
+                                <option value="네이버 플레이스" />
+                                <option value="톡톡 파트너스" />
+                                <option value="카카오 채널" />
+                                <option value="매장 운영" />
+                            </datalist>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">제목</label>
+                            <input type="text" class="form-control" @bind="_faqEditing.Title" placeholder="예: 휴무일 설정 방법" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">상세 설명</label>
+                            <textarea class="form-control" rows="8" @bind="_faqEditing.Description"
+                                      placeholder="관리자가 참고할 상세 설명을 입력하세요"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">스크린샷 / 이미지</label>
+                            @if (!string.IsNullOrEmpty(_faqEditing.ImageUrl))
+                            {
+                                <div class="faq-edit-image-preview mb-2">
+                                    <img src="@_faqEditing.ImageUrl" alt="미리보기" />
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFaqImage">
+                                        <i class="bi bi-x-lg"></i> 제거
+                                    </button>
                                 </div>
-                                @if (!string.IsNullOrEmpty(faq.ImageUrl))
-                                {
-                                    <div class="faq-admin-image">
-                                        <img src="@faq.ImageUrl" alt="@faq.Title" />
-                                    </div>
-                                }
-                                <div class="faq-admin-desc">@faq.Description</div>
+                            }
+                            <InputFile OnChange="OnFaqImageSelected" accept="image/*" class="form-control form-control-sm" />
+                            @if (_faqUploading)
+                            {
+                                <div class="mt-1 text-muted small">
+                                    <span class="spinner-border spinner-border-sm me-1"></span> 업로드 중...
+                                </div>
+                            }
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold">순서</label>
+                                <input type="number" class="form-control form-control-sm" @bind="_faqEditing.Order" min="0" />
                             </div>
-                        }
+                            <div class="col-6 d-flex align-items-end">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" @bind="_faqEditing.IsPublished" id="faqPublished" />
+                                    <label class="form-check-label" for="faqPublished">게시</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary" @onclick="CloseFaqEditor">취소</button>
+                            <button class="btn btn-salon" @onclick="SaveFaq" disabled="@(_faqSaving || string.IsNullOrWhiteSpace(_faqEditing.Title))">
+                                @if (_faqSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-check-lg"></i> 저장
+                            </button>
+                        </div>
                     </div>
-                }
-            </div>
+                </div>
+            }
+            else
+            {
+                <!-- FAQ 목록 (아코디언) -->
+                <div class="shop-section">
+                    <div class="shop-section-header">
+                        <i class="bi bi-question-circle"></i>
+                        <h3>FAQ 관리</h3>
+                        <span class="text-muted ms-2" style="font-size:0.8rem">@(_faqItems.Count)건</span>
+                        <button class="btn btn-salon btn-sm ms-auto" @onclick="ShowFaqEditor">
+                            <i class="bi bi-plus-lg"></i> 추가
+                        </button>
+                    </div>
+
+                    @if (_faqLoading)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm"></div>
+                        </div>
+                    }
+                    else if (!_faqItems.Any())
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-info-circle"></i> 등록된 FAQ가 없습니다
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var group in _faqItems.OrderBy(f => f.Order).GroupBy(f => f.Category).OrderBy(g => g.Key))
+                        {
+                            @if (!string.IsNullOrEmpty(group.Key))
+                            {
+                                <div class="faq-acc-group-header">
+                                    <i class="bi @GetFaqCategoryIcon(group.Key)"></i>
+                                    @group.Key
+                                    <span class="faq-acc-group-count">@group.Count()</span>
+                                </div>
+                            }
+                            @foreach (var faq in group.OrderBy(f => f.Order))
+                            {
+                                <div class="faq-acc-item @(_expandedFaqId == faq.Id ? "expanded" : "")">
+                                    <div class="faq-acc-header" @onclick="() => ToggleFaqAccordion(faq.Id)">
+                                        <div class="faq-acc-title">
+                                            @faq.Title
+                                            @if (!faq.IsPublished)
+                                            {
+                                                <span class="badge bg-secondary ms-1" style="font-size:0.6rem">비공개</span>
+                                            }
+                                        </div>
+                                        <i class="bi @(_expandedFaqId == faq.Id ? "bi-chevron-up" : "bi-chevron-down") faq-acc-chevron"></i>
+                                    </div>
+                                    @if (_expandedFaqId == faq.Id)
+                                    {
+                                        <div class="faq-acc-body">
+                                            @if (!string.IsNullOrEmpty(faq.ImageUrl))
+                                            {
+                                                <div class="faq-acc-image">
+                                                    <img src="@faq.ImageUrl" alt="@faq.Title" />
+                                                </div>
+                                            }
+                                            <div class="faq-acc-desc">@faq.Description</div>
+                                            <div class="faq-acc-actions">
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)">
+                                                    <i class="bi bi-pencil"></i> 수정
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFaq(faq)">
+                                                    <i class="bi bi-trash"></i> 삭제
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            }
         }
         else if (_shopAdminTab == 3)
         {
@@ -417,88 +506,6 @@
             </div>
         }
 
-        @* FAQ 편집 모달 *@
-        @if (_faqEditing != null)
-        {
-            <div class="modal-backdrop fade show"></div>
-            <div class="modal fade show d-block" tabindex="-1" @onclick="CloseFaqEditor" @onclick:stopPropagation="false">
-                <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">@(_faqIsNew ? "FAQ 추가" : "FAQ 수정")</h5>
-                            <button type="button" class="btn-close" @onclick="CloseFaqEditor"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">카테고리</label>
-                                <input type="text" class="form-control form-control-sm" @bind="_faqEditing.Category"
-                                       list="faqCategories" placeholder="예: 네이버 플레이스, 톡톡 파트너스, 카카오 채널" />
-                                <datalist id="faqCategories">
-                                    <option value="네이버 플레이스" />
-                                    <option value="톡톡 파트너스" />
-                                    <option value="카카오 채널" />
-                                    <option value="매장 운영" />
-                                </datalist>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">제목</label>
-                                <input type="text" class="form-control" @bind="_faqEditing.Title" placeholder="예: 휴무일 설정 방법" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">상세 설명</label>
-                                <textarea class="form-control" rows="5" @bind="_faqEditing.Description"
-                                          placeholder="고객에게 보여줄 상세 설명을 입력하세요"></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">스크린샷 / 이미지</label>
-                                @if (!string.IsNullOrEmpty(_faqEditing.ImageUrl))
-                                {
-                                    <div class="faq-edit-image-preview mb-2">
-                                        <img src="@_faqEditing.ImageUrl" alt="미리보기" />
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFaqImage">
-                                            <i class="bi bi-x-lg"></i> 제거
-                                        </button>
-                                    </div>
-                                }
-                                <InputFile OnChange="OnFaqImageSelected" accept="image/*" class="form-control form-control-sm" />
-                                @if (_faqUploading)
-                                {
-                                    <div class="mt-1 text-muted small">
-                                        <span class="spinner-border spinner-border-sm me-1"></span> 업로드 중...
-                                    </div>
-                                }
-                            </div>
-
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="form-label fw-bold">순서</label>
-                                    <input type="number" class="form-control form-control-sm" @bind="_faqEditing.Order" min="0" />
-                                </div>
-                                <div class="col-6 d-flex align-items-end">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" @bind="_faqEditing.IsPublished" id="faqPublished" />
-                                        <label class="form-check-label" for="faqPublished">게시</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-secondary" @onclick="CloseFaqEditor">취소</button>
-                            <button class="btn btn-salon" @onclick="SaveFaq" disabled="@(_faqSaving || string.IsNullOrWhiteSpace(_faqEditing.Title))">
-                                @if (_faqSaving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                <i class="bi bi-check-lg"></i> 저장
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
     }
     else if (_adminTab == 2)
     {
@@ -925,6 +932,7 @@
     private bool _faqIsNew;
     private bool _faqSaving;
     private bool _faqUploading;
+    private string? _expandedFaqId;
 
     // 쓰레기 배출 스케줄
     private readonly List<TrashScheduleItem> _trashSchedule = new()
@@ -1096,6 +1104,7 @@
             Id = faq.Id,
             Title = faq.Title,
             Description = faq.Description,
+            Category = faq.Category,
             ImageUrl = faq.ImageUrl,
             Order = faq.Order,
             IsPublished = faq.IsPublished,
@@ -1105,6 +1114,18 @@
     }
 
     private void CloseFaqEditor() => _faqEditing = null;
+
+    private void ToggleFaqAccordion(string id) =>
+        _expandedFaqId = _expandedFaqId == id ? null : id;
+
+    private static string GetFaqCategoryIcon(string category) => category switch
+    {
+        "네이버 플레이스" => "bi-geo-alt-fill",
+        "톡톡 파트너스" => "bi-chat-dots-fill",
+        "카카오 채널" => "bi-chat-heart-fill",
+        "매장 운영" => "bi-shop",
+        _ => "bi-question-circle"
+    };
 
     private async Task SaveFaq()
     {
@@ -4403,5 +4424,132 @@ Save the file as: {GetSuggestedFilename()}";
         background: var(--salon-green, #7ba383);
         border-color: var(--salon-green, #7ba383);
         color: #fff;
+    }
+
+    /* -- FAQ 아코디언 -- */
+    .faq-acc-group-header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #555;
+        padding: 0.6rem 0.2rem 0.3rem;
+        border-bottom: 1px solid #eee;
+        margin-top: 0.5rem;
+    }
+
+    .faq-acc-group-header i {
+        color: var(--salon-green, #7ba383);
+    }
+
+    .faq-acc-group-count {
+        font-size: 0.7rem;
+        font-weight: 400;
+        color: #999;
+        margin-left: 0.2rem;
+    }
+
+    .faq-acc-item {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-top: 0.4rem;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+
+    .faq-acc-item.expanded {
+        border-color: var(--salon-green, #7ba383);
+        box-shadow: 0 2px 8px rgba(123, 163, 131, 0.12);
+    }
+
+    .faq-acc-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.7rem 0.8rem;
+        cursor: pointer;
+        background: #fafafa;
+        transition: background 0.15s;
+    }
+
+    .faq-acc-header:hover {
+        background: #f0f0f0;
+    }
+
+    .faq-acc-item.expanded .faq-acc-header {
+        background: rgba(123, 163, 131, 0.06);
+        border-bottom: 1px solid #eee;
+    }
+
+    .faq-acc-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #333;
+        flex: 1;
+    }
+
+    .faq-acc-chevron {
+        font-size: 0.75rem;
+        color: #aaa;
+        flex-shrink: 0;
+        transition: transform 0.2s;
+    }
+
+    .faq-acc-body {
+        padding: 0.8rem;
+        animation: faqAccFadeIn 0.2s ease;
+    }
+
+    @@keyframes faqAccFadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .faq-acc-image {
+        margin-bottom: 0.6rem;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .faq-acc-image img {
+        width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+        background: #f8f8f8;
+    }
+
+    .faq-acc-desc {
+        font-size: 0.82rem;
+        color: #555;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .faq-acc-actions {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.6rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #f0f0f0;
+    }
+
+    .faq-edit-form {
+        padding: 0.5rem 0;
+    }
+
+    .faq-edit-image-preview {
+        position: relative;
+        display: inline-block;
+    }
+
+    .faq-edit-image-preview img {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 6px;
+        border: 1px solid #eee;
     }
 </style>
