@@ -873,7 +873,9 @@
                 <button class="btn-close" @onclick="() => _adminGalleryEditItem = null"></button>
             </div>
             <div class="gallery-edit-body">
-                <GalleryDecorator Item="_adminGalleryEditItem" EditMode="true" OnSave="SaveAdminGalleryDecoration" />
+                <GalleryDecorator Item="_adminGalleryEditItem" EditMode="true"
+                                  OnSave="SaveAdminGalleryDecoration"
+                                  OnCancel="() => _adminGalleryEditItem = null" />
             </div>
         </div>
     </div>

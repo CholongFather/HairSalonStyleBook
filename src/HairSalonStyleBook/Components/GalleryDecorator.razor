@@ -13,6 +13,12 @@
                 @_editDeco.TextContent
             </div>
         }
+        @if (!string.IsNullOrEmpty(_editDeco.Sticker))
+        {
+            <div class="gd-sticker gd-sticker-@(_editDeco.StickerPosition)">
+                @_editDeco.Sticker
+            </div>
+        }
     </div>
 
     @if (EditMode)
@@ -84,6 +90,36 @@
                 </div>
             </div>
 
+            <!-- 스티커 -->
+            <div class="gd-section">
+                <label class="gd-label"><i class="bi bi-emoji-smile"></i> 스티커</label>
+                <div class="gd-sticker-grid">
+                    <button class="gd-sticker-btn @(string.IsNullOrEmpty(_editDeco.Sticker) ? "active" : "")"
+                            @onclick="() => _editDeco.Sticker = string.Empty">
+                        <i class="bi bi-x-circle" style="font-size:1rem;color:#ccc;"></i>
+                    </button>
+                    @foreach (var s in _stickers)
+                    {
+                        <button class="gd-sticker-btn @(_editDeco.Sticker == s ? "active" : "")"
+                                @onclick="() => _editDeco.Sticker = s">
+                            @s
+                        </button>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(_editDeco.Sticker))
+                {
+                    <div class="gd-sticker-pos-list">
+                        @foreach (var sp in _stickerPositions)
+                        {
+                            <button class="gd-pos-btn @(_editDeco.StickerPosition == sp.Key ? "active" : "")"
+                                    @onclick="() => _editDeco.StickerPosition = sp.Key">
+                                @sp.Name
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
             <!-- 히스토리 -->
             @if (Item.History.Any())
             {
@@ -108,7 +144,7 @@
                 </div>
             }
 
-            <!-- 저장 버튼 -->
+            <!-- 저장/취소 버튼 -->
             <div class="gd-actions">
                 <button class="btn btn-salon btn-sm" @onclick="SaveDecoration" disabled="@_saving">
                     @if (_saving)
@@ -117,7 +153,7 @@
                     }
                     <i class="bi bi-check-lg"></i> 저장
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" @onclick="ResetEdit">
+                <button class="btn btn-outline-secondary btn-sm" @onclick="CancelEdit">
                     <i class="bi bi-x-lg"></i> 취소
                 </button>
             </div>
@@ -129,11 +165,12 @@
     [Parameter] public GalleryItem Item { get; set; } = new();
     [Parameter] public bool EditMode { get; set; }
     [Parameter] public EventCallback<GalleryItem> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
 
     private GalleryDecoration _editDeco = new();
     private bool _saving;
 
-    // 액자 프리셋
+    // 액자 프리셋 (10종)
     private static readonly (string Key, string Name)[] _frames = new[]
     {
         ("none", "없음"),
@@ -142,36 +179,57 @@
         ("film", "필름"),
         ("elegant", "엘레건트"),
         ("simple", "심플"),
+        ("shadow", "그림자"),
+        ("rounded", "둥근"),
+        ("magazine", "매거진"),
+        ("neon", "네온"),
     };
 
-    // 글씨체
+    // 글씨체 (8종)
     private static readonly (string Key, string Preview)[] _fonts = new[]
     {
-        ("default", "가나다"),
-        ("handwrite", "가나다"),
-        ("cute", "가나다"),
-        ("brush", "가나다"),
-        ("elegant", "가나다"),
+        ("default", "기본"),
+        ("handwrite", "손글씨"),
+        ("cute", "귀여운"),
+        ("brush", "붓글씨"),
+        ("elegant", "명조"),
+        ("round", "둥근"),
+        ("bold", "굵은"),
+        ("title", "제목"),
     };
 
-    // 색상 팔레트
+    // 색상 팔레트 (16색)
     private static readonly string[] _colors = new[]
     {
         "#ffffff", "#000000", "#f5e6d3", "#d4a574",
         "#7ba383", "#e8847c", "#6b8eb5", "#c9b1d4",
+        "#ff6b9d", "#ffd93d", "#6bcb77", "#4d96ff",
+        "#ff8c42", "#a855f7", "#f472b6", "#94a3b8",
+    };
+
+    // 스티커 (이모지)
+    private static readonly string[] _stickers = new[]
+    {
+        "\u2764\ufe0f", "\ud83d\udc96", "\ud83d\udc95", "\u2728", "\ud83c\udf1f", "\ud83c\udf38",
+        "\ud83c\udf39", "\ud83c\udf3b", "\ud83c\udf3a", "\ud83c\udf37", "\ud83e\udd8b", "\ud83c\udf40",
+        "\ud83d\udc8e", "\ud83d\udc51", "\ud83c\udf80", "\ud83c\udf81",
+        "\ud83d\udcf7", "\ud83c\udfa8", "\ud83c\udfb5", "\u2615",
+        "\ud83c\udf08", "\ud83e\uddf8", "\ud83d\udc36", "\ud83d\udc31",
+    };
+
+    // 스티커 위치
+    private static readonly (string Key, string Name)[] _stickerPositions = new[]
+    {
+        ("top-left", "좌상"),
+        ("top-right", "우상"),
+        ("center", "중앙"),
+        ("bottom-left", "좌하"),
+        ("bottom-right", "우하"),
     };
 
     protected override void OnParametersSet()
     {
-        // 편집용 복사본 생성
-        _editDeco = new GalleryDecoration
-        {
-            FrameType = Item.Decoration.FrameType,
-            TextContent = Item.Decoration.TextContent,
-            TextFont = Item.Decoration.TextFont,
-            TextPosition = Item.Decoration.TextPosition,
-            TextColor = Item.Decoration.TextColor,
-        };
+        _editDeco = CloneDeco(Item.Decoration);
     }
 
     private async Task SaveDecoration()
@@ -179,69 +237,47 @@
         _saving = true;
         StateHasChanged();
 
-        // 현재 상태를 히스토리에 추가 (변경이 있을 때만)
         var current = Item.Decoration;
-        if (current.FrameType != _editDeco.FrameType ||
-            current.TextContent != _editDeco.TextContent ||
-            current.TextFont != _editDeco.TextFont ||
-            current.TextPosition != _editDeco.TextPosition ||
-            current.TextColor != _editDeco.TextColor)
+        if (HasDecoChanged(current, _editDeco))
         {
             Item.History.Add(new DecorationHistory
             {
-                Decoration = new GalleryDecoration
-                {
-                    FrameType = current.FrameType,
-                    TextContent = current.TextContent,
-                    TextFont = current.TextFont,
-                    TextPosition = current.TextPosition,
-                    TextColor = current.TextColor,
-                },
+                Decoration = CloneDeco(current),
                 Timestamp = DateTime.UtcNow
             });
-
-            // 히스토리 최대 20개 유지
             while (Item.History.Count > 20)
                 Item.History.RemoveAt(0);
         }
 
-        // 새 꾸미기 적용
-        Item.Decoration = new GalleryDecoration
-        {
-            FrameType = _editDeco.FrameType,
-            TextContent = _editDeco.TextContent,
-            TextFont = _editDeco.TextFont,
-            TextPosition = _editDeco.TextPosition,
-            TextColor = _editDeco.TextColor,
-        };
-
+        Item.Decoration = CloneDeco(_editDeco);
         await OnSave.InvokeAsync(Item);
         _saving = false;
     }
 
-    private void RollbackTo(GalleryDecoration deco)
+    private async Task CancelEdit()
     {
-        _editDeco = new GalleryDecoration
-        {
-            FrameType = deco.FrameType,
-            TextContent = deco.TextContent,
-            TextFont = deco.TextFont,
-            TextPosition = deco.TextPosition,
-            TextColor = deco.TextColor,
-        };
+        _editDeco = CloneDeco(Item.Decoration);
+        await OnCancel.InvokeAsync();
     }
 
-    private void ResetEdit()
+    private void RollbackTo(GalleryDecoration deco) => _editDeco = CloneDeco(deco);
+
+    private static GalleryDecoration CloneDeco(GalleryDecoration d) => new()
     {
-        _editDeco = new GalleryDecoration
-        {
-            FrameType = Item.Decoration.FrameType,
-            TextContent = Item.Decoration.TextContent,
-            TextFont = Item.Decoration.TextFont,
-            TextPosition = Item.Decoration.TextPosition,
-            TextColor = Item.Decoration.TextColor,
-        };
-    }
+        FrameType = d.FrameType,
+        TextContent = d.TextContent,
+        TextFont = d.TextFont,
+        TextPosition = d.TextPosition,
+        TextColor = d.TextColor,
+        Sticker = d.Sticker,
+        StickerPosition = d.StickerPosition,
+    };
+
+    private static bool HasDecoChanged(GalleryDecoration a, GalleryDecoration b) =>
+        a.FrameType != b.FrameType || a.TextContent != b.TextContent ||
+        a.TextFont != b.TextFont || a.TextPosition != b.TextPosition ||
+        a.TextColor != b.TextColor || a.Sticker != b.Sticker ||
+        a.StickerPosition != b.StickerPosition;
 
     private static string GetFrameName(string key) => key switch
     {
@@ -250,6 +286,10 @@
         "film" => "필름",
         "elegant" => "엘레건트",
         "simple" => "심플",
+        "shadow" => "그림자",
+        "rounded" => "둥근",
+        "magazine" => "매거진",
+        "neon" => "네온",
         _ => ""
     };
 }
@@ -262,13 +302,12 @@
         gap: 1rem;
     }
 
-    /* 미리보기 */
     .gd-preview {
         position: relative;
         width: 100%;
         max-width: 400px;
         margin: 0 auto;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .gd-image {
@@ -293,14 +332,31 @@
     .gd-text-center { top: 50%; transform: translateY(-50%); }
     .gd-text-bottom { bottom: 8px; }
 
-    /* 글씨체 */
+    /* 글씨체 (8종) */
     .gd-font-default { font-family: 'Noto Serif KR', serif; }
-    .gd-font-handwrite { font-family: 'Nanum Pen Script', cursive; font-size: 1.4rem; }
-    .gd-font-cute { font-family: 'Gamja Flower', cursive; font-size: 1.3rem; }
-    .gd-font-brush { font-family: 'Gaegu', cursive; font-size: 1.3rem; }
+    .gd-font-handwrite { font-family: 'Nanum Pen Script', cursive; font-size: 1.4em; }
+    .gd-font-cute { font-family: 'Gamja Flower', cursive; font-size: 1.3em; }
+    .gd-font-brush { font-family: 'Gaegu', cursive; font-size: 1.3em; }
     .gd-font-elegant { font-family: 'Nanum Myeongjo', serif; }
+    .gd-font-round { font-family: 'Jua', sans-serif; font-size: 1.1em; }
+    .gd-font-bold { font-family: 'Black Han Sans', sans-serif; font-size: 1.2em; }
+    .gd-font-title { font-family: 'Do Hyeon', sans-serif; font-size: 1.2em; }
 
-    /* ── 액자 스타일 ── */
+    /* 스티커 오버레이 */
+    .gd-sticker {
+        position: absolute;
+        font-size: 2.2rem;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        pointer-events: none;
+    }
+    .gd-sticker-top-left { top: 8px; left: 8px; }
+    .gd-sticker-top-right { top: 8px; right: 8px; }
+    .gd-sticker-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .gd-sticker-bottom-left { bottom: 8px; left: 8px; }
+    .gd-sticker-bottom-right { bottom: 8px; right: 8px; }
+
+    /* ── 액자 스타일 (10종) ── */
     .frame-none { }
 
     .frame-polaroid {
@@ -354,6 +410,39 @@
         border-radius: 10px;
     }
 
+    .frame-shadow {
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .frame-shadow .gd-image {
+        border-radius: 8px;
+    }
+
+    .frame-rounded {
+        border-radius: 24px;
+        border: 4px solid white;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .frame-rounded .gd-image {
+        border-radius: 20px;
+    }
+
+    .frame-magazine {
+        background: #111;
+        padding: 4px;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+    }
+    .frame-magazine .gd-image {
+        filter: contrast(1.1) saturate(1.1);
+    }
+
+    .frame-neon {
+        border: 3px solid #ff6bcb;
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(255,107,203,0.5), 0 0 20px rgba(255,107,203,0.2),
+                    inset 0 0 10px rgba(255,107,203,0.1);
+    }
+
     /* ── 편집 패널 ── */
     .gd-editor {
         display: flex;
@@ -381,6 +470,7 @@
         gap: 0.4rem;
         overflow-x: auto;
         padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
     }
 
     .gd-frame-btn {
@@ -396,6 +486,7 @@
         min-width: 52px;
         font-size: 0.6rem;
         color: #888;
+        flex-shrink: 0;
     }
     .gd-frame-btn.active {
         border-color: #7ba383;
@@ -437,6 +528,23 @@
     .frame-simple .gd-frame-inner {
         border: 1px solid #ddd;
         border-radius: 4px;
+    }
+    .frame-shadow .gd-frame-inner {
+        border-radius: 3px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    }
+    .frame-rounded .gd-frame-inner {
+        border-radius: 10px;
+        border: 2px solid white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .frame-magazine .gd-frame-inner {
+        background: #111;
+        border: 1px solid #333;
+    }
+    .frame-neon .gd-frame-inner {
+        border: 2px solid #ff6bcb;
+        box-shadow: 0 0 6px rgba(255,107,203,0.5);
     }
 
     /* 글씨체 선택 */
@@ -485,6 +593,35 @@
         padding: 0;
     }
     .gd-color-btn.active { border-color: #7ba383; box-shadow: 0 0 0 2px rgba(123,163,131,0.3); }
+
+    /* 스티커 그리드 */
+    .gd-sticker-grid {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+    }
+    .gd-sticker-btn {
+        width: 36px;
+        height: 36px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background: #f8f8f8;
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    .gd-sticker-btn.active {
+        border-color: #7ba383;
+        background: rgba(123,163,131,0.08);
+    }
+    .gd-sticker-pos-list {
+        display: flex;
+        gap: 0.3rem;
+        margin-top: 0.3rem;
+    }
 
     /* 히스토리 */
     .gd-hist-count {

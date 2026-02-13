@@ -10,12 +10,16 @@ public class GalleryItem
     public string ImageUrl { get; set; } = "";
     /// <summary>사진 설명</summary>
     public string Description { get; set; } = "";
+    /// <summary>해시태그 (검색용)</summary>
+    public List<string> Hashtags { get; set; } = new();
     /// <summary>현재 꾸미기 설정</summary>
     public GalleryDecoration Decoration { get; set; } = new();
     /// <summary>꾸미기 변경 히스토리 (최대 20개)</summary>
     public List<DecorationHistory> History { get; set; } = new();
-    /// <summary>노출 여부</summary>
-    public bool IsPublished { get; set; } = true;
+    /// <summary>방문일 (유저가 설정)</summary>
+    public DateTime? VisitDate { get; set; }
+    /// <summary>노출 여부 (기본 비노출)</summary>
+    public bool IsPublished { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -35,6 +39,10 @@ public class GalleryDecoration
     public string TextPosition { get; set; } = "bottom";
     /// <summary>텍스트 색상 (hex)</summary>
     public string TextColor { get; set; } = "#ffffff";
+    /// <summary>스티커 (이모지 or 키)</summary>
+    public string Sticker { get; set; } = "";
+    /// <summary>스티커 위치: top-left, top-right, center, bottom-left, bottom-right</summary>
+    public string StickerPosition { get; set; } = "bottom-right";
 }
 
 /// <summary>

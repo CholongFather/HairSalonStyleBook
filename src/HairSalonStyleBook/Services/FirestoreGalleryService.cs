@@ -113,8 +113,10 @@ public class FirestoreGalleryService : IGalleryService
                 Id = id,
                 ImageUrl = GetStr(fields, "imageUrl"),
                 Description = GetStr(fields, "description"),
+                Hashtags = GetStringArray(fields, "hashtags"),
                 Decoration = MapDecorationFrom(fields),
                 History = MapHistoryFrom(fields),
+                VisitDate = GetNullableTimestamp(fields, "visitDate"),
                 IsPublished = GetBool(fields, "isPublished", true),
                 CreatedAt = GetTimestamp(fields, "createdAt"),
                 UpdatedAt = GetTimestamp(fields, "updatedAt"),
@@ -134,6 +136,13 @@ public class FirestoreGalleryService : IGalleryService
             {
                 ["imageUrl"] = new() { StringValue = item.ImageUrl },
                 ["description"] = new() { StringValue = item.Description },
+                ["hashtags"] = new()
+                {
+                    ArrayValue = new FirestoreArrayValue
+                    {
+                        Values = item.Hashtags.Select(h => new FirestoreValue { StringValue = h }).ToList()
+                    }
+                },
                 ["decoration"] = new()
                 {
                     MapValue = new FirestoreMapValue
@@ -145,6 +154,8 @@ public class FirestoreGalleryService : IGalleryService
                             ["textFont"] = new() { StringValue = item.Decoration.TextFont },
                             ["textPosition"] = new() { StringValue = item.Decoration.TextPosition },
                             ["textColor"] = new() { StringValue = item.Decoration.TextColor },
+                            ["sticker"] = new() { StringValue = item.Decoration.Sticker },
+                            ["stickerPosition"] = new() { StringValue = item.Decoration.StickerPosition },
                         }
                     }
                 },
@@ -164,11 +175,16 @@ public class FirestoreGalleryService : IGalleryService
                                     ["textFont"] = new() { StringValue = h.Decoration.TextFont },
                                     ["textPosition"] = new() { StringValue = h.Decoration.TextPosition },
                                     ["textColor"] = new() { StringValue = h.Decoration.TextColor },
+                                    ["sticker"] = new() { StringValue = h.Decoration.Sticker },
+                                    ["stickerPosition"] = new() { StringValue = h.Decoration.StickerPosition },
                                 }
                             }
                         }).ToList()
                     }
                 },
+                ["visitDate"] = item.VisitDate.HasValue
+                    ? new() { TimestampValue = item.VisitDate.Value.ToString("o") }
+                    : new() { NullValue = "NULL_VALUE" },
                 ["isPublished"] = new() { BooleanValue = item.IsPublished },
                 ["createdAt"] = new() { TimestampValue = item.CreatedAt.ToString("o") },
                 ["updatedAt"] = new() { TimestampValue = item.UpdatedAt.ToString("o") },
@@ -189,6 +205,8 @@ public class FirestoreGalleryService : IGalleryService
             TextFont = GetStr(f, "textFont"),
             TextPosition = GetStr(f, "textPosition"),
             TextColor = GetStr(f, "textColor"),
+            Sticker = GetStr(f, "sticker"),
+            StickerPosition = GetStr(f, "stickerPosition") is { Length: > 0 } sp ? sp : "bottom-right",
         };
     }
 
@@ -212,6 +230,8 @@ public class FirestoreGalleryService : IGalleryService
                         TextFont = GetStr(f, "textFont"),
                         TextPosition = GetStr(f, "textPosition"),
                         TextColor = GetStr(f, "textColor"),
+                        Sticker = GetStr(f, "sticker"),
+                        StickerPosition = GetStr(f, "stickerPosition") is { Length: > 0 } sp2 ? sp2 : "bottom-right",
                     }
                 };
             })
@@ -226,6 +246,16 @@ public class FirestoreGalleryService : IGalleryService
 
     private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
+
+    private static DateTime? GetNullableTimestamp(Dictionary<string, FirestoreValue> fields, string key)
+        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : null;
+
+    private static List<string> GetStringArray(Dictionary<string, FirestoreValue> fields, string key)
+    {
+        if (!fields.TryGetValue(key, out var v) || v.ArrayValue?.Values == null)
+            return new List<string>();
+        return v.ArrayValue.Values.Where(x => x.StringValue != null).Select(x => x.StringValue!).ToList();
+    }
 
     #endregion
 }
