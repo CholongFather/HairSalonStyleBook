@@ -1,0 +1,422 @@
+{
+  "documents": [
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/9e04a399a46c",
+      "fields": {
+        "success": {
+          "booleanValue": true
+        },
+        "deviceFingerprint": {
+          "stringValue": "fab351da"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T15:40:45.585Z"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        }
+      },
+      "createTime": "2026-02-13T15:40:45.612528Z",
+      "updateTime": "2026-02-13T15:40:45.612528Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/745a732104b9",
+      "fields": {
+        "success": {
+          "booleanValue": true
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T15:31:22.396Z"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        }
+      },
+      "createTime": "2026-02-13T15:31:22.427852Z",
+      "updateTime": "2026-02-13T15:31:22.427852Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/105bb87349ef",
+      "fields": {
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T11:43:19.398Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        }
+      },
+      "createTime": "2026-02-13T11:43:19.420968Z",
+      "updateTime": "2026-02-13T11:43:19.420968Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/6d572f53efea",
+      "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-13T09:30:46.962Z"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "success": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2026-02-13T09:30:47.045201Z",
+      "updateTime": "2026-02-13T09:30:47.045201Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/a6f48a72b171",
+      "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-13T09:03:17.768Z"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        }
+      },
+      "createTime": "2026-02-13T09:03:17.850724Z",
+      "updateTime": "2026-02-13T09:03:17.850724Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/9ca54b3d172e",
+      "fields": {
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T08:55:27.550Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        }
+      },
+      "createTime": "2026-02-13T08:55:27.720266Z",
+      "updateTime": "2026-02-13T08:55:27.720266Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/8dd3cfbe95e6",
+      "fields": {
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T08:50:22.342Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        }
+      },
+      "createTime": "2026-02-13T08:50:22.418979Z",
+      "updateTime": "2026-02-13T08:50:22.418979Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/6a3487d4d9e2",
+      "fields": {
+        "success": {
+          "booleanValue": true
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T08:15:39.325Z"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        }
+      },
+      "createTime": "2026-02-13T08:15:39.464128Z",
+      "updateTime": "2026-02-13T08:15:39.464128Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/d30a3519bd25",
+      "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:12:42.953Z"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "success": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2026-02-13T07:12:43.126677Z",
+      "updateTime": "2026-02-13T07:12:43.126677Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/40ead17a6687",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T06:43:04.420Z"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        }
+      },
+      "createTime": "2026-02-13T06:43:04.496759Z",
+      "updateTime": "2026-02-13T06:43:04.496759Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/37729da7fa75",
+      "fields": {
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T04:11:02.960Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        }
+      },
+      "createTime": "2026-02-13T04:11:03.020023Z",
+      "updateTime": "2026-02-13T04:11:03.020023Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/3ec5a6a07250",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T02:31:25.120Z"
+        }
+      },
+      "createTime": "2026-02-13T02:31:25.212765Z",
+      "updateTime": "2026-02-13T02:31:25.212765Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/3234efbb843b",
+      "fields": {
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T23:28:05.784Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        }
+      },
+      "createTime": "2026-02-12T23:28:05.842700Z",
+      "updateTime": "2026-02-12T23:28:05.842700Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/f71463da3ed8",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Windows"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T23:28:02.716Z"
+        },
+        "screenSize": {
+          "stringValue": "1920x1080"
+        },
+        "deviceFingerprint": {
+          "stringValue": "ebbe7f3f"
+        }
+      },
+      "createTime": "2026-02-12T23:28:02.788750Z",
+      "updateTime": "2026-02-12T23:28:02.788750Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/ddf1f5e008bb",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T21:18:34.893Z"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "success": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2026-02-12T21:18:35.077319Z",
+      "updateTime": "2026-02-12T21:18:35.077319Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/3aaeff20cccf",
+      "fields": {
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:09.971Z"
+        },
+        "success": {
+          "booleanValue": true
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        }
+      },
+      "createTime": "2026-02-12T12:30:10.110179Z",
+      "updateTime": "2026-02-12T12:30:10.110179Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/73a1d041b670",
+      "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:07.091Z"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        }
+      },
+      "createTime": "2026-02-12T12:30:07.194983Z",
+      "updateTime": "2026-02-12T12:30:07.194983Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/71cedb14adb0",
+      "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:05.611Z"
+        },
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        }
+      },
+      "createTime": "2026-02-12T12:30:05.723454Z",
+      "updateTime": "2026-02-12T12:30:05.723454Z"
+    },
+    {
+      "name": "projects/always-hair-salon/databases/(default)/documents/loginAttempts/013d00fda839",
+      "fields": {
+        "deviceInfo": {
+          "stringValue": "Android"
+        },
+        "success": {
+          "booleanValue": false
+        },
+        "deviceFingerprint": {
+          "stringValue": "1aaaa8db"
+        },
+        "screenSize": {
+          "stringValue": "412x1006"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:30:02.081Z"
+        }
+      },
+      "createTime": "2026-02-12T12:30:02.215214Z",
+      "updateTime": "2026-02-12T12:30:02.215214Z"
+    }
+  ]
+}
