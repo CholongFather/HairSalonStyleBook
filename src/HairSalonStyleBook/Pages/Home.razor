@@ -327,8 +327,11 @@
             <div class="tab-panel tab-fade-in">
                 @if (_galleryLoading)
                 {
-                    <div class="text-center py-5">
-                        <div class="spinner-border spinner-border-sm"></div>
+                    <div class="gallery-grid">
+                        @for (var i = 0; i < 6; i++)
+                        {
+                            <div class="skeleton skeleton-card"></div>
+                        }
                     </div>
                 }
                 else if (!_galleryItems.Any())
@@ -487,6 +490,18 @@
                             </button>
                         </div>
                     }
+                    @if (_galleryHasMore)
+                    {
+                        <div class="text-center mt-3 mb-2">
+                            <button class="btn btn-salon-outline btn-sm gallery-load-more" @onclick="LoadMoreGallery" disabled="@_galleryLoadingMore">
+                                @if (_galleryLoadingMore)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-arrow-down-circle"></i> 더보기
+                            </button>
+                        </div>
+                    }
                 }
             </div>
         }
@@ -572,6 +587,8 @@
     // 갤러리
     private List<GalleryItem> _galleryItems = new();
     private bool _galleryLoading;
+    private bool _galleryLoadingMore;
+    private bool _galleryHasMore;
     private GalleryItem? _galleryEditItem;
     private string _gallerySearch = "";
     private bool _calendarOpen;
@@ -580,6 +597,7 @@
 
     private int _galleryPage = 1;
     private const int GalleryPageSize = 12;
+    private const int GalleryFetchSize = 24;
 
     private IEnumerable<GalleryItem> FilteredGalleryItems
     {
@@ -668,9 +686,31 @@
     private async Task LoadGallery()
     {
         _galleryLoading = true;
-        try { _galleryItems = (await GalleryService.GetAllAsync()).Where(g => g.IsPublished).OrderByDescending(g => g.CreatedAt).ToList(); }
-        catch { _galleryItems = new(); }
+        try
+        {
+            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize);
+            _galleryItems = items.Where(g => g.IsPublished).ToList();
+            _galleryHasMore = hasMore;
+        }
+        catch { _galleryItems = new(); _galleryHasMore = false; }
         _galleryLoading = false;
+    }
+
+    private async Task LoadMoreGallery()
+    {
+        if (_galleryLoadingMore || !_galleryHasMore) return;
+        _galleryLoadingMore = true;
+        StateHasChanged();
+        try
+        {
+            var lastDate = _galleryItems.LastOrDefault()?.CreatedAt;
+            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, lastDate);
+            _galleryItems.AddRange(items.Where(g => g.IsPublished));
+            _galleryHasMore = hasMore;
+        }
+        catch { _galleryHasMore = false; }
+        _galleryLoadingMore = false;
+        StateHasChanged();
     }
 
     private void OpenGalleryEdit(GalleryItem item)
@@ -687,7 +727,6 @@
     {
         await GalleryService.UpdateAsync(item);
         _galleryEditItem = null;
-        _galleryItems = (await GalleryService.GetAllAsync()).Where(g => g.IsPublished).OrderByDescending(g => g.CreatedAt).ToList();
     }
 
     private void SwitchTab(int tab)
@@ -1982,6 +2021,16 @@
         color: #888;
         min-width: 50px;
         text-align: center;
+    }
+
+    .gallery-load-more {
+        font-family: var(--font-serif);
+        font-size: 0.78rem;
+        padding: 0.4rem 1.5rem;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
     }
 
     /* 갤러리 편집 오버레이 */

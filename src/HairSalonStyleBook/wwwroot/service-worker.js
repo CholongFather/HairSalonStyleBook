@@ -1,5 +1,7 @@
-// 늘~오던 헤어살롱 - 이미지 캐싱 Service Worker
+// 늘~오던 헤어살롱 - 이미지 캐싱 + 오프라인 폴백 Service Worker
 const CACHE_NAME = 'salon-image-cache-v1';
+const OFFLINE_CACHE = 'salon-offline-v1';
+const OFFLINE_URL = 'offline.html';
 
 // 캐싱할 이미지 패턴
 const IMAGE_ORIGINS = [
@@ -27,27 +29,40 @@ function isImageRequest(url) {
     return false;
 }
 
-// 설치
+// 설치 - 오프라인 페이지 프리캐시
 self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(OFFLINE_CACHE).then(cache => cache.add(OFFLINE_URL))
+    );
     self.skipWaiting();
 });
 
-// 활성화 - 오래된 캐시 정리
+// 활성화 - 오래된 캐시 정리 (오프라인 캐시는 유지)
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(names =>
             Promise.all(
                 names
-                    .filter(name => name !== CACHE_NAME)
+                    .filter(name => name !== CACHE_NAME && name !== OFFLINE_CACHE)
                     .map(name => caches.delete(name))
             )
         ).then(() => self.clients.claim())
     );
 });
 
-// 네트워크 요청 가로채기 - 이미지만 캐싱
+// 네트워크 요청 가로채기 - 이미지 캐싱 + 오프라인 폴백
 self.addEventListener('fetch', event => {
     const url = event.request.url;
+
+    // 페이지 내비게이션 요청 - 오프라인 시 폴백 페이지 반환
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() =>
+                caches.open(OFFLINE_CACHE).then(cache => cache.match(OFFLINE_URL))
+            )
+        );
+        return;
+    }
 
     // 이미지가 아니면 기본 동작
     if (!isImageRequest(url)) {

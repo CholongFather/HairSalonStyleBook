@@ -5,6 +5,7 @@
 @inject IAuditService AuditService
 @inject IImageService ImageService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@(_isEdit ? "스타일 수정" : "새 스타일") - 관리자</PageTitle>
 
@@ -361,15 +362,15 @@
                 await stream.CopyToAsync(ms);
                 var data = ms.ToArray();
 
+                // 이미지 리사이징 (최대 1200px, WebP 변환)
+                var base64 = Convert.ToBase64String(data);
+                var resized = await JS.InvokeAsync<string>("resizeImage", base64, 1200, 1600, 0.82);
+                var resizedData = Convert.FromBase64String(resized);
+
                 // 앵글 선택 시 파일명에 태그 추가
-                var uploadName = file.Name;
-                if (!string.IsNullOrEmpty(_selectedAngle))
-                {
-                    var ext = Path.GetExtension(file.Name);
-                    var nameOnly = Path.GetFileNameWithoutExtension(file.Name);
-                    uploadName = $"{nameOnly}_{_selectedAngle}{ext}";
-                }
-                var url = await ImageService.UploadAsync(uploadName, data, file.ContentType);
+                var nameOnly = Path.GetFileNameWithoutExtension(file.Name);
+                var uploadName = string.IsNullOrEmpty(_selectedAngle) ? $"{nameOnly}.webp" : $"{nameOnly}_{_selectedAngle}.webp";
+                var url = await ImageService.UploadAsync(uploadName, resizedData, "image/webp");
                 _style.ImageUrls.Add(url);
                 _uploadedCount++;
                 StateHasChanged();

@@ -1,6 +1,7 @@
 @inject NavigationManager Nav
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 <header class="salon-header">
     <div class="container header-container">
@@ -11,6 +12,9 @@
             <span class="logo-deco">&#10047;</span>
         </a>
         <div class="header-actions">
+            <button class="header-link theme-toggle" @onclick="ToggleTheme" title="@(_isDark ? "라이트 모드" : "다크 모드")">
+                <i class="bi @(_isDark ? "bi-sun-fill" : "bi-moon-fill")"></i>
+            </button>
             <AuthorizeView>
                 <Authorized Context="authContext">
                     <AuthorizeView Roles="Admin">
@@ -31,6 +35,24 @@
 </header>
 
 @code {
+    private bool _isDark;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JS.InvokeAsync<string>("salonTheme.get");
+            _isDark = theme == "dark";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        _isDark = !_isDark;
+        await JS.InvokeVoidAsync("salonTheme.set", _isDark ? "dark" : "light");
+    }
+
     private async Task HandleLogout()
     {
         await AuthService.LogoutAsync();
@@ -118,6 +140,14 @@
 
     .header-admin {
         color: var(--salon-green);
+    }
+
+    .theme-toggle i {
+        transition: transform 0.3s ease;
+    }
+
+    .theme-toggle:hover i {
+        transform: rotate(20deg);
     }
 
     @@media (max-width: 576px) {

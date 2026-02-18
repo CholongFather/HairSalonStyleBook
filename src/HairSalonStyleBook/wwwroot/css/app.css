@@ -22,6 +22,41 @@
     --shadow-glow: 0 0 20px rgba(123, 163, 131, 0.15);
 }
 
+/* 다크 모드 */
+[data-theme="dark"] {
+    --salon-black: #e8e3dc;
+    --salon-dark: #d4cfc8;
+    --salon-gray: #a09a94;
+    --salon-light-gray: #3d3a36;
+    --salon-bg: #1e1c1a;
+    --salon-white: #2a2826;
+    --salon-accent: #d4b87a;
+    --salon-green: #8bb893;
+    --salon-green-light: #6a9b72;
+    --salon-rose: #d4a0a0;
+    --salon-rose-light: #4a3535;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(139, 184, 147, 0.15);
+}
+
+[data-theme="dark"] .table { --bs-table-bg: var(--salon-white); --bs-table-color: var(--salon-black); }
+[data-theme="dark"] .form-control, [data-theme="dark"] .form-select {
+    background-color: #353230;
+    border-color: #4a4743;
+    color: var(--salon-black);
+}
+[data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
+    background-color: #3a3836;
+    border-color: var(--salon-green);
+    color: var(--salon-black);
+}
+[data-theme="dark"] .form-check-input { background-color: #353230; border-color: #5a5753; }
+[data-theme="dark"] .form-check-input:checked { background-color: var(--salon-green); border-color: var(--salon-green); }
+[data-theme="dark"] .modal-content { background-color: var(--salon-white); color: var(--salon-black); }
+[data-theme="dark"] .btn-close { filter: invert(1); }
+
 /* 기본 레이아웃 */
 html, body {
     font-family: var(--font-serif);

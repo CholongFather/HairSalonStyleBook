@@ -66,6 +66,71 @@ public class FirestoreGalleryService : IGalleryService
         }
     }
 
+    public async Task<(List<GalleryItem> Items, bool HasMore)> GetPageAsync(int limit, DateTime? beforeDate = null)
+    {
+        try
+        {
+            // Firestore REST API: structuredQuery (runQuery 엔드포인트)
+            var queryUrl = $"{_baseUrl}:runQuery?key={_apiKey}";
+
+            var orderBy = new List<object>
+            {
+                new { field = new { fieldPath = "createdAt" }, direction = "DESCENDING" }
+            };
+
+            var where = beforeDate.HasValue
+                ? new
+                {
+                    fieldFilter = new
+                    {
+                        field = new { fieldPath = "createdAt" },
+                        op = "LESS_THAN",
+                        value = new { timestampValue = beforeDate.Value.ToString("o") }
+                    }
+                }
+                : (object?)null;
+
+            var query = new Dictionary<string, object>
+            {
+                ["structuredQuery"] = new Dictionary<string, object>
+                {
+                    ["from"] = new[] { new { collectionId = "gallery" } },
+                    ["orderBy"] = orderBy,
+                    ["limit"] = limit + 1 // 1개 더 요청해서 hasMore 판별
+                }
+            };
+
+            if (where != null)
+                ((Dictionary<string, object>)query["structuredQuery"])["where"] = where;
+
+            var content = new StringContent(JsonSerializer.Serialize(query, JsonOptions), Encoding.UTF8, "application/json");
+            var response = await _http.PostAsync(queryUrl, content);
+            if (!response.IsSuccessStatusCode)
+                return (new List<GalleryItem>(), false);
+
+            var results = await response.Content.ReadFromJsonAsync<List<FirestoreQueryResult>>(JsonOptions);
+            if (results == null)
+                return (new List<GalleryItem>(), false);
+
+            var items = results
+                .Where(r => r.Document != null)
+                .Select(r => MapFromFirestore(r.Document!))
+                .Where(g => g != null)
+                .Select(g => g!)
+                .ToList();
+
+            var hasMore = items.Count > limit;
+            if (hasMore)
+                items = items.Take(limit).ToList();
+
+            return (items, hasMore);
+        }
+        catch
+        {
+            return (new List<GalleryItem>(), false);
+        }
+    }
+
     public async Task<GalleryItem> CreateAsync(GalleryItem item)
     {
         item.Id = Guid.NewGuid().ToString("N")[..12];

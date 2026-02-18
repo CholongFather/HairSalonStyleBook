@@ -289,4 +289,12 @@ public class FirestoreArrayValue
     public List<FirestoreValue>? Values { get; set; }
 }
 
+/// <summary>
+/// Firestore runQuery 응답 항목
+/// </summary>
+public class FirestoreQueryResult
+{
+    public FirestoreDocument? Document { get; set; }
+}
+
 #endregion

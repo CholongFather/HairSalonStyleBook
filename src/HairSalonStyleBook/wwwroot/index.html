@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
-
+<script>
+    // FOUC 방지: localStorage에서 즉시 테마 적용
+    (function() {
+        var t = localStorage.getItem('salon-theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    })();
+</script>
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -59,6 +65,32 @@
         window.gdGetRect = function(el) {
             var r = el.getBoundingClientRect();
             return { left: r.left, top: r.top, width: r.width, height: r.height };
+        };
+        // 이미지 리사이징 (canvas)
+        window.resizeImage = function(base64, maxW, maxH, quality) {
+            return new Promise(function(resolve) {
+                var img = new Image();
+                img.onload = function() {
+                    var w = img.width, h = img.height;
+                    var scale = Math.min(maxW / w, maxH / h, 1);
+                    var nw = Math.round(w * scale), nh = Math.round(h * scale);
+                    var c = document.createElement('canvas');
+                    c.width = nw; c.height = nh;
+                    c.getContext('2d').drawImage(img, 0, 0, nw, nh);
+                    var dataUrl = c.toDataURL('image/webp', quality || 0.75);
+                    resolve(dataUrl.split(',')[1]); // base64 부분만 반환
+                };
+                img.src = 'data:image/png;base64,' + base64;
+            });
+        };
+        // 다크 모드
+        window.salonTheme = {
+            get: function() { return localStorage.getItem('salon-theme') || 'light'; },
+            set: function(theme) {
+                localStorage.setItem('salon-theme', theme);
+                if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+                else document.documentElement.removeAttribute('data-theme');
+            }
         };
     </script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>

@@ -86,10 +86,29 @@
         }
         else
         {
+            @if (_selectedIds.Any())
+            {
+                <div class="bulk-toolbar">
+                    <span class="bulk-count"><i class="bi bi-check2-square"></i> @(_selectedIds.Count)건 선택</span>
+                    <button class="btn btn-sm bulk-btn bulk-publish" @onclick="() => BulkPublish(true)" disabled="@_bulkProcessing">
+                        <i class="bi bi-check-circle"></i> 일괄 게시
+                    </button>
+                    <button class="btn btn-sm bulk-btn bulk-unpublish" @onclick="() => BulkPublish(false)" disabled="@_bulkProcessing">
+                        <i class="bi bi-dash-circle"></i> 일괄 비게시
+                    </button>
+                    <button class="btn btn-sm bulk-btn bulk-delete" @onclick="BulkDelete" disabled="@_bulkProcessing">
+                        <i class="bi bi-trash"></i> 일괄 삭제
+                    </button>
+                    <button class="btn btn-sm bulk-btn bulk-cancel" @onclick="() => _selectedIds.Clear()">
+                        <i class="bi bi-x-lg"></i> 취소
+                    </button>
+                </div>
+            }
             <div class="table-responsive">
                 <table class="table admin-table">
                     <thead>
                         <tr>
+                            <th style="width:36px"><input type="checkbox" checked="@IsAllSelected" @onchange="() => ToggleSelectAll()" class="form-check-input" /></th>
                             <th class="sortable-th" @onclick='() => ToggleSort("title")'>제목 @SortIcon("title")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("images")'>사진 @SortIcon("images")</th>
                             <th class="sortable-th" @onclick='() => ToggleSort("category")'>카테고리 @SortIcon("category")</th>
@@ -103,14 +122,15 @@
                         @if (!FilteredStyles.Any())
                         {
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     @(string.IsNullOrEmpty(_searchText) ? "등록된 스타일이 없습니다." : "검색 결과가 없습니다.")
                                 </td>
                             </tr>
                         }
                         @foreach (var style in FilteredStyles)
                         {
-                            <tr>
+                            <tr class="@(_selectedIds.Contains(style.Id) ? "row-selected" : "")">
+                                <td><input type="checkbox" checked="@_selectedIds.Contains(style.Id)" @onchange="() => ToggleSelect(style.Id)" class="form-check-input" /></td>
                                 <td>@style.Title</td>
                                 <td class="text-center">
                                     @if (style.ImageUrls.Count > 0)
@@ -1061,6 +1081,9 @@
     private List<StylePost> _styles = new();
     private bool _loading = true;
     private bool _seeding;
+    // 일괄 선택
+    private HashSet<string> _selectedIds = new();
+    private bool _bulkProcessing;
     private int _seedProgress;
     private int _seedTotal;
     private int _adminTab;
@@ -1526,7 +1549,12 @@
                 var buffer = new byte[file.Size];
                 await using var stream = file.OpenReadStream(5 * 1024 * 1024);
                 await stream.ReadExactlyAsync(buffer);
-                var url = await ImageService.UploadAsync(file.Name, buffer, file.ContentType, "gallery");
+                // 이미지 리사이징 (최대 1200px, WebP 변환)
+                var base64 = Convert.ToBase64String(buffer);
+                var resized = await JS.InvokeAsync<string>("resizeImage", base64, 1200, 1600, 0.82);
+                var resizedData = Convert.FromBase64String(resized);
+                var webpName = Path.GetFileNameWithoutExtension(file.Name) + ".webp";
+                var url = await ImageService.UploadAsync(webpName, resizedData, "image/webp", "gallery");
 
                 var item = new GalleryItem
                 {
@@ -1929,6 +1957,64 @@ Save the file as: {GetSuggestedFilename()}";
         _styles.Remove(style);
     }
 
+
+    // 일괄 선택
+    private bool IsAllSelected => FilteredStyles.Any() && FilteredStyles.All(s => _selectedIds.Contains(s.Id));
+
+    private void ToggleSelectAll()
+    {
+        if (IsAllSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var s in FilteredStyles) _selectedIds.Add(s.Id);
+    }
+
+    private void ToggleSelect(string id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+    }
+
+    private async Task BulkPublish(bool publish)
+    {
+        if (_bulkProcessing || !_selectedIds.Any()) return;
+        _bulkProcessing = true;
+        StateHasChanged();
+        try
+        {
+            var targets = _styles.Where(s => _selectedIds.Contains(s.Id) && s.IsPublished != publish).ToList();
+            foreach (var style in targets)
+            {
+                style.IsPublished = publish;
+                await StyleService.UpdateAsync(style);
+            }
+            if (targets.Any())
+                await AuditService.LogAsync("BulkPublish", "", "", $"{targets.Count}건 일괄 {(publish ? "게시" : "비게시")}");
+            ShowToast($"{targets.Count}건 {(publish ? "게시" : "비게시")} 완료");
+            _selectedIds.Clear();
+        }
+        finally { _bulkProcessing = false; }
+    }
+
+    private async Task BulkDelete()
+    {
+        if (_bulkProcessing || !_selectedIds.Any()) return;
+        _bulkProcessing = true;
+        StateHasChanged();
+        try
+        {
+            var targets = _styles.Where(s => _selectedIds.Contains(s.Id)).ToList();
+            foreach (var style in targets)
+            {
+                await StyleService.DeleteAsync(style.Id);
+                _styles.Remove(style);
+            }
+            if (targets.Any())
+                await AuditService.LogAsync("BulkDelete", "", "", $"{targets.Count}건 일괄 삭제: {string.Join(", ", targets.Select(t => t.Title))}");
+            ShowToast($"{targets.Count}건 삭제 완료");
+            _selectedIds.Clear();
+        }
+        finally { _bulkProcessing = false; }
+    }
 
     private async Task SeedInitialData()
     {
@@ -4075,6 +4161,47 @@ Save the file as: {GetSuggestedFilename()}";
         color: var(--salon-gray);
         white-space: nowrap;
     }
+
+    /* 일괄 작업 툴바 */
+    .bulk-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.75rem;
+        background: rgba(123, 163, 131, 0.08);
+        border: 1px solid rgba(123, 163, 131, 0.25);
+        border-radius: 10px;
+        flex-wrap: wrap;
+    }
+
+    .bulk-count {
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--salon-green);
+        margin-right: 0.5rem;
+    }
+
+    .bulk-btn {
+        font-family: var(--font-serif);
+        font-size: 0.7rem;
+        padding: 4px 12px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .bulk-publish { background: var(--salon-green); color: #fff; border: none; }
+    .bulk-publish:hover { background: #5a8c63; color: #fff; }
+    .bulk-unpublish { background: var(--salon-gray); color: #fff; border: none; }
+    .bulk-unpublish:hover { background: #5a5550; color: #fff; }
+    .bulk-delete { background: #dc3545; color: #fff; border: none; }
+    .bulk-delete:hover { background: #bb2d3b; color: #fff; }
+    .bulk-cancel { background: transparent; color: var(--salon-gray); border: 1px solid var(--salon-light-gray); }
+
+    .row-selected { background: rgba(123, 163, 131, 0.06); }
 
     .admin-table {
         font-family: var(--font-serif);
