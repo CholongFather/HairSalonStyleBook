@@ -91,6 +91,12 @@
                     <span>업로드 중... (@_uploadedCount/@_totalUploadCount)</span>
                 </div>
             }
+            @if (_skippedCount > 0 && !_uploading)
+            {
+                <div class="alert alert-warning py-1 px-2 mt-1" style="font-size:0.75rem;">
+                    <i class="bi bi-exclamation-triangle"></i> @(_skippedCount)개 파일이 5MB 초과로 건너뛰었습니다.
+                </div>
+            }
 
             @if (_imageSaved)
             {
@@ -332,12 +338,15 @@
         }
     }
 
+    private int _skippedCount;
+
     private async Task OnFilesSelected(InputFileChangeEventArgs e)
     {
         var maxSize = 5 * 1024 * 1024; // 5MB
         var files = e.GetMultipleFiles(10);
         _uploading = true;
         _uploadedCount = 0;
+        _skippedCount = 0;
         _totalUploadCount = files.Count;
         StateHasChanged();
 
@@ -345,7 +354,7 @@
         {
             try
             {
-                if (file.Size > maxSize) continue;
+                if (file.Size > maxSize) { _skippedCount++; continue; }
 
                 using var stream = file.OpenReadStream(maxSize);
                 using var ms = new MemoryStream();

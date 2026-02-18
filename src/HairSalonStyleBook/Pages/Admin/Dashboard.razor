@@ -771,6 +771,12 @@
                 <span style="font-size:0.8rem;">업로드 중... @_galleryUploadedCount/@_galleryTotalUploadCount</span>
             </div>
         }
+        @if (_gallerySkippedCount > 0 && !_galleryUploading)
+        {
+            <div class="alert alert-warning py-1 px-2 mt-1" style="font-size:0.75rem;">
+                <i class="bi bi-exclamation-triangle"></i> @(_gallerySkippedCount)개 파일이 5MB 초과로 건너뛰었습니다.
+            </div>
+        }
 
         <!-- 설명 입력 (업로드 시) -->
         <div class="mb-2">
@@ -1026,7 +1032,32 @@
     </div>
 }
 
+<!-- Toast 알림 -->
+@if (!string.IsNullOrEmpty(_toastMessage))
+{
+    <div class="admin-toast @(_toastVisible ? "show" : "")">
+        <i class="bi bi-check-circle-fill"></i> @_toastMessage
+    </div>
+}
+
 @code {
+    // Toast
+    private string _toastMessage = "";
+    private bool _toastVisible;
+
+    private async void ShowToast(string message)
+    {
+        _toastMessage = message;
+        _toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _toastVisible = false;
+        StateHasChanged();
+        await Task.Delay(300);
+        _toastMessage = "";
+        StateHasChanged();
+    }
+
     private List<StylePost> _styles = new();
     private bool _loading = true;
     private bool _seeding;
@@ -1474,6 +1505,8 @@
         StateHasChanged();
     }
 
+    private int _gallerySkippedCount;
+
     private async Task OnGalleryFilesSelected(InputFileChangeEventArgs e)
     {
         var files = e.GetMultipleFiles(20);
@@ -1481,12 +1514,13 @@
 
         _galleryUploading = true;
         _galleryUploadedCount = 0;
+        _gallerySkippedCount = 0;
         _galleryTotalUploadCount = files.Count;
         StateHasChanged();
 
         foreach (var file in files)
         {
-            if (file.Size > 5 * 1024 * 1024) { _galleryUploadedCount++; continue; }
+            if (file.Size > 5 * 1024 * 1024) { _gallerySkippedCount++; _galleryUploadedCount++; continue; }
             try
             {
                 var buffer = new byte[file.Size];
@@ -1847,25 +1881,45 @@ Save the file as: {GetSuggestedFilename()}";
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetSuggestedFilename());
     }
 
+    private HashSet<string> _togglingIds = new();
+
     private async Task TogglePublish(StylePost style)
     {
-        style.IsPublished = !style.IsPublished;
-        await StyleService.UpdateAsync(style);
-        await AuditService.LogAsync("Publish", style.Id, style.Title, $"게시 상태 → {(style.IsPublished ? "게시" : "비게시")}");
+        if (!_togglingIds.Add(style.Id)) return; // 연타 방지
+        try
+        {
+            style.IsPublished = !style.IsPublished;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Publish", style.Id, style.Title, $"게시 상태 → {(style.IsPublished ? "게시" : "비게시")}");
+            ShowToast(style.IsPublished ? "게시로 변경됨" : "비게시로 변경됨");
+        }
+        finally { _togglingIds.Remove(style.Id); }
     }
 
     private async Task ToggleFeatured(StylePost style)
     {
-        style.IsFeatured = !style.IsFeatured;
-        await StyleService.UpdateAsync(style);
-        await AuditService.LogAsync("Update", style.Id, style.Title, $"인기 배지 → {(style.IsFeatured ? "ON" : "OFF")}");
+        if (!_togglingIds.Add($"f_{style.Id}")) return;
+        try
+        {
+            style.IsFeatured = !style.IsFeatured;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Update", style.Id, style.Title, $"인기 배지 → {(style.IsFeatured ? "ON" : "OFF")}");
+            ShowToast(style.IsFeatured ? "인기 배지 ON" : "인기 배지 OFF");
+        }
+        finally { _togglingIds.Remove($"f_{style.Id}"); }
     }
 
     private async Task ToggleSignature(StylePost style)
     {
-        style.IsSignature = !style.IsSignature;
-        await StyleService.UpdateAsync(style);
-        await AuditService.LogAsync("Update", style.Id, style.Title, $"시그니처 배지 → {(style.IsSignature ? "ON" : "OFF")}");
+        if (!_togglingIds.Add($"s_{style.Id}")) return;
+        try
+        {
+            style.IsSignature = !style.IsSignature;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Update", style.Id, style.Title, $"시그니처 배지 → {(style.IsSignature ? "ON" : "OFF")}");
+            ShowToast(style.IsSignature ? "시그니처 배지 ON" : "시그니처 배지 OFF");
+        }
+        finally { _togglingIds.Remove($"s_{style.Id}"); }
     }
 
     private async Task DeleteStyle(StylePost style)
@@ -5489,5 +5543,37 @@ Save the file as: {GetSuggestedFilename()}";
             grid-template-columns: repeat(3, 1fr);
             gap: 4px;
         }
+    }
+
+    /* Toast 알림 */
+    .admin-toast {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: rgba(44, 44, 44, 0.92);
+        color: #fff;
+        padding: 0.5rem 1.2rem;
+        border-radius: 24px;
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.3s ease;
+        pointer-events: none;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    .admin-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .admin-toast i {
+        color: var(--salon-green);
     }
 </style>

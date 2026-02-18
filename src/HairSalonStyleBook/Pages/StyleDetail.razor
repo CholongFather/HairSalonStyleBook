@@ -78,7 +78,7 @@
         {
             <div class="detail-section detail-desc-section">
                 <div class="detail-description">
-                    @((MarkupString)_style.Description)
+                    @((MarkupString)HairSalonStyleBook.Services.HtmlSanitizer.Sanitize(_style.Description))
                 </div>
             </div>
         }

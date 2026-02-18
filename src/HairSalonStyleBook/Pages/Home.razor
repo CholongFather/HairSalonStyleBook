@@ -416,7 +416,16 @@
                         }
                     </div>
 
-                    <div class="result-count"><span>@FilteredGalleryItems.Count()</span>장의 사진</div>
+                    <div class="result-count">
+                        <span>@FilteredGalleryItems.Count()</span>장의 사진
+                        @if (_selectedDate.HasValue)
+                        {
+                            <span class="gallery-date-badge">
+                                <i class="bi bi-calendar-check"></i> @_selectedDate.Value.ToString("M월 d일")
+                                <button class="gallery-date-badge-clear" @onclick="() => _selectedDate = null"><i class="bi bi-x"></i></button>
+                            </span>
+                        }
+                    </div>
                     @if (FilteredGalleryItems.Any(g => g.Hashtags.Any()))
                     {
                         <div class="gallery-hashtag-bar">
@@ -1300,6 +1309,34 @@
     .result-count span {
         color: var(--salon-green);
         font-weight: 700;
+    }
+
+    .gallery-date-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        background: rgba(123, 163, 131, 0.12);
+        color: var(--salon-green);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 0.3rem;
+    }
+
+    .gallery-date-badge-clear {
+        background: none;
+        border: none;
+        color: var(--salon-green);
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.7rem;
+        opacity: 0.6;
+        line-height: 1;
+    }
+
+    .gallery-date-badge-clear:hover {
+        opacity: 1;
     }
 
     /* 빈 상태 */

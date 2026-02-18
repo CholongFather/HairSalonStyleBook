@@ -19,14 +19,28 @@
     [Parameter] public string SearchText { get; set; } = "";
     [Parameter] public EventCallback<string> OnSearch { get; set; }
 
+    private CancellationTokenSource? _debounceCtx;
+
     private async Task OnInput(ChangeEventArgs e)
     {
         SearchText = e.Value?.ToString() ?? "";
-        await OnSearch.InvokeAsync(SearchText);
+
+        // 300ms 디바운스
+        _debounceCtx?.Cancel();
+        _debounceCtx = new CancellationTokenSource();
+        var token = _debounceCtx.Token;
+        try
+        {
+            await Task.Delay(300, token);
+            if (!token.IsCancellationRequested)
+                await OnSearch.InvokeAsync(SearchText);
+        }
+        catch (TaskCanceledException) { }
     }
 
     private async Task ClearSearch()
     {
+        _debounceCtx?.Cancel();
         SearchText = "";
         await OnSearch.InvokeAsync("");
     }
