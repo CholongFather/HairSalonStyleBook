@@ -36,3 +36,5 @@ Thumbs.db
 
 ## Test/temp
 release_test/
+temp_*.json
+scripts/
