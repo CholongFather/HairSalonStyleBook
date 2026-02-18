@@ -38,3 +38,4 @@ Thumbs.db
 release_test/
 temp_*.json
 scripts/
+*.ps1
