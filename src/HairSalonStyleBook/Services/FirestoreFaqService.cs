@@ -40,7 +40,10 @@ public class FirestoreFaqService : IFaqService
         {
             var response = await _http.GetAsync($"{_baseUrl}/faqs?key={_apiKey}&pageSize=100");
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[FaqService] 목록 조회 실패: {response.StatusCode}");
                 return new List<FaqItem>();
+            }
 
             var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
             if (json?.Documents == null)
@@ -49,8 +52,9 @@ public class FirestoreFaqService : IFaqService
             _cache = json.Documents.Select(MapFromFirestore).Where(f => f != null).Select(f => f!).ToList();
             return _cache.ToList();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[FaqService] 목록 조회 예외: {ex.Message}");
             return new List<FaqItem>();
         }
     }
@@ -64,7 +68,10 @@ public class FirestoreFaqService : IFaqService
         var doc = MapToFirestore(item);
         var content = new StringContent(JsonSerializer.Serialize(doc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PostAsync($"{_baseUrl}/faqs?documentId={item.Id}&key={_apiKey}", content);
+        var response = await _http.PostAsync($"{_baseUrl}/faqs?documentId={item.Id}&key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[FaqService] 생성 실패: {response.StatusCode} (id={item.Id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
         return item;
     }
@@ -76,13 +83,19 @@ public class FirestoreFaqService : IFaqService
         var doc = MapToFirestore(item);
         var content = new StringContent(JsonSerializer.Serialize(doc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PatchAsync($"{_baseUrl}/faqs/{item.Id}?key={_apiKey}", content);
+        var response = await _http.PatchAsync($"{_baseUrl}/faqs/{item.Id}?key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[FaqService] 수정 실패: {response.StatusCode} (id={item.Id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _http.DeleteAsync($"{_baseUrl}/faqs/{id}?key={_apiKey}");
+        var response = await _http.DeleteAsync($"{_baseUrl}/faqs/{id}?key={_apiKey}");
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[FaqService] 삭제 실패: {response.StatusCode} (id={id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
     }
 
@@ -108,8 +121,9 @@ public class FirestoreFaqService : IFaqService
                 UpdatedAt = GetTimestamp(fields, "updatedAt"),
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[FaqService] 문서 매핑 실패: {ex.Message}");
             return null;
         }
     }

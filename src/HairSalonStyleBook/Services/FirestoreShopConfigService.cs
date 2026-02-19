@@ -41,6 +41,7 @@ public class FirestoreShopConfigService : IShopConfigService
             var response = await _http.GetAsync($"{_baseUrl}/config/shop?key={_apiKey}");
             if (!response.IsSuccessStatusCode)
             {
+                Console.WriteLine($"[ShopConfigService] 설정 조회 실패: {response.StatusCode}");
                 _cache = new ShopConfig(); // 기본값 사용
                 return _cache;
             }
@@ -71,8 +72,9 @@ public class FirestoreShopConfigService : IShopConfigService
             };
             return _cache;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[ShopConfigService] 설정 조회 예외: {ex.Message}");
             _cache = new ShopConfig();
             return _cache;
         }
@@ -101,7 +103,10 @@ public class FirestoreShopConfigService : IShopConfigService
         var body = new FirestoreFields { Fields = fields };
         var content = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PatchAsync($"{_baseUrl}/config/shop?key={_apiKey}", content);
+        var response = await _http.PatchAsync($"{_baseUrl}/config/shop?key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[ShopConfigService] 설정 저장 실패: {response.StatusCode}");
+        response.EnsureSuccessStatusCode();
         _cache = config; // 캐시 즉시 갱신
     }
 

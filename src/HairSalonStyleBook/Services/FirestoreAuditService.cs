@@ -35,14 +35,18 @@ public class FirestoreAuditService : IAuditService
         {
             var response = await _http.GetAsync($"{_baseUrl}/auditLogs?key={_apiKey}&orderBy=timestamp desc");
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[AuditService] 목록 조회 실패: {response.StatusCode}");
                 return new List<AuditLog>();
+            }
 
             var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
             return json?.Documents?.Select(MapFromFirestore).Where(a => a != null).Select(a => a!).ToList()
                    ?? new List<AuditLog>();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[AuditService] 목록 조회 예외: {ex.Message}");
             return new List<AuditLog>();
         }
     }
@@ -62,7 +66,16 @@ public class FirestoreAuditService : IAuditService
         var firestoreDoc = MapToFirestore(log);
         var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PostAsync($"{_baseUrl}/auditLogs?documentId={log.Id}&key={_apiKey}", content);
+        try
+        {
+            var response = await _http.PostAsync($"{_baseUrl}/auditLogs?documentId={log.Id}&key={_apiKey}", content);
+            if (!response.IsSuccessStatusCode)
+                Console.WriteLine($"[AuditService] 로그 기록 실패: {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AuditService] 로그 기록 예외: {ex.Message}");
+        }
     }
 
     private static AuditLog? MapFromFirestore(FirestoreDocument doc)
@@ -84,8 +97,9 @@ public class FirestoreAuditService : IAuditService
                 Timestamp = GetTimestamp(fields, "timestamp")
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[AuditService] 문서 매핑 실패: {ex.Message}");
             return null;
         }
     }

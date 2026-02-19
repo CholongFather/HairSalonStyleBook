@@ -47,9 +47,14 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
                 }
             };
             var content = new StringContent(JsonSerializer.Serialize(fields, JsonOptions), Encoding.UTF8, "application/json");
-            await _http.PostAsync($"{_baseUrl}/loginAttempts?documentId={id}&key={_apiKey}", content);
+            var response = await _http.PostAsync($"{_baseUrl}/loginAttempts?documentId={id}&key={_apiKey}", content);
+            if (!response.IsSuccessStatusCode)
+                Console.WriteLine($"[LoginSecurity] 로그인 시도 기록 실패: {response.StatusCode}");
         }
-        catch { /* 로깅 실패 무시 */ }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginSecurity] 로그인 시도 기록 예외: {ex.Message}");
+        }
     }
 
     public async Task<List<LoginAttempt>> GetAttemptsAsync()
@@ -58,12 +63,19 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
         {
             var response = await _http.GetAsync($"{_baseUrl}/loginAttempts?key={_apiKey}&orderBy=timestamp desc&pageSize=100");
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[LoginSecurity] 시도 목록 조회 실패: {response.StatusCode}");
                 return new();
+            }
 
             var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
             return json?.Documents?.Select(MapFromFirestore).Where(a => a != null).Select(a => a!).ToList() ?? new();
         }
-        catch { return new(); }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginSecurity] 시도 목록 조회 예외: {ex.Message}");
+            return new();
+        }
     }
 
     public async Task<List<string>> GetBlockedDevicesAsync()
@@ -74,7 +86,10 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
         {
             var response = await _http.GetAsync($"{_baseUrl}/config/blockedDevices?key={_apiKey}");
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[LoginSecurity] 차단 목록 조회 실패: {response.StatusCode}");
                 return _blockedCache = new();
+            }
 
             var doc = await response.Content.ReadFromJsonAsync<FirestoreDocument>(JsonOptions);
             if (doc?.Fields != null && doc.Fields.TryGetValue("devices", out var devicesVal))
@@ -86,7 +101,10 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
                 return _blockedCache;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginSecurity] 차단 목록 조회 예외: {ex.Message}");
+        }
 
         return _blockedCache = new();
     }
@@ -130,10 +148,16 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
                 }
             };
             var content = new StringContent(JsonSerializer.Serialize(fields, JsonOptions), Encoding.UTF8, "application/json");
-            await _http.PatchAsync($"{_baseUrl}/config/blockedDevices?key={_apiKey}", content);
+            var response = await _http.PatchAsync($"{_baseUrl}/config/blockedDevices?key={_apiKey}", content);
+            if (!response.IsSuccessStatusCode)
+                Console.WriteLine($"[LoginSecurity] 차단 목록 저장 실패: {response.StatusCode}");
+            response.EnsureSuccessStatusCode();
             _blockedCache = devices;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginSecurity] 차단 목록 저장 예외: {ex.Message}");
+        }
     }
 
     private static LoginAttempt? MapFromFirestore(FirestoreDocument doc)
@@ -153,7 +177,11 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
                 Success = fields.TryGetValue("success", out var v) && v.BooleanValue == true
             };
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginSecurity] 문서 매핑 실패: {ex.Message}");
+            return null;
+        }
     }
 
     private static string GetString(Dictionary<string, FirestoreValue> fields, string key)

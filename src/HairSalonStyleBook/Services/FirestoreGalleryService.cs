@@ -48,7 +48,11 @@ public class FirestoreGalleryService : IGalleryService
                     url += $"&pageToken={pageToken}";
 
                 var response = await _http.GetAsync(url);
-                if (!response.IsSuccessStatusCode) break;
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[GalleryService] 목록 조회 실패: {response.StatusCode}");
+                    break;
+                }
 
                 var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
                 if (json?.Documents != null)
@@ -60,8 +64,9 @@ public class FirestoreGalleryService : IGalleryService
             _cache = all;
             return _cache.ToList();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[GalleryService] 목록 조회 예외: {ex.Message}");
             return new List<GalleryItem>();
         }
     }
@@ -130,7 +135,10 @@ public class FirestoreGalleryService : IGalleryService
             var content = new StringContent(JsonSerializer.Serialize(query, JsonOptions), Encoding.UTF8, "application/json");
             var response = await _http.PostAsync(queryUrl, content);
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[GalleryService] 페이지 조회 실패: {response.StatusCode}");
                 return (new List<GalleryItem>(), false);
+            }
 
             var results = await response.Content.ReadFromJsonAsync<List<FirestoreQueryResult>>(JsonOptions);
             if (results == null)
@@ -149,8 +157,9 @@ public class FirestoreGalleryService : IGalleryService
 
             return (items, hasMore);
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[GalleryService] 페이지 조회 예외: {ex.Message}");
             return (new List<GalleryItem>(), false);
         }
     }
@@ -164,7 +173,10 @@ public class FirestoreGalleryService : IGalleryService
         var doc = MapToFirestore(item);
         var content = new StringContent(JsonSerializer.Serialize(doc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PostAsync($"{_baseUrl}/gallery?documentId={item.Id}&key={_apiKey}", content);
+        var response = await _http.PostAsync($"{_baseUrl}/gallery?documentId={item.Id}&key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[GalleryService] 생성 실패: {response.StatusCode} (id={item.Id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
         return item;
     }
@@ -176,13 +188,19 @@ public class FirestoreGalleryService : IGalleryService
         var doc = MapToFirestore(item);
         var content = new StringContent(JsonSerializer.Serialize(doc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PatchAsync($"{_baseUrl}/gallery/{item.Id}?key={_apiKey}", content);
+        var response = await _http.PatchAsync($"{_baseUrl}/gallery/{item.Id}?key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[GalleryService] 수정 실패: {response.StatusCode} (id={item.Id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _http.DeleteAsync($"{_baseUrl}/gallery/{id}?key={_apiKey}");
+        var response = await _http.DeleteAsync($"{_baseUrl}/gallery/{id}?key={_apiKey}");
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[GalleryService] 삭제 실패: {response.StatusCode} (id={id})");
+        response.EnsureSuccessStatusCode();
         _cache = null;
     }
 
@@ -212,8 +230,9 @@ public class FirestoreGalleryService : IGalleryService
                 UpdatedAt = GetTimestamp(fields, "updatedAt"),
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[GalleryService] 문서 매핑 실패: {ex.Message}");
             return null;
         }
     }

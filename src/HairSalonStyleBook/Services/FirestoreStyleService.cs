@@ -52,7 +52,10 @@ public class FirestoreStyleService : IStyleService
 
                 var response = await _http.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[StyleService] 목록 조회 실패: {response.StatusCode}");
                     break;
+                }
 
                 var json = await response.Content.ReadFromJsonAsync<FirestoreListResponse>(JsonOptions);
                 if (json?.Documents != null)
@@ -64,8 +67,9 @@ public class FirestoreStyleService : IStyleService
             _cache = allDocs.Select(MapFromFirestore).Where(s => s != null).Select(s => s!).ToList();
             return _cache.ToList();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[StyleService] 목록 조회 예외: {ex.Message}");
             return new List<StylePost>();
         }
     }
@@ -101,13 +105,17 @@ public class FirestoreStyleService : IStyleService
         {
             var response = await _http.GetAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
             if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[StyleService] 상세 조회 실패: {response.StatusCode} (id={id})");
                 return null;
+            }
 
             var doc = await response.Content.ReadFromJsonAsync<FirestoreDocument>(JsonOptions);
             return doc != null ? MapFromFirestore(doc) : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[StyleService] 상세 조회 예외: {ex.Message}");
             return null;
         }
     }
@@ -121,7 +129,10 @@ public class FirestoreStyleService : IStyleService
         var firestoreDoc = MapToFirestore(style);
         var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PostAsync($"{_baseUrl}/styles?documentId={style.Id}&key={_apiKey}", content);
+        var response = await _http.PostAsync($"{_baseUrl}/styles?documentId={style.Id}&key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[StyleService] 생성 실패: {response.StatusCode} (id={style.Id})");
+        response.EnsureSuccessStatusCode();
         InvalidateCache();
         return style;
     }
@@ -133,14 +144,20 @@ public class FirestoreStyleService : IStyleService
         var firestoreDoc = MapToFirestore(style);
         var content = new StringContent(JsonSerializer.Serialize(firestoreDoc, JsonOptions), Encoding.UTF8, "application/json");
 
-        await _http.PatchAsync($"{_baseUrl}/styles/{style.Id}?key={_apiKey}", content);
+        var response = await _http.PatchAsync($"{_baseUrl}/styles/{style.Id}?key={_apiKey}", content);
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[StyleService] 수정 실패: {response.StatusCode} (id={style.Id})");
+        response.EnsureSuccessStatusCode();
         InvalidateCache();
         return style;
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _http.DeleteAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
+        var response = await _http.DeleteAsync($"{_baseUrl}/styles/{id}?key={_apiKey}");
+        if (!response.IsSuccessStatusCode)
+            Console.WriteLine($"[StyleService] 삭제 실패: {response.StatusCode} (id={id})");
+        response.EnsureSuccessStatusCode();
         InvalidateCache();
     }
 
@@ -188,8 +205,9 @@ public class FirestoreStyleService : IStyleService
                 IsPublished = GetBoolValue(fields, "isPublished")
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[StyleService] 문서 매핑 실패: {ex.Message}");
             return null;
         }
     }
