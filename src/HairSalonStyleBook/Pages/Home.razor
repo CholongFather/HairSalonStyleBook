@@ -688,8 +688,8 @@
         _galleryLoading = true;
         try
         {
-            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize);
-            _galleryItems = items.Where(g => g.IsPublished).ToList();
+            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, publishedOnly: true);
+            _galleryItems = items;
             _galleryHasMore = hasMore;
         }
         catch { _galleryItems = new(); _galleryHasMore = false; }
@@ -704,8 +704,8 @@
         try
         {
             var lastDate = _galleryItems.LastOrDefault()?.CreatedAt;
-            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, lastDate);
-            _galleryItems.AddRange(items.Where(g => g.IsPublished));
+            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, lastDate, publishedOnly: true);
+            _galleryItems.AddRange(items);
             _galleryHasMore = hasMore;
         }
         catch { _galleryHasMore = false; }

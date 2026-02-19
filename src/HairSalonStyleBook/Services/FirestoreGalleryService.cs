@@ -66,7 +66,7 @@ public class FirestoreGalleryService : IGalleryService
         }
     }
 
-    public async Task<(List<GalleryItem> Items, bool HasMore)> GetPageAsync(int limit, DateTime? beforeDate = null)
+    public async Task<(List<GalleryItem> Items, bool HasMore)> GetPageAsync(int limit, DateTime? beforeDate = null, bool publishedOnly = false)
     {
         try
         {
@@ -78,8 +78,25 @@ public class FirestoreGalleryService : IGalleryService
                 new { field = new { fieldPath = "createdAt" }, direction = "DESCENDING" }
             };
 
-            var where = beforeDate.HasValue
-                ? new
+            // where 필터 조립
+            var filters = new List<object>();
+
+            if (publishedOnly)
+            {
+                filters.Add(new
+                {
+                    fieldFilter = new
+                    {
+                        field = new { fieldPath = "isPublished" },
+                        op = "EQUAL",
+                        value = new { booleanValue = true }
+                    }
+                });
+            }
+
+            if (beforeDate.HasValue)
+            {
+                filters.Add(new
                 {
                     fieldFilter = new
                     {
@@ -87,8 +104,15 @@ public class FirestoreGalleryService : IGalleryService
                         op = "LESS_THAN",
                         value = new { timestampValue = beforeDate.Value.ToString("o") }
                     }
-                }
-                : (object?)null;
+                });
+            }
+
+            object? where = filters.Count switch
+            {
+                0 => null,
+                1 => filters[0],
+                _ => new { compositeFilter = new { op = "AND", filters } }
+            };
 
             var query = new Dictionary<string, object>
             {
