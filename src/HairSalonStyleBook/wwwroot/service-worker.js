@@ -1,13 +1,14 @@
-// 늘~오던 헤어살롱 - 이미지 캐싱 + 오프라인 폴백 Service Worker
-const CACHE_NAME = 'salon-image-cache-v1';
+// 늘~오던 헤어살롱 - 공격적 이미지 캐싱 + 오프라인 폴백 Service Worker
+const CACHE_NAME = 'salon-image-cache-v2';
 const OFFLINE_CACHE = 'salon-offline-v1';
 const OFFLINE_URL = 'offline.html';
 
-// 캐싱할 이미지 패턴
+// 캐싱할 이미지 패턴 (Firebase Storage + QR API)
 const IMAGE_ORIGINS = [
     'firebasestorage.googleapis.com',
     'storage.googleapis.com',
-    'always-hair-salon.firebasestorage.app'
+    'always-hair-salon.firebasestorage.app',
+    'api.qrserver.com'
 ];
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.ico'];
@@ -16,7 +17,7 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.ic
 function isImageRequest(url) {
     const urlLower = url.toLowerCase();
 
-    // Firebase Storage 이미지
+    // Firebase Storage / QR API 이미지
     if (IMAGE_ORIGINS.some(origin => urlLower.includes(origin))) {
         return true;
     }
@@ -29,7 +30,7 @@ function isImageRequest(url) {
     return false;
 }
 
-// 설치 - 오프라인 페이지 프리캐시
+// 설치 - 오프라인 페이지 프리캐시 + 즉시 활성화
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(OFFLINE_CACHE).then(cache => cache.add(OFFLINE_URL))
@@ -37,7 +38,7 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
-// 활성화 - 오래된 캐시 정리 (오프라인 캐시는 유지)
+// 활성화 - 오래된 캐시 정리 (현재 버전만 유지)
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(names =>
@@ -50,7 +51,7 @@ self.addEventListener('activate', event => {
     );
 });
 
-// 네트워크 요청 가로채기 - 이미지 캐싱 + 오프라인 폴백
+// 네트워크 요청 가로채기 - 공격적 이미지 캐싱 + 오프라인 폴백
 self.addEventListener('fetch', event => {
     const url = event.request.url;
 
@@ -69,19 +70,11 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Cache First 전략: 캐시에 있으면 즉시 반환, 없으면 네트워크
+    // Cache First 전략 (revalidation 없음 - Firebase URL은 토큰 포함 불변)
     event.respondWith(
         caches.open(CACHE_NAME).then(cache =>
             cache.match(event.request).then(cachedResponse => {
                 if (cachedResponse) {
-                    // 캐시 히트 - 백그라운드에서 새 버전 업데이트 (stale-while-revalidate)
-                    const fetchPromise = fetch(event.request).then(networkResponse => {
-                        if (networkResponse && networkResponse.ok) {
-                            cache.put(event.request, networkResponse.clone());
-                        }
-                        return networkResponse;
-                    }).catch(() => { /* 오프라인이면 무시 */ });
-
                     return cachedResponse;
                 }
 
@@ -97,14 +90,14 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// 캐시 크기 관리 - 최대 200개 이미지
+// 캐시 크기 관리 - 최대 500개 이미지
 self.addEventListener('message', event => {
     if (event.data === 'cleanup-cache') {
         caches.open(CACHE_NAME).then(cache =>
             cache.keys().then(keys => {
-                if (keys.length > 200) {
+                if (keys.length > 500) {
                     // 오래된 항목부터 삭제
-                    const deleteCount = keys.length - 150;
+                    const deleteCount = keys.length - 400;
                     return Promise.all(
                         keys.slice(0, deleteCount).map(key => cache.delete(key))
                     );

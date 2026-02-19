@@ -490,18 +490,6 @@
                             </button>
                         </div>
                     }
-                    @if (_galleryHasMore)
-                    {
-                        <div class="text-center mt-3 mb-2">
-                            <button class="btn btn-salon-outline btn-sm gallery-load-more" @onclick="LoadMoreGallery" disabled="@_galleryLoadingMore">
-                                @if (_galleryLoadingMore)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                <i class="bi bi-arrow-down-circle"></i> 더보기
-                            </button>
-                        </div>
-                    }
                 }
             </div>
         }
@@ -587,8 +575,6 @@
     // 갤러리
     private List<GalleryItem> _galleryItems = new();
     private bool _galleryLoading;
-    private bool _galleryLoadingMore;
-    private bool _galleryHasMore;
     private GalleryItem? _galleryEditItem;
     private string _gallerySearch = "";
     private bool _calendarOpen;
@@ -597,7 +583,6 @@
 
     private int _galleryPage = 1;
     private const int GalleryPageSize = 12;
-    private const int GalleryFetchSize = 24;
 
     private IEnumerable<GalleryItem> FilteredGalleryItems
     {
@@ -688,29 +673,14 @@
         _galleryLoading = true;
         try
         {
-            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, publishedOnly: true);
-            _galleryItems = items;
-            _galleryHasMore = hasMore;
+            var all = await GalleryService.GetAllAsync();
+            _galleryItems = all
+                .Where(g => g.IsPublished)
+                .OrderByDescending(g => g.CreatedAt)
+                .ToList();
         }
-        catch { _galleryItems = new(); _galleryHasMore = false; }
+        catch { _galleryItems = new(); }
         _galleryLoading = false;
-    }
-
-    private async Task LoadMoreGallery()
-    {
-        if (_galleryLoadingMore || !_galleryHasMore) return;
-        _galleryLoadingMore = true;
-        StateHasChanged();
-        try
-        {
-            var lastDate = _galleryItems.LastOrDefault()?.CreatedAt;
-            var (items, hasMore) = await GalleryService.GetPageAsync(GalleryFetchSize, lastDate, publishedOnly: true);
-            _galleryItems.AddRange(items);
-            _galleryHasMore = hasMore;
-        }
-        catch { _galleryHasMore = false; }
-        _galleryLoadingMore = false;
-        StateHasChanged();
     }
 
     private void OpenGalleryEdit(GalleryItem item)

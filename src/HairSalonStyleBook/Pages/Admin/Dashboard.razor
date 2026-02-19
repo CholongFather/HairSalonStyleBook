@@ -1,5 +1,6 @@
 ﻿@page "/admin"
 @attribute [Authorize(Roles = "Admin")]
+@implements IDisposable
 @inject IStyleService StyleService
 @inject IAuditService AuditService
 @inject IAuthService AuthService
@@ -17,13 +18,13 @@
 <div class="container admin-page">
     <!-- 관리자 탭 -->
     <div class="admin-tab-bar">
-        <button class="admin-tab @(_adminTab == 0 ? "active" : "")" @onclick="() => _adminTab = 0">
+        <button class="admin-tab @(_adminTab == 0 ? "active" : "")" @onclick="() => { StopSecurityAutoRefresh(); _adminTab = 0; }">
             <i class="bi bi-scissors"></i> 스타일
         </button>
-        <button class="admin-tab @(_adminTab == 4 ? "active" : "")" @onclick="() => { _adminTab = 4; _ = LoadGalleryIfNeeded(); }">
+        <button class="admin-tab @(_adminTab == 4 ? "active" : "")" @onclick="() => { StopSecurityAutoRefresh(); _adminTab = 4; _ = LoadGalleryIfNeeded(); }">
             <i class="bi bi-images"></i> 갤러리
         </button>
-        <button class="admin-tab @(_adminTab == 1 ? "active" : "")" @onclick="() => _adminTab = 1">
+        <button class="admin-tab @(_adminTab == 1 ? "active" : "")" @onclick="() => { StopSecurityAutoRefresh(); _adminTab = 1; }">
             <i class="bi bi-shop"></i> 매장
         </button>
         <button class="admin-tab @(_adminTab == 3 ? "active" : "")" @onclick="OpenSecurityTab">
@@ -663,14 +664,18 @@
         else
         {
             <!-- 로그인 보안 -->
-            <div class="d-flex justify-content-end mb-3">
-                <button class="btn btn-salon-outline btn-sm" @onclick="LoadSecurityData" disabled="@_securityLoading">
+            <div class="d-flex justify-content-end mb-3 align-items-center gap-2">
+                <span class="text-muted" style="font-size:0.75rem;">
                     @if (_securityLoading)
                     {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        <span class="spinner-border spinner-border-sm me-1" style="width:0.7rem;height:0.7rem;"></span>
                     }
-                    <i class="bi bi-arrow-clockwise"></i> 새로고침
-                </button>
+                    else
+                    {
+                        <i class="bi bi-arrow-repeat text-success"></i>
+                    }
+                    @(SecurityRefreshIntervalSeconds)초 자동 새로고침
+                </span>
             </div>
 
             @if (_blockedDevices.Any())
@@ -1203,6 +1208,8 @@
     private bool _securityLoading;
     private List<AuditLog> _auditLogs = new();
     private bool _auditLoading;
+    private System.Threading.Timer? _securityAutoRefreshTimer;
+    private const int SecurityRefreshIntervalSeconds = 30;
 
     // 매장 설정
     private ShopConfig _shopConfig = new();
@@ -1328,6 +1335,27 @@
             await LoadAuditLogs();
         if (!_loginAttempts.Any())
             await LoadSecurityData();
+        StartSecurityAutoRefresh();
+    }
+
+    private void StartSecurityAutoRefresh()
+    {
+        StopSecurityAutoRefresh();
+        _securityAutoRefreshTimer = new System.Threading.Timer(
+            async _ => await InvokeAsync(async () =>
+            {
+                if (_securityLoading) return;
+                await LoadSecurityData();
+            }),
+            null,
+            TimeSpan.FromSeconds(SecurityRefreshIntervalSeconds),
+            TimeSpan.FromSeconds(SecurityRefreshIntervalSeconds));
+    }
+
+    private void StopSecurityAutoRefresh()
+    {
+        _securityAutoRefreshTimer?.Dispose();
+        _securityAutoRefreshTimer = null;
     }
 
     private async Task LoadAuditLogs()
@@ -4032,6 +4060,11 @@ Save the file as: {GetSuggestedFilename()}";
                 IsPublished = false
             }
         };
+    }
+
+    public void Dispose()
+    {
+        StopSecurityAutoRefresh();
     }
 }
 
