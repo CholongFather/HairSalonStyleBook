@@ -506,14 +506,7 @@
                                                     <img src="@faq.ImageUrl" alt="@faq.Title" />
                                                 </div>
                                             }
-                                            @if (ContainsHtml(faq.Description))
-                                            {
-                                                <div class="faq-acc-desc">@((MarkupString)HairSalonStyleBook.Services.HtmlSanitizer.Sanitize(faq.Description ?? ""))</div>
-                                            }
-                                            else
-                                            {
-                                                <div class="faq-acc-desc faq-acc-desc-plain">@faq.Description</div>
-                                            }
+                                            <div class="faq-acc-desc">@((MarkupString)HairSalonStyleBook.Services.HtmlSanitizer.Sanitize(faq.Description ?? ""))</div>
                                             <div class="faq-acc-actions">
                                                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditFaq(faq)">
                                                     <i class="bi bi-pencil"></i> 수정
@@ -1381,10 +1374,6 @@
         "Delete" => "삭제",
         _ => action
     };
-
-    // HTML 태그 포함 여부 판별 (리치텍스트 vs 일반 텍스트)
-    private static bool ContainsHtml(string? text)
-        => !string.IsNullOrEmpty(text) && System.Text.RegularExpressions.Regex.IsMatch(text, @"<\w+[^>]*>");
 
     private async Task LoadSecurityData()
     {
@@ -5227,10 +5216,6 @@ Save the file as: {GetSuggestedFilename()}";
         line-height: 1.8;
         max-height: 600px;
         overflow-y: auto;
-    }
-
-    .faq-acc-desc-plain {
-        white-space: pre-wrap;
     }
 
     .faq-acc-desc h3 {
