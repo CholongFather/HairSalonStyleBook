@@ -762,9 +762,16 @@
 
     private async Task OpenQr(string data)
     {
-        _overlayQrUrl = await JS.InvokeAsync<string>("generateQrDataUrl", data, 400);
-        _qrScale = 1.0;
-        _showQrOverlay = true;
+        try
+        {
+            _overlayQrUrl = await JS.InvokeAsync<string>("generateQrDataUrl", data, 400);
+            _qrScale = 1.0;
+            _showQrOverlay = true;
+        }
+        catch
+        {
+            // QR 생성 실패 시 무시
+        }
     }
 
     private void CloseQr()

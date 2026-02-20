@@ -103,14 +103,29 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>
         window.generateQrDataUrl = function(text, targetSize) {
-            if (!text) return '';
+            if (!text || typeof qrcode === 'undefined') return '';
             var qr = qrcode(0, 'M');
             qr.addData(text);
             qr.make();
             var margin = 2;
             var modules = qr.getModuleCount();
             var cellSize = Math.max(1, Math.floor(targetSize / (modules + margin * 2)));
-            return qr.createDataURL(cellSize, margin);
+            var size = (modules + margin * 2) * cellSize;
+            var canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            for (var r = 0; r < modules; r++) {
+                for (var c = 0; c < modules; c++) {
+                    if (qr.isDark(r, c)) {
+                        ctx.fillRect((c + margin) * cellSize, (r + margin) * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+            return canvas.toDataURL('image/png');
         };
     </script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>

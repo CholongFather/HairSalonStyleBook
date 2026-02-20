@@ -18,12 +18,20 @@
     private string _dataUrl = "";
     private string _prevData = "";
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!string.IsNullOrEmpty(Data) && Data != _prevData)
         {
             _prevData = Data;
-            _dataUrl = await JS.InvokeAsync<string>("generateQrDataUrl", Data, Size);
+            try
+            {
+                _dataUrl = await JS.InvokeAsync<string>("generateQrDataUrl", Data, Size);
+                StateHasChanged();
+            }
+            catch
+            {
+                // JS 라이브러리 로드 실패 시 무시
+            }
         }
     }
 }
