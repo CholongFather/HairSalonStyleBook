@@ -1,0 +1,29 @@
+@inject IJSRuntime JS
+
+@if (!string.IsNullOrEmpty(_dataUrl))
+{
+    <img src="@_dataUrl" alt="@Alt" class="@CssClass" loading="lazy" />
+}
+
+@code {
+    /// <summary>QR로 인코딩할 데이터 (URL, WiFi 문자열 등)</summary>
+    [Parameter] public string Data { get; set; } = "";
+
+    /// <summary>생성할 QR 이미지 크기 (px)</summary>
+    [Parameter] public int Size { get; set; } = 400;
+
+    [Parameter] public string Alt { get; set; } = "QR Code";
+    [Parameter] public string CssClass { get; set; } = "";
+
+    private string _dataUrl = "";
+    private string _prevData = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(Data) && Data != _prevData)
+        {
+            _prevData = Data;
+            _dataUrl = await JS.InvokeAsync<string>("generateQrDataUrl", Data, Size);
+        }
+    }
+}

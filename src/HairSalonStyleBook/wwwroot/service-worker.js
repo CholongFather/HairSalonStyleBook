@@ -21,8 +21,7 @@ const PRECACHE_URLS = [
 const IMAGE_ORIGINS = [
     'firebasestorage.googleapis.com',
     'storage.googleapis.com',
-    'always-hair-salon.firebasestorage.app',
-    'api.qrserver.com'
+    'always-hair-salon.firebasestorage.app'
 ];
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.ico'];

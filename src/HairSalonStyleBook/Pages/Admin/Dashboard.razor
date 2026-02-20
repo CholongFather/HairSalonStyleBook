@@ -281,6 +281,21 @@
                     </div>
                 </div>
 
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.NaverPayEnabled" id="naverPay" />
+                            <label class="form-check-label fw-bold" for="naverPay">
+                                <span class="naver-n" style="font-size:0.75rem">N</span> 네이버페이
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-group mt-1">
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPayUrl"
+                               placeholder="네이버페이 결제 링크 URL" />
+                    </div>
+                </div>
+
             </div>
 
             <button class="btn btn-salon mt-3" @onclick="SaveShopConfig" disabled="@_shopSaving">
@@ -1465,6 +1480,7 @@
         _shopSaved = false;
         StateHasChanged();
         await ShopConfigService.SaveAsync(_shopConfig);
+        await AuditService.LogAsync("Update", "shop", "매장설정", "매장 설정 저장");
         _shopSaving = false;
         _shopSaved = true;
         StateHasChanged();
@@ -1518,9 +1534,15 @@
         StateHasChanged();
 
         if (_faqIsNew)
+        {
             await FaqService.CreateAsync(_faqEditing);
+            await AuditService.LogAsync("Create", _faqEditing.Id, _faqEditing.Title, $"FAQ '{_faqEditing.Title}' 생성");
+        }
         else
+        {
             await FaqService.UpdateAsync(_faqEditing);
+            await AuditService.LogAsync("Update", _faqEditing.Id, _faqEditing.Title, $"FAQ '{_faqEditing.Title}' 수정");
+        }
 
         _faqItems = await FaqService.GetAllAsync();
         _faqSaving = false;
@@ -1535,6 +1557,7 @@
             try { await ImageService.DeleteAsync(faq.ImageUrl); } catch { }
         }
         await FaqService.DeleteAsync(faq.Id);
+        await AuditService.LogAsync("Delete", faq.Id, faq.Title, $"FAQ '{faq.Title}' 삭제");
         _faqItems = await FaqService.GetAllAsync();
         StateHasChanged();
     }
@@ -1620,6 +1643,10 @@
             StateHasChanged();
         }
 
+        var uploadedCount = _galleryTotalUploadCount - _gallerySkippedCount;
+        if (uploadedCount > 0)
+            await AuditService.LogAsync("Create", "", "갤러리", $"갤러리 이미지 {uploadedCount}건 업로드");
+
         _galleryUploading = false;
         _galleryUploadDesc = "";
         StateHasChanged();
@@ -1680,6 +1707,8 @@
                 style.ImageUrls.Add(url);
         }
         await StyleService.UpdateAsync(style);
+        if (selectedItems.Any())
+            await AuditService.LogAsync("Update", style.Id, style.Title, $"갤러리 사진 {selectedItems.Count}건 → 스타일 '{style.Title}'에 연결");
         _showStyleSearchModal = false;
         _selectedGalleryIds.Clear();
         StateHasChanged();
@@ -1694,6 +1723,8 @@
             await GalleryService.DeleteAsync(item.Id);
             _galleryItems.Remove(item);
         }
+        if (toDelete.Any())
+            await AuditService.LogAsync("BulkDelete", "", "갤러리", $"갤러리 이미지 {toDelete.Count}건 삭제");
         _selectedGalleryIds.Clear();
         StateHasChanged();
     }
@@ -1702,6 +1733,7 @@
     {
         item.IsPublished = !item.IsPublished;
         await GalleryService.UpdateAsync(item);
+        await AuditService.LogAsync("Publish", item.Id, "갤러리", $"갤러리 게시 상태 → {(item.IsPublished ? "게시" : "비게시")}");
         StateHasChanged();
     }
 
@@ -1709,6 +1741,7 @@
     {
         item.IsLocked = !item.IsLocked;
         await GalleryService.UpdateAsync(item);
+        await AuditService.LogAsync("Update", item.Id, "갤러리", $"갤러리 잠금 → {(item.IsLocked ? "ON" : "OFF")}");
         StateHasChanged();
     }
 
@@ -1717,6 +1750,7 @@
     private async Task SaveAdminGalleryDecoration(GalleryItem item)
     {
         await GalleryService.UpdateAsync(item);
+        await AuditService.LogAsync("Update", item.Id, "갤러리", "갤러리 꾸미기 저장");
         _adminGalleryEditItem = null;
         StateHasChanged();
     }

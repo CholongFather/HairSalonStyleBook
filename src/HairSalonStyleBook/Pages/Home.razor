@@ -129,7 +129,7 @@
         {
             <!-- 탭 2: 매장 -->
             <div class="tab-panel tab-fade-in">
-                <!-- 서브탭: WiFi / 계좌 -->
+                <!-- 서브탭: WiFi / 계좌 / 간편결제 -->
                 <div class="sub-tab-bar">
                     <button class="sub-tab-item @(_shopTab == 0 ? "active" : "")" @onclick="() => _shopTab = 0">
                         <i class="bi bi-wifi"></i> WiFi
@@ -137,6 +137,12 @@
                     <button class="sub-tab-item @(_shopTab == 1 ? "active" : "")" @onclick="() => _shopTab = 1">
                         <i class="bi bi-credit-card"></i> 계좌
                     </button>
+                    @if (HasEasyPay)
+                    {
+                        <button class="sub-tab-item @(_shopTab == 2 ? "active" : "")" @onclick="() => _shopTab = 2">
+                            <i class="bi bi-phone"></i> 간편결제
+                        </button>
+                    }
                 </div>
 
                 @if (_shopTab == 0)
@@ -165,14 +171,14 @@
                             <div class="qr-dual">
                                 <div class="qr-dual-item">
                                     <span class="qr-dual-label">5G</span>
-                                    <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.Wifi5GQrUrl)">
-                                        <img src="@_shopConfig.Wifi5GQrUrl" alt="5G WiFi QR" class="qr-image-sm" loading="lazy" />
+                                    <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.Wifi5GQrData)">
+                                        <QrCode Data="@_shopConfig.Wifi5GQrData" Alt="5G WiFi QR" CssClass="qr-image-sm" />
                                     </div>
                                 </div>
                                 <div class="qr-dual-item">
                                     <span class="qr-dual-label">2.4G</span>
-                                    <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.Wifi24GQrUrl)">
-                                        <img src="@_shopConfig.Wifi24GQrUrl" alt="2.4G WiFi QR" class="qr-image-sm" loading="lazy" />
+                                    <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.Wifi24GQrData)">
+                                        <QrCode Data="@_shopConfig.Wifi24GQrData" Alt="2.4G WiFi QR" CssClass="qr-image-sm" />
                                     </div>
                                 </div>
                             </div>
@@ -209,30 +215,62 @@
                         </div>
                         <div class="qr-section">
                             <p class="qr-label">QR 스캔하여 계좌정보 확인</p>
-                            <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.AccountQrUrl)">
-                                <img src="@_shopConfig.AccountQrUrl" alt="계좌 QR Code" class="qr-image" loading="lazy" />
+                            <div class="qr-wrapper" @onclick="() => OpenQr(ShopConfig.AccountQrData)">
+                                <QrCode Data="@ShopConfig.AccountQrData" Alt="계좌 QR Code" CssClass="qr-image" />
                                 <span class="qr-tap-hint">
                                     <i class="bi bi-phone"></i> 스마트폰으로 스캔하세요
                                 </span>
                             </div>
                         </div>
-                        @if (_shopConfig.KakaoPayEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoPayQrUrl))
+                        <p class="info-note">
+                            <i class="bi bi-info-circle"></i>
+                            시술 후 계좌이체도 가능합니다
+                        </p>
+                    </div>
+                }
+                else if (_shopTab == 2)
+                {
+                    <!-- 간편결제 -->
+                    <div class="info-card">
+                        <div class="info-card-icon">
+                            <i class="bi bi-phone"></i>
+                        </div>
+                        <h3 class="info-card-title">간편결제</h3>
+                        <div class="info-card-divider"></div>
+
+                        @if (_shopConfig.KakaoPayEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoPayUrl))
                         {
                             <div class="qr-section">
                                 <p class="qr-label">
-                                    <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오페이 송금
+                                    <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오페이
                                 </p>
-                                <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.KakaoPayQrUrl)">
-                                    <img src="@_shopConfig.KakaoPayQrUrl" alt="카카오페이 QR" class="qr-image" loading="lazy" />
+                                <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.KakaoPayUrl)">
+                                    <QrCode Data="@_shopConfig.KakaoPayUrl" Alt="카카오페이 QR" CssClass="qr-image" />
                                     <span class="qr-tap-hint">
                                         <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
                                     </span>
                                 </div>
                             </div>
                         }
+
+                        @if (_shopConfig.NaverPayEnabled && !string.IsNullOrEmpty(_shopConfig.NaverPayUrl))
+                        {
+                            <div class="qr-section">
+                                <p class="qr-label">
+                                    <span class="naver-n" style="font-size:0.85rem">N</span> 네이버페이
+                                </p>
+                                <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.NaverPayUrl)">
+                                    <QrCode Data="@_shopConfig.NaverPayUrl" Alt="네이버페이 QR" CssClass="qr-image" />
+                                    <span class="qr-tap-hint">
+                                        <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
+                                    </span>
+                                </div>
+                            </div>
+                        }
+
                         <p class="info-note">
                             <i class="bi bi-info-circle"></i>
-                            시술 후 계좌이체도 가능합니다
+                            QR을 스캔하여 간편하게 결제하세요
                         </p>
                     </div>
                 }
@@ -244,7 +282,7 @@
             <div class="tab-panel tab-fade-in">
                 <p class="sns-guide-text"><i class="bi bi-qr-code-scan"></i> 고객이 핸드폰으로 QR을 스캔하면 해당 페이지로 이동합니다</p>
 
-                @if (_shopConfig.SnsInstagramEnabled && !string.IsNullOrEmpty(_shopConfig.InstagramQrUrl))
+                @if (_shopConfig.SnsInstagramEnabled && !string.IsNullOrEmpty(_shopConfig.InstagramUrl))
                 {
                     <div class="sns-section">
                         <div class="sns-section-header">
@@ -257,8 +295,8 @@
                                     <i class="bi bi-instagram"></i>
                                     <span>Instagram</span>
                                 </div>
-                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.InstagramQrUrl)">
-                                    <img src="@_shopConfig.InstagramQrUrl" alt="Instagram QR" loading="lazy" />
+                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.InstagramUrl)">
+                                    <QrCode Data="@_shopConfig.InstagramUrl" Alt="Instagram QR" />
                                 </div>
                                 <p class="sns-qr-card-desc">실시간 스타일 업데이트</p>
                             </div>
@@ -267,7 +305,7 @@
                     </div>
                 }
 
-                @if (_shopConfig.SnsKakaoEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoChannelQrUrl))
+                @if (_shopConfig.SnsKakaoEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoChannelUrl))
                 {
                     <div class="sns-section">
                         <div class="sns-section-header">
@@ -280,8 +318,8 @@
                                     <i class="bi bi-chat-dots-fill"></i>
                                     <span>카카오톡 채널</span>
                                 </div>
-                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.KakaoChannelQrUrl)">
-                                    <img src="@_shopConfig.KakaoChannelQrUrl" alt="카카오톡 채널 QR" loading="lazy" />
+                                <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.KakaoChannelUrl)">
+                                    <QrCode Data="@_shopConfig.KakaoChannelUrl" Alt="카카오톡 채널 QR" />
                                 </div>
                                 <p class="sns-qr-card-desc">채널 추가하고 소식 받기</p>
                             </div>
@@ -291,8 +329,8 @@
                 }
 
                 @{
-                    var showNaverPlace = _shopConfig.SnsNaverPlaceEnabled && !string.IsNullOrEmpty(_shopConfig.NaverPlaceQrUrl);
-                    var showNaverReview = _shopConfig.SnsNaverReviewEnabled && !string.IsNullOrEmpty(_shopConfig.NaverReviewQrUrl);
+                    var showNaverPlace = _shopConfig.SnsNaverPlaceEnabled && !string.IsNullOrEmpty(_shopConfig.NaverPlaceUrl);
+                    var showNaverReview = _shopConfig.SnsNaverReviewEnabled && !string.IsNullOrEmpty(_shopConfig.NaverReviewUrl);
                 }
                 @if (showNaverPlace || showNaverReview)
                 {
@@ -309,8 +347,8 @@
                                         <span class="naver-n">N</span>
                                         <span>네이버 플레이스</span>
                                     </div>
-                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverPlaceQrUrl)">
-                                        <img src="@_shopConfig.NaverPlaceQrUrl" alt="네이버 플레이스 QR" loading="lazy" />
+                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverPlaceUrl)">
+                                        <QrCode Data="@_shopConfig.NaverPlaceUrl" Alt="네이버 플레이스 QR" />
                                     </div>
                                     <p class="sns-qr-card-desc">매장 정보 & 예약</p>
                                 </div>
@@ -323,8 +361,8 @@
                                         <i class="bi bi-chat-heart"></i>
                                         <span>리뷰</span>
                                     </div>
-                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverReviewQrUrl)">
-                                        <img src="@_shopConfig.NaverReviewQrUrl" alt="리뷰 QR" loading="lazy" />
+                                    <div class="sns-qr-card-body" @onclick="() => OpenQr(_shopConfig.NaverReviewUrl)">
+                                        <QrCode Data="@_shopConfig.NaverReviewUrl" Alt="리뷰 QR" />
                                     </div>
                                     <p class="sns-qr-card-desc">고객님들의 솔직한 후기</p>
                                 </div>
@@ -574,6 +612,10 @@
     private int _activeTab;
     private int _shopTab;
 
+    private bool HasEasyPay =>
+        (_shopConfig.KakaoPayEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoPayUrl)) ||
+        (_shopConfig.NaverPayEnabled && !string.IsNullOrEmpty(_shopConfig.NaverPayUrl));
+
     // 페이지 슬라이드
     private string _slideClass = "";
     private int _pageKey;
@@ -718,10 +760,9 @@
         _activeTab = tab;
     }
 
-    private void OpenQr(string url)
+    private async Task OpenQr(string data)
     {
-        // 오버레이용 고해상도 QR 요청
-        _overlayQrUrl = url.Replace("200x200", "400x400");
+        _overlayQrUrl = await JS.InvokeAsync<string>("generateQrDataUrl", data, 400);
         _qrScale = 1.0;
         _showQrOverlay = true;
     }

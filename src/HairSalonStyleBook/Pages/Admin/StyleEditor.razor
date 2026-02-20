@@ -383,12 +383,15 @@
 
         _uploading = false;
         await AutoSaveImages();
+        if (_uploadedCount > 0)
+            await AuditService.LogAsync("Update", _style.Id, _style.Title, $"이미지 {_uploadedCount}건 업로드");
     }
 
     private async Task RemoveImage(string url)
     {
         _style.ImageUrls.Remove(url);
         await AutoSaveImages();
+        await AuditService.LogAsync("Update", _style.Id, _style.Title, "이미지 1건 삭제");
     }
 
     private async Task AutoSaveImages()

@@ -29,7 +29,8 @@ public class ShopConfig
     // 간편결제
     public string KakaoPayUrl { get; set; } = "";
     public bool KakaoPayEnabled { get; set; } = false;
-    public string KakaoPayQrUrl => string.IsNullOrEmpty(KakaoPayUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(KakaoPayUrl)}";
+    public string NaverPayUrl { get; set; } = "";
+    public bool NaverPayEnabled { get; set; } = false;
 
     // SNS 활성/비활성
     public bool SnsInstagramEnabled { get; set; } = true;
@@ -37,13 +38,7 @@ public class ShopConfig
     public bool SnsNaverPlaceEnabled { get; set; } = true;
     public bool SnsNaverReviewEnabled { get; set; } = true;
 
-    // QR 코드 URL 자동 생성
-    public string Wifi5GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName5G};P:{WifiPassword};;")}";
-    public string Wifi24GQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString($"WIFI:T:WPA;S:{WifiName24G};P:{WifiPassword};;")}";
-    // 계좌 QR → 결제 페이지 URL로 연결 (텍스트 QR은 폰에서 복사 불가)
-    public string AccountQrUrl => $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString("https://cholongfather.github.io/HairSalonStyleBook/pay")}";
-    public string InstagramQrUrl => string.IsNullOrEmpty(InstagramUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(InstagramUrl)}";
-    public string KakaoChannelQrUrl => string.IsNullOrEmpty(KakaoChannelUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(KakaoChannelUrl)}";
-    public string NaverPlaceQrUrl => string.IsNullOrEmpty(NaverPlaceUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverPlaceUrl)}";
-    public string NaverReviewQrUrl => string.IsNullOrEmpty(NaverReviewUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(NaverReviewUrl)}";
+    public string Wifi5GQrData => $"WIFI:T:WPA;S:{WifiName5G};P:{WifiPassword};;";
+    public string Wifi24GQrData => $"WIFI:T:WPA;S:{WifiName24G};P:{WifiPassword};;";
+    public const string AccountQrData = "https://cholongfather.github.io/HairSalonStyleBook/pay";
 }

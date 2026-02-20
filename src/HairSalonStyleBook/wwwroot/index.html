@@ -99,6 +99,20 @@
             }
         };
     </script>
+    <!-- QR 코드 클라이언트 생성 (외부 API 의존 제거) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script>
+        window.generateQrDataUrl = function(text, targetSize) {
+            if (!text) return '';
+            var qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+            var margin = 2;
+            var modules = qr.getModuleCount();
+            var cellSize = Math.max(1, Math.floor(targetSize / (modules + margin * 2)));
+            return qr.createDataURL(cellSize, margin);
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
