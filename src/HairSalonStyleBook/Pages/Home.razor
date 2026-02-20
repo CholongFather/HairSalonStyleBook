@@ -216,6 +216,20 @@
                                 </span>
                             </div>
                         </div>
+                        @if (_shopConfig.KakaoPayEnabled && !string.IsNullOrEmpty(_shopConfig.KakaoPayQrUrl))
+                        {
+                            <div class="qr-section">
+                                <p class="qr-label">
+                                    <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오페이 송금
+                                </p>
+                                <div class="qr-wrapper" @onclick="() => OpenQr(_shopConfig.KakaoPayQrUrl)">
+                                    <img src="@_shopConfig.KakaoPayQrUrl" alt="카카오페이 QR" class="qr-image" loading="lazy" />
+                                    <span class="qr-tap-hint">
+                                        <i class="bi bi-arrows-fullscreen"></i> 터치하여 확대
+                                    </span>
+                                </div>
+                            </div>
+                        }
                         <p class="info-note">
                             <i class="bi bi-info-circle"></i>
                             시술 후 계좌이체도 가능합니다

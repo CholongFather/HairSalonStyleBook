@@ -69,25 +69,15 @@
 
             <p class="pay-note">복사 후 뱅킹 앱에 붙여넣기 하세요</p>
 
-            @if (_config.KakaoPayEnabled && !string.IsNullOrEmpty(_config.KakaoPayUrl) ||
-                 _config.NaverPayEnabled && !string.IsNullOrEmpty(_config.NaverPayUrl))
+            @if (_config.KakaoPayEnabled && !string.IsNullOrEmpty(_config.KakaoPayUrl))
             {
                 <!-- 간편결제 -->
                 <div class="pay-easy-section">
                     <p class="pay-easy-label">간편결제</p>
                     <div class="pay-easy-btns">
-                        @if (_config.KakaoPayEnabled && !string.IsNullOrEmpty(_config.KakaoPayUrl))
-                        {
-                            <button class="pay-easy-btn pay-easy-btn-kakao" @onclick="() => OpenUrl(_config.KakaoPayUrl)">
-                                <i class="bi bi-chat-dots-fill"></i> 카카오페이
-                            </button>
-                        }
-                        @if (_config.NaverPayEnabled && !string.IsNullOrEmpty(_config.NaverPayUrl))
-                        {
-                            <button class="pay-easy-btn pay-easy-btn-naver" @onclick="() => OpenUrl(_config.NaverPayUrl)">
-                                <span class="pay-easy-n">N</span> 네이버페이
-                            </button>
-                        }
+                        <button class="pay-easy-btn pay-easy-btn-kakao" @onclick="() => OpenUrl(_config.KakaoPayUrl)">
+                            <i class="bi bi-chat-dots-fill"></i> 카카오페이
+                        </button>
                     </div>
                 </div>
             }
@@ -588,13 +578,4 @@
         color: #3c1e1e;
     }
 
-    .pay-easy-btn-naver {
-        background: #03C75A;
-        color: #fff;
-    }
-
-    .pay-easy-n {
-        font-weight: 900;
-        font-size: 0.9rem;
-    }
 </style>

@@ -281,20 +281,6 @@
                     </div>
                 </div>
 
-                <div class="sns-admin-item">
-                    <div class="sns-admin-toggle">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.NaverPayEnabled" id="naverPay" />
-                            <label class="form-check-label fw-bold" for="naverPay">
-                                <span style="color:#03C75A;font-weight:900">N</span> 네이버페이
-                            </label>
-                        </div>
-                    </div>
-                    <div class="shop-edit-group mt-1">
-                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPayUrl"
-                               placeholder="네이버페이 송금 링크 URL" />
-                    </div>
-                </div>
             </div>
 
             <button class="btn btn-salon mt-3" @onclick="SaveShopConfig" disabled="@_shopSaving">

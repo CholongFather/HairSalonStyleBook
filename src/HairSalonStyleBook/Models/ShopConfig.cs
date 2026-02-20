@@ -28,9 +28,8 @@ public class ShopConfig
 
     // 간편결제
     public string KakaoPayUrl { get; set; } = "";
-    public string NaverPayUrl { get; set; } = "";
     public bool KakaoPayEnabled { get; set; } = false;
-    public bool NaverPayEnabled { get; set; } = false;
+    public string KakaoPayQrUrl => string.IsNullOrEmpty(KakaoPayUrl) ? "" : $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(KakaoPayUrl)}";
 
     // SNS 활성/비활성
     public bool SnsInstagramEnabled { get; set; } = true;
