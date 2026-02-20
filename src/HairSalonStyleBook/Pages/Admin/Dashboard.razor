@@ -259,6 +259,44 @@
                 </div>
             </div>
 
+            <!-- 간편결제 -->
+            <div class="shop-section" style="margin-top: 1rem;">
+                <div class="shop-section-header">
+                    <i class="bi bi-phone"></i>
+                    <h3>간편결제</h3>
+                </div>
+
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.KakaoPayEnabled" id="kakaoPay" />
+                            <label class="form-check-label fw-bold" for="kakaoPay">
+                                <i class="bi bi-chat-dots-fill" style="color:#FEE500"></i> 카카오페이
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-group mt-1">
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.KakaoPayUrl"
+                               placeholder="카카오페이 송금 링크 URL" />
+                    </div>
+                </div>
+
+                <div class="sns-admin-item">
+                    <div class="sns-admin-toggle">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="_shopConfig.NaverPayEnabled" id="naverPay" />
+                            <label class="form-check-label fw-bold" for="naverPay">
+                                <span style="color:#03C75A;font-weight:900">N</span> 네이버페이
+                            </label>
+                        </div>
+                    </div>
+                    <div class="shop-edit-group mt-1">
+                        <input type="text" class="form-control form-control-sm" @bind="_shopConfig.NaverPayUrl"
+                               placeholder="네이버페이 송금 링크 URL" />
+                    </div>
+                </div>
+            </div>
+
             <button class="btn btn-salon mt-3" @onclick="SaveShopConfig" disabled="@_shopSaving">
                 @if (_shopSaving)
                 {

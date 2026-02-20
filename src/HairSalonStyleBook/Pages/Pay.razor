@@ -69,6 +69,29 @@
 
             <p class="pay-note">복사 후 뱅킹 앱에 붙여넣기 하세요</p>
 
+            @if (_config.KakaoPayEnabled && !string.IsNullOrEmpty(_config.KakaoPayUrl) ||
+                 _config.NaverPayEnabled && !string.IsNullOrEmpty(_config.NaverPayUrl))
+            {
+                <!-- 간편결제 -->
+                <div class="pay-easy-section">
+                    <p class="pay-easy-label">간편결제</p>
+                    <div class="pay-easy-btns">
+                        @if (_config.KakaoPayEnabled && !string.IsNullOrEmpty(_config.KakaoPayUrl))
+                        {
+                            <button class="pay-easy-btn pay-easy-btn-kakao" @onclick="() => OpenUrl(_config.KakaoPayUrl)">
+                                <i class="bi bi-chat-dots-fill"></i> 카카오페이
+                            </button>
+                        }
+                        @if (_config.NaverPayEnabled && !string.IsNullOrEmpty(_config.NaverPayUrl))
+                        {
+                            <button class="pay-easy-btn pay-easy-btn-naver" @onclick="() => OpenUrl(_config.NaverPayUrl)">
+                                <span class="pay-easy-n">N</span> 네이버페이
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- 남은 시간 + 닫기 -->
             <div class="pay-footer">
                 <div class="pay-timer">
@@ -214,6 +237,11 @@
         "SC제일은행" => "SC제일",
         _ => bankName.Replace("은행", "")
     };
+
+    private async Task OpenUrl(string url)
+    {
+        await JS.InvokeVoidAsync("window.open", url, "_blank");
+    }
 
     private async Task ClosePage()
     {
@@ -514,5 +542,59 @@
         padding: 0.5rem 1.2rem;
         background: rgba(123, 163, 131, 0.1);
         border-radius: 20px;
+    }
+
+    /* 간편결제 */
+    .pay-easy-section {
+        margin-top: 1.2rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(232, 227, 220, 0.4);
+    }
+
+    .pay-easy-label {
+        font-family: var(--font-serif);
+        font-size: 0.75rem;
+        color: var(--salon-gray);
+        margin: 0 0 0.6rem;
+    }
+
+    .pay-easy-btns {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .pay-easy-btn {
+        flex: 1;
+        padding: 0.75rem 0.5rem;
+        border: none;
+        border-radius: 12px;
+        font-family: var(--font-serif);
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        transition: all 0.2s;
+    }
+
+    .pay-easy-btn:active {
+        transform: scale(0.96);
+    }
+
+    .pay-easy-btn-kakao {
+        background: #FEE500;
+        color: #3c1e1e;
+    }
+
+    .pay-easy-btn-naver {
+        background: #03C75A;
+        color: #fff;
+    }
+
+    .pay-easy-n {
+        font-weight: 900;
+        font-size: 0.9rem;
     }
 </style>

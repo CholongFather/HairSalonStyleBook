@@ -26,6 +26,12 @@ public class ShopConfig
             : $"https://map.naver.com/p/search/{Uri.EscapeDataString(NaverSearchKeyword)}/place/{NaverPlaceId}?placePath=/home";
     public string NaverReviewUrl => string.IsNullOrEmpty(NaverPlaceId) ? "" : $"https://m.place.naver.com/hairshop/{NaverPlaceId}/review/visitor";
 
+    // 간편결제
+    public string KakaoPayUrl { get; set; } = "";
+    public string NaverPayUrl { get; set; } = "";
+    public bool KakaoPayEnabled { get; set; } = false;
+    public bool NaverPayEnabled { get; set; } = false;
+
     // SNS 활성/비활성
     public bool SnsInstagramEnabled { get; set; } = true;
     public bool SnsKakaoEnabled { get; set; } = true;
