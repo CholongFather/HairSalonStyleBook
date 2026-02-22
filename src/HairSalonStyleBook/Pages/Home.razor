@@ -3,6 +3,7 @@
 @inject IStyleService StyleService
 @inject IShopConfigService ShopConfigService
 @inject IGalleryService GalleryService
+@inject IBeforeAfterService BAService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -28,10 +29,6 @@
             <i class="bi bi-share"></i>
             <span>SNS</span>
         </button>
-        <button class="tab-item" @onclick="GoToBeforeAfter">
-            <i class="bi bi-arrow-left-right"></i>
-            <span>B/A</span>
-        </button>
     </div>
 
     <!-- 탭 콘텐츠 영역 -->
@@ -40,6 +37,18 @@
         {
             <!-- 탭 0: 스타일북 -->
             <div class="tab-panel tab-fade-in">
+                <!-- 스타일북 서브탭 -->
+                <div class="sub-tab-bar">
+                    <button class="sub-tab-item @(_styleSubTab == 0 ? "active" : "")" @onclick="() => _styleSubTab = 0">
+                        <i class="bi bi-grid"></i> 스타일
+                    </button>
+                    <button class="sub-tab-item @(_styleSubTab == 1 ? "active" : "")" @onclick="() => { _styleSubTab = 1; _ = LoadBeforeAfterIfNeeded(); }">
+                        <i class="bi bi-arrow-left-right"></i> Before / After
+                    </button>
+                </div>
+
+                @if (_styleSubTab == 0)
+                {
                 <!-- 카테고리 & 시술 필터 -->
                 <CategoryMenu SelectedCategory="_selectedCategory" OnCategorySelected="OnCategoryChanged"
                               SelectedService="_selectedService" OnServiceSelected="OnServiceChanged" />
@@ -125,6 +134,93 @@
                             <span class="page-indicator-text">@_currentPage / @_totalPages</span>
                         </div>
                         <Pagination CurrentPage="_currentPage" TotalPages="_totalPages" OnPageChanged="OnPageChanged" />
+                    }
+                }
+                } @* 스타일 서브탭 끝 *@
+                else if (_styleSubTab == 1)
+                {
+                    @* Before / After 서브탭 *@
+                    @if (_baLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        </div>
+                    }
+                    else if (!_baItems.Any())
+                    {
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="bi bi-arrow-left-right"></i></div>
+                            <p class="empty-text">등록된 Before/After가 없습니다</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @* B/A 카테고리 필터 *@
+                        <div class="ba-filter-chips">
+                            @foreach (var cat in _baCategories)
+                            {
+                                <button class="ba-chip @(cat == _baCat ? "active" : "")"
+                                        @onclick="() => _baCat = cat">@cat</button>
+                            }
+                        </div>
+
+                        <div class="ba-home-grid">
+                            @foreach (var item in FilteredBA)
+                            {
+                                <div class="ba-home-card" @onclick="() => _baFullscreen = item">
+                                    <BeforeAfterSlider BeforeImageUrls="item.BeforeImageUrls"
+                                                       AfterImageUrls="item.AfterImageUrls"
+                                                       Height="260" />
+                                    <div class="ba-home-card-body">
+                                        <strong>@item.Title</strong>
+                                        @if (!string.IsNullOrWhiteSpace(item.Category))
+                                        {
+                                            <span class="ba-home-badge">@item.Category</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (_baHasMore)
+                        {
+                            <div class="text-center mt-3">
+                                <button class="btn btn-salon-outline btn-sm" @onclick="LoadMoreBA" disabled="@_baLoadingMore">
+                                    @if (_baLoadingMore) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    더보기
+                                </button>
+                            </div>
+                        }
+                    }
+
+                    @* B/A 풀스크린 모달 *@
+                    @if (_baFullscreen != null)
+                    {
+                        <div class="ba-fs-overlay" @onclick="() => _baFullscreen = null">
+                            <div class="ba-fs-content" @onclick:stopPropagation="true">
+                                <button class="ba-fs-close" @onclick="() => _baFullscreen = null"><i class="bi bi-x-lg"></i></button>
+                                <BeforeAfterSlider BeforeImageUrls="_baFullscreen.BeforeImageUrls"
+                                                   AfterImageUrls="_baFullscreen.AfterImageUrls"
+                                                   Height="450" />
+                                <div class="ba-fs-detail">
+                                    <h5>@_baFullscreen.Title</h5>
+                                    @if (!string.IsNullOrWhiteSpace(_baFullscreen.Description))
+                                    {
+                                        <p class="text-secondary mb-1" style="font-size:0.85rem;">@_baFullscreen.Description</p>
+                                    }
+                                    <div class="ba-home-meta">
+                                        @if (!string.IsNullOrWhiteSpace(_baFullscreen.Category))
+                                        {
+                                            <span class="ba-home-badge">@_baFullscreen.Category</span>
+                                        }
+                                        @foreach (var tag in _baFullscreen.Hashtags.Take(5))
+                                        {
+                                            <span class="ba-home-tag">#@tag</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     }
                 }
             </div>
@@ -603,7 +699,59 @@
 }
 
 @code {
-    private void GoToBeforeAfter() => Nav.NavigateTo("before-after");
+    // -- 스타일북 서브탭 --
+    private int _styleSubTab;
+
+    // -- Before / After --
+    private readonly string[] _baCategories = { "전체", "남성", "여성숏", "여성단발", "여성미디움", "여성롱" };
+    private string _baCat = "전체";
+    private List<BeforeAfterItem> _baItems = new();
+    private bool _baLoading;
+    private bool _baHasMore;
+    private bool _baLoadingMore;
+    private bool _baLoaded;
+    private BeforeAfterItem? _baFullscreen;
+
+    private List<BeforeAfterItem> FilteredBA =>
+        _baCat == "전체" ? _baItems : _baItems.Where(x => x.Category == _baCat).ToList();
+
+    private async Task LoadBeforeAfterIfNeeded()
+    {
+        if (_baLoaded) return;
+        _baLoading = true;
+        try
+        {
+            var (items, hasMore) = await BAService.GetPageAsync(12, null, true);
+            _baItems = items;
+            _baHasMore = hasMore;
+            _baLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Home] B/A 로드 실패: {ex.Message}");
+        }
+        finally
+        {
+            _baLoading = false;
+        }
+    }
+
+    private async Task LoadMoreBA()
+    {
+        if (_baLoadingMore || !_baHasMore) return;
+        _baLoadingMore = true;
+        try
+        {
+            var lastDate = _baItems.LastOrDefault()?.CreatedAt;
+            var (items, hasMore) = await BAService.GetPageAsync(12, lastDate, true);
+            _baItems.AddRange(items);
+            _baHasMore = hasMore;
+        }
+        finally
+        {
+            _baLoadingMore = false;
+        }
+    }
 
     private List<StylePost> _allStyles = new();
     private List<StylePost> _filteredStyles = new();
@@ -2120,6 +2268,139 @@
 
     @@media (max-width: 480px) {
         .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* B/A 서브탭 */
+    .ba-filter-chips {
+        display: flex;
+        gap: 6px;
+        padding: 0.5rem 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ba-chip {
+        padding: 5px 12px;
+        border: 1.5px solid var(--border-color, #ddd);
+        border-radius: 18px;
+        background: transparent;
+        color: var(--text-secondary, #666);
+        font-size: 0.78rem;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .ba-chip.active,
+    .ba-chip:hover {
+        background: var(--text-primary, #1a1a1a);
+        color: #fff;
+        border-color: var(--text-primary, #1a1a1a);
+    }
+
+    .ba-home-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    @@media (min-width: 768px) {
+        .ba-home-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .ba-home-card {
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--bg-primary, #fff);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .ba-home-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .ba-home-card-body {
+        padding: 0.6rem 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .ba-home-card-body strong {
+        font-size: 0.9rem;
+    }
+
+    .ba-home-badge {
+        font-size: 0.68rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--bg-secondary, #f5f5f5);
+        color: var(--text-secondary, #666);
+    }
+
+    .ba-home-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .ba-home-tag {
+        font-size: 0.72rem;
+        color: #888;
+    }
+
+    /* B/A 풀스크린 */
+    .ba-fs-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .ba-fs-content {
+        position: relative;
+        width: 100%;
+        max-width: 650px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--bg-primary, #fff);
+    }
+
+    .ba-fs-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 20;
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.5);
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ba-fs-detail {
+        padding: 0.8rem 1rem;
+    }
+
+    .ba-fs-detail h5 {
+        margin-bottom: 0.3rem;
+        font-size: 1.05rem;
+        font-weight: 600;
     }
 
 </style>

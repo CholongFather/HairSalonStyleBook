@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @using Microsoft.AspNetCore.Authorization
 @inject IBeforeAfterService BAService
+@inject IStyleService StyleService
 @inject IAuditService AuditService
 @inject IImageService ImageService
 @inject IJSRuntime JS
@@ -78,35 +79,33 @@
                 </div>
 
                 <div class="bae-modal-body">
-                    @* 제목 *@
+                    @* 스타일 선택 *@
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">시술명</label>
-                        <input type="text" class="form-control" @bind="_editItem.Title" placeholder="예: 레이어드 펌" />
-                    </div>
-
-                    @* 카테고리 *@
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">카테고리</label>
-                        <select class="form-select" @bind="_editItem.Category">
-                            <option value="">선택</option>
-                            <option value="남성">남성</option>
-                            <option value="여성숏">여성숏</option>
-                            <option value="여성단발">여성단발</option>
-                            <option value="여성미디움">여성미디움</option>
-                            <option value="여성롱">여성롱</option>
+                        <label class="form-label fw-semibold">스타일 선택</label>
+                        <select class="form-select" value="@_selectedStyleId" @onchange="OnStyleSelected">
+                            <option value="">-- 스타일을 선택하세요 --</option>
+                            @foreach (var s in _styles)
+                            {
+                                <option value="@s.Id">@s.Category.ToString() · @s.Title</option>
+                            }
                         </select>
+                        @if (!string.IsNullOrEmpty(_editItem.Title))
+                        {
+                            <div class="bae-selected-style mt-2">
+                                <span class="ba-badge">@_editItem.Category</span>
+                                <strong class="ms-1">@_editItem.Title</strong>
+                                @foreach (var tag in _editItem.Hashtags.Take(5))
+                                {
+                                    <span class="ba-hashtag ms-1">#@tag</span>
+                                }
+                            </div>
+                        }
                     </div>
 
-                    @* 설명 *@
+                    @* 설명 (추가 메모) *@
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">설명</label>
-                        <textarea class="form-control" rows="2" @bind="_editItem.Description" placeholder="간단한 시술 설명"></textarea>
-                    </div>
-
-                    @* 해시태그 *@
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">해시태그 (쉼표 구분)</label>
-                        <input type="text" class="form-control" @bind="_hashtagInput" placeholder="예: 펌, 웨이브, 볼륨" />
+                        <label class="form-label fw-semibold">추가 설명 <span class="text-secondary fw-normal">(선택)</span></label>
+                        <textarea class="form-control" rows="2" @bind="_editItem.Description" placeholder="시술 관련 추가 메모"></textarea>
                     </div>
 
                     @* Before 이미지 *@
@@ -223,13 +222,14 @@
 
 @code {
     private List<BeforeAfterItem> _items = new();
+    private List<StylePost> _styles = new();
     private bool _loading = true;
 
     // 편집
     private bool _editing;
     private bool _isNew;
     private BeforeAfterItem _editItem = new();
-    private string _hashtagInput = "";
+    private string _selectedStyleId = "";
     private bool _saving;
     private string? _uploadError;
     private bool _uploading;
@@ -240,7 +240,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadItems();
+        await Task.WhenAll(LoadItems(), LoadStyles());
+    }
+
+    private async Task LoadStyles()
+    {
+        try
+        {
+            _styles = (await StyleService.GetAllAsync())
+                .OrderBy(s => s.Category)
+                .ThenBy(s => s.Title)
+                .ToList();
+        }
+        catch { /* 무시 */ }
+    }
+
+    private void OnStyleSelected(ChangeEventArgs e)
+    {
+        _selectedStyleId = e.Value?.ToString() ?? "";
+        var style = _styles.FirstOrDefault(s => s.Id == _selectedStyleId);
+        if (style != null)
+        {
+            _editItem.Title = style.Title;
+            _editItem.Category = style.Category.ToString();
+            _editItem.Hashtags = new List<string>(style.Hashtags);
+        }
     }
 
     private async Task LoadItems()
@@ -263,7 +287,7 @@
     {
         _isNew = true;
         _editItem = new BeforeAfterItem();
-        _hashtagInput = "";
+        _selectedStyleId = "";
         _uploadError = null;
         _editing = true;
     }
@@ -284,7 +308,9 @@
             CreatedAt = item.CreatedAt,
             UpdatedAt = item.UpdatedAt,
         };
-        _hashtagInput = string.Join(", ", item.Hashtags);
+        // 기존 항목의 스타일 매칭 (제목으로)
+        var matched = _styles.FirstOrDefault(s => s.Title == item.Title);
+        _selectedStyleId = matched?.Id ?? "";
         _uploadError = null;
         _editing = true;
     }
@@ -364,7 +390,7 @@
         if (_saving) return;
         if (string.IsNullOrWhiteSpace(_editItem.Title))
         {
-            _uploadError = "시술명을 입력해주세요.";
+            _uploadError = "스타일을 선택해주세요.";
             return;
         }
         if (!_editItem.BeforeImageUrls.Any() || !_editItem.AfterImageUrls.Any())
@@ -378,13 +404,6 @@
 
         try
         {
-            // 해시태그 파싱
-            _editItem.Hashtags = _hashtagInput
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(h => h.Length > 0)
-                .Distinct()
-                .ToList();
-
             if (_isNew)
             {
                 var created = await BAService.CreateAsync(_editItem);
