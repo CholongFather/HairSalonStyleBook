@@ -1,0 +1,226 @@
+@inject IJSRuntime JS
+
+@* Before/After 슬라이더 비교 컴포넌트 *@
+<div class="ba-slider-wrap" @ref="_container"
+     @onpointerdown="OnPointerDown"
+     @onpointermove="OnPointerMove"
+     @onpointerup="OnPointerUp"
+     @onpointercancel="OnPointerUp"
+     style="height: @(Height)px;">
+
+    @* Before 이미지 (전체 배경) *@
+    <div class="ba-layer ba-before">
+        <img src="@CurrentBeforeUrl" alt="Before" />
+        <span class="ba-label ba-label-before">BEFORE</span>
+        @if (BeforeImageUrls.Count > 1)
+        {
+            <div class="ba-img-nav ba-img-nav-before">
+                <button class="ba-img-btn" @onclick="PrevBefore" @onclick:stopPropagation="true"><i class="bi bi-chevron-left"></i></button>
+                <span class="ba-img-idx">@(_beforeIdx + 1)/@(BeforeImageUrls.Count)</span>
+                <button class="ba-img-btn" @onclick="NextBefore" @onclick:stopPropagation="true"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        }
+    </div>
+
+    @* After 이미지 (clip으로 잘림) *@
+    <div class="ba-layer ba-after" style="clip-path: inset(0 0 0 @(_pct)%);">
+        <img src="@CurrentAfterUrl" alt="After" />
+        <span class="ba-label ba-label-after">AFTER</span>
+        @if (AfterImageUrls.Count > 1)
+        {
+            <div class="ba-img-nav ba-img-nav-after">
+                <button class="ba-img-btn" @onclick="PrevAfter" @onclick:stopPropagation="true"><i class="bi bi-chevron-left"></i></button>
+                <span class="ba-img-idx">@(_afterIdx + 1)/@(AfterImageUrls.Count)</span>
+                <button class="ba-img-btn" @onclick="NextAfter" @onclick:stopPropagation="true"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        }
+    </div>
+
+    @* 드래그 핸들 *@
+    <div class="ba-handle" style="left: @(_pct)%;">
+        <div class="ba-handle-line"></div>
+        <div class="ba-handle-circle">
+            <i class="bi bi-arrows"></i>
+        </div>
+        <div class="ba-handle-line"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<string> BeforeImageUrls { get; set; } = new();
+    [Parameter] public List<string> AfterImageUrls { get; set; } = new();
+    [Parameter] public int Height { get; set; } = 400;
+
+    private ElementReference _container;
+    private double _pct = 50; // 핸들 위치 (%)
+    private bool _dragging;
+    private int _beforeIdx;
+    private int _afterIdx;
+
+    private string CurrentBeforeUrl => BeforeImageUrls.Count > 0 ? BeforeImageUrls[_beforeIdx] : "";
+    private string CurrentAfterUrl => AfterImageUrls.Count > 0 ? AfterImageUrls[_afterIdx] : "";
+
+    private void PrevBefore() { _beforeIdx = (_beforeIdx - 1 + BeforeImageUrls.Count) % BeforeImageUrls.Count; }
+    private void NextBefore() { _beforeIdx = (_beforeIdx + 1) % BeforeImageUrls.Count; }
+    private void PrevAfter() { _afterIdx = (_afterIdx - 1 + AfterImageUrls.Count) % AfterImageUrls.Count; }
+    private void NextAfter() { _afterIdx = (_afterIdx + 1) % AfterImageUrls.Count; }
+
+    private async Task OnPointerDown(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        _dragging = true;
+        await UpdatePosition(e.ClientX);
+    }
+
+    private async Task OnPointerMove(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_dragging) return;
+        await UpdatePosition(e.ClientX);
+    }
+
+    private void OnPointerUp()
+    {
+        _dragging = false;
+    }
+
+    private async Task UpdatePosition(double clientX)
+    {
+        try
+        {
+            var rect = await JS.InvokeAsync<BoundingRect>("gdGetRect", _container);
+            if (rect.Width <= 0) return;
+            var pct = (clientX - rect.Left) / rect.Width * 100;
+            _pct = Math.Clamp(pct, 2, 98);
+        }
+        catch { /* JS interop 실패 무시 */ }
+    }
+
+    private record BoundingRect(double Left, double Top, double Width, double Height);
+}
+
+<style>
+    .ba-slider-wrap {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        cursor: ew-resize;
+        touch-action: pan-y;
+        user-select: none;
+        background: var(--bg-secondary, #f0f0f0);
+    }
+
+    .ba-layer {
+        position: absolute;
+        inset: 0;
+    }
+
+    .ba-layer img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ba-label {
+        position: absolute;
+        top: 12px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        pointer-events: none;
+    }
+
+    .ba-label-before {
+        left: 12px;
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+    }
+
+    .ba-label-after {
+        right: 12px;
+        background: rgba(255,255,255,0.85);
+        color: #333;
+    }
+
+    /* 핸들 */
+    .ba-handle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .ba-handle-line {
+        flex: 1;
+        width: 3px;
+        background: #fff;
+        box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    }
+
+    .ba-handle-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #333;
+        font-size: 1rem;
+    }
+
+    /* 이미지 인덱스 네비게이션 */
+    .ba-img-nav {
+        position: absolute;
+        bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        z-index: 5;
+    }
+
+    .ba-img-nav-before {
+        left: 10px;
+    }
+
+    .ba-img-nav-after {
+        right: 10px;
+    }
+
+    .ba-img-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.5);
+        color: #fff;
+        font-size: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        pointer-events: auto;
+    }
+
+    .ba-img-btn:hover {
+        background: rgba(0,0,0,0.75);
+    }
+
+    .ba-img-idx {
+        font-size: 0.65rem;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        pointer-events: none;
+    }
+</style>

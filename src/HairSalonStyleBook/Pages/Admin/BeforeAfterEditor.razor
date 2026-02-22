@@ -1,0 +1,679 @@
+@page "/admin/before-after"
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
+@inject IBeforeAfterService BAService
+@inject IAuditService AuditService
+@inject IImageService ImageService
+@inject IJSRuntime JS
+
+<PageTitle>Before/After 관리 - 늘~오던 헤어살롱</PageTitle>
+
+<div class="container bae-page">
+    <div class="bae-header">
+        <h2 class="bae-title"><i class="bi bi-arrow-left-right"></i> Before / After 관리</h2>
+        <button class="btn btn-salon" @onclick="OpenNewEditor">
+            <i class="bi bi-plus-lg"></i> 새 항목
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status"></div>
+        </div>
+    }
+    else if (!_items.Any())
+    {
+        <div class="bae-empty">
+            <i class="bi bi-image" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p>등록된 Before/After 항목이 없습니다.</p>
+            <button class="btn btn-salon" @onclick="OpenNewEditor"><i class="bi bi-plus-lg"></i> 첫 항목 등록</button>
+        </div>
+    }
+    else
+    {
+        <div class="bae-list">
+            @foreach (var item in _items)
+            {
+                <div class="bae-item">
+                    <div class="bae-item-thumbs">
+                        @if (!string.IsNullOrEmpty(item.BeforeThumbnail))
+                        {
+                            <img src="@item.BeforeThumbnail" alt="Before" class="bae-thumb" />
+                        }
+                        <i class="bi bi-arrow-right bae-arrow"></i>
+                        @if (!string.IsNullOrEmpty(item.AfterThumbnail))
+                        {
+                            <img src="@item.AfterThumbnail" alt="After" class="bae-thumb" />
+                        }
+                    </div>
+                    <div class="bae-item-info">
+                        <strong>@item.Title</strong>
+                        <span class="bae-cat">@item.Category</span>
+                        <span class="bae-pub @(item.IsPublished ? "pub" : "")">
+                            @(item.IsPublished ? "게시중" : "비공개")
+                        </span>
+                    </div>
+                    <div class="bae-item-actions">
+                        <button class="btn btn-sm btn-salon-outline" @onclick="() => OpenEditEditor(item)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* 편집 모달 *@
+    @if (_editing)
+    {
+        <div class="bae-modal-overlay" @onclick="CancelEdit">
+            <div class="bae-modal" @onclick:stopPropagation="true">
+                <div class="bae-modal-header">
+                    <h4>@(_isNew ? "새 Before/After" : "Before/After 편집")</h4>
+                    <button class="bae-modal-close" @onclick="CancelEdit"><i class="bi bi-x-lg"></i></button>
+                </div>
+
+                <div class="bae-modal-body">
+                    @* 제목 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">시술명</label>
+                        <input type="text" class="form-control" @bind="_editItem.Title" placeholder="예: 레이어드 펌" />
+                    </div>
+
+                    @* 카테고리 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">카테고리</label>
+                        <select class="form-select" @bind="_editItem.Category">
+                            <option value="">선택</option>
+                            <option value="남성">남성</option>
+                            <option value="여성숏">여성숏</option>
+                            <option value="여성단발">여성단발</option>
+                            <option value="여성미디움">여성미디움</option>
+                            <option value="여성롱">여성롱</option>
+                        </select>
+                    </div>
+
+                    @* 설명 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">설명</label>
+                        <textarea class="form-control" rows="2" @bind="_editItem.Description" placeholder="간단한 시술 설명"></textarea>
+                    </div>
+
+                    @* 해시태그 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">해시태그 (쉼표 구분)</label>
+                        <input type="text" class="form-control" @bind="_hashtagInput" placeholder="예: 펌, 웨이브, 볼륨" />
+                    </div>
+
+                    @* Before 이미지 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Before 이미지 (@(_editItem.BeforeImageUrls.Count)장)</label>
+                        <div class="bae-upload-zone">
+                            <InputFile OnChange="e => OnImagesSelected(e, true)" multiple accept="image/*" class="bae-upload-input" id="beforeUpload" />
+                            <label for="beforeUpload" class="bae-upload-label">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                                <span>Before 이미지 선택</span>
+                            </label>
+                        </div>
+                        @if (_editItem.BeforeImageUrls.Any())
+                        {
+                            <div class="bae-img-preview-row">
+                                @for (int i = 0; i < _editItem.BeforeImageUrls.Count; i++)
+                                {
+                                    var idx = i;
+                                    <div class="bae-img-preview">
+                                        <img src="@_editItem.BeforeImageUrls[idx]" />
+                                        <button class="bae-img-remove" @onclick="() => RemoveImage(true, idx)"><i class="bi bi-x"></i></button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* After 이미지 *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">After 이미지 (@(_editItem.AfterImageUrls.Count)장)</label>
+                        <div class="bae-upload-zone">
+                            <InputFile OnChange="e => OnImagesSelected(e, false)" multiple accept="image/*" class="bae-upload-input" id="afterUpload" />
+                            <label for="afterUpload" class="bae-upload-label">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                                <span>After 이미지 선택</span>
+                            </label>
+                        </div>
+                        @if (_editItem.AfterImageUrls.Any())
+                        {
+                            <div class="bae-img-preview-row">
+                                @for (int i = 0; i < _editItem.AfterImageUrls.Count; i++)
+                                {
+                                    var idx = i;
+                                    <div class="bae-img-preview">
+                                        <img src="@_editItem.AfterImageUrls[idx]" />
+                                        <button class="bae-img-remove" @onclick="() => RemoveImage(false, idx)"><i class="bi bi-x"></i></button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* 미리보기 *@
+                    @if (_editItem.BeforeImageUrls.Any() && _editItem.AfterImageUrls.Any())
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">미리보기</label>
+                            <BeforeAfterSlider BeforeImageUrls="_editItem.BeforeImageUrls"
+                                               AfterImageUrls="_editItem.AfterImageUrls"
+                                               Height="250" />
+                        </div>
+                    }
+
+                    @* 게시 여부 *@
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" class="form-check-input" id="baPublish" @bind="_editItem.IsPublished" />
+                        <label class="form-check-label" for="baPublish">게시</label>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_uploadError))
+                    {
+                        <div class="alert alert-danger py-2">@_uploadError</div>
+                    }
+                </div>
+
+                <div class="bae-modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelEdit">취소</button>
+                    <button class="btn btn-salon" @onclick="SaveItem" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* 삭제 확인 모달 *@
+    @if (_deleteTarget != null)
+    {
+        <div class="bae-modal-overlay" @onclick="() => _deleteTarget = null">
+            <div class="bae-modal bae-modal-sm" @onclick:stopPropagation="true">
+                <div class="bae-modal-body text-center py-4">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                    <h5 class="mt-2">삭제 확인</h5>
+                    <p class="text-secondary">"@_deleteTarget.Title"을(를) 삭제하시겠습니까?<br />이미지도 함께 삭제됩니다.</p>
+                </div>
+                <div class="bae-modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">취소</button>
+                    <button class="btn btn-danger" @onclick="DoDelete" disabled="@_deleting">
+                        @if (_deleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<BeforeAfterItem> _items = new();
+    private bool _loading = true;
+
+    // 편집
+    private bool _editing;
+    private bool _isNew;
+    private BeforeAfterItem _editItem = new();
+    private string _hashtagInput = "";
+    private bool _saving;
+    private string? _uploadError;
+    private bool _uploading;
+
+    // 삭제
+    private BeforeAfterItem? _deleteTarget;
+    private bool _deleting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _loading = true;
+        try
+        {
+            _items = await BAService.GetAllAsync();
+            _items = _items.OrderByDescending(x => x.CreatedAt).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // -- 편집 --
+
+    private void OpenNewEditor()
+    {
+        _isNew = true;
+        _editItem = new BeforeAfterItem();
+        _hashtagInput = "";
+        _uploadError = null;
+        _editing = true;
+    }
+
+    private void OpenEditEditor(BeforeAfterItem item)
+    {
+        _isNew = false;
+        _editItem = new BeforeAfterItem
+        {
+            Id = item.Id,
+            BeforeImageUrls = new List<string>(item.BeforeImageUrls),
+            AfterImageUrls = new List<string>(item.AfterImageUrls),
+            Title = item.Title,
+            Description = item.Description,
+            Category = item.Category,
+            Hashtags = new List<string>(item.Hashtags),
+            IsPublished = item.IsPublished,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = item.UpdatedAt,
+        };
+        _hashtagInput = string.Join(", ", item.Hashtags);
+        _uploadError = null;
+        _editing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _editing = false;
+        _editItem = new();
+    }
+
+    private async Task OnImagesSelected(InputFileChangeEventArgs e, bool isBefore)
+    {
+        if (_uploading) return;
+        _uploading = true;
+        _uploadError = null;
+        var maxSize = 5 * 1024 * 1024; // 5MB
+
+        try
+        {
+            var files = e.GetMultipleFiles(10);
+            foreach (var file in files)
+            {
+                if (file.Size > maxSize)
+                {
+                    _uploadError = $"'{file.Name}'이(가) 5MB를 초과합니다. ({file.Size / 1024 / 1024:F1}MB)";
+                    continue;
+                }
+
+                using var stream = file.OpenReadStream(maxSize);
+                using var ms = new System.IO.MemoryStream();
+                await stream.CopyToAsync(ms);
+                var data = ms.ToArray();
+
+                // 리사이즈 (WebP 변환)
+                var base64 = Convert.ToBase64String(data);
+                var resized = await JS.InvokeAsync<string>("resizeImage", base64, 1200, 1600, 0.82);
+                var resizedData = Convert.FromBase64String(resized);
+
+                var nameOnly = Path.GetFileNameWithoutExtension(file.Name);
+                var url = await ImageService.UploadAsync($"{nameOnly}.webp", resizedData, "image/webp", "beforeafter");
+
+                if (isBefore)
+                    _editItem.BeforeImageUrls.Add(url);
+                else
+                    _editItem.AfterImageUrls.Add(url);
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"업로드 실패: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    private async void RemoveImage(bool isBefore, int idx)
+    {
+        var list = isBefore ? _editItem.BeforeImageUrls : _editItem.AfterImageUrls;
+        if (idx < 0 || idx >= list.Count) return;
+
+        var url = list[idx];
+        list.RemoveAt(idx);
+
+        // Storage에서 삭제
+        try { await ImageService.DeleteAsync(url); }
+        catch { /* 무시 — 저장 시 URL 목록에서 제거됨 */ }
+
+        StateHasChanged();
+    }
+
+    private async Task SaveItem()
+    {
+        if (_saving) return;
+        if (string.IsNullOrWhiteSpace(_editItem.Title))
+        {
+            _uploadError = "시술명을 입력해주세요.";
+            return;
+        }
+        if (!_editItem.BeforeImageUrls.Any() || !_editItem.AfterImageUrls.Any())
+        {
+            _uploadError = "Before / After 이미지를 각각 최소 1장 업로드해주세요.";
+            return;
+        }
+
+        _saving = true;
+        _uploadError = null;
+
+        try
+        {
+            // 해시태그 파싱
+            _editItem.Hashtags = _hashtagInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(h => h.Length > 0)
+                .Distinct()
+                .ToList();
+
+            if (_isNew)
+            {
+                var created = await BAService.CreateAsync(_editItem);
+                await AuditService.LogAsync("BeforeAfter.Create", created.Id, created.Title,
+                    $"Before {created.BeforeImageUrls.Count}장, After {created.AfterImageUrls.Count}장");
+            }
+            else
+            {
+                await BAService.UpdateAsync(_editItem);
+                await AuditService.LogAsync("BeforeAfter.Update", _editItem.Id, _editItem.Title, "항목 수정");
+            }
+
+            _editing = false;
+            await LoadItems();
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"저장 실패: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    // -- 삭제 --
+
+    private void ConfirmDelete(BeforeAfterItem item)
+    {
+        _deleteTarget = item;
+    }
+
+    private async Task DoDelete()
+    {
+        if (_deleteTarget == null || _deleting) return;
+        _deleting = true;
+
+        try
+        {
+            // 이미지 삭제
+            foreach (var url in _deleteTarget.BeforeImageUrls.Concat(_deleteTarget.AfterImageUrls))
+            {
+                try { await ImageService.DeleteAsync(url); }
+                catch { /* 무시 */ }
+            }
+
+            await BAService.DeleteAsync(_deleteTarget.Id);
+            await AuditService.LogAsync("BeforeAfter.Delete", _deleteTarget.Id, _deleteTarget.Title, "항목 삭제");
+
+            _deleteTarget = null;
+            await LoadItems();
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+}
+
+<style>
+    .bae-page {
+        padding-bottom: 2rem;
+    }
+
+    .bae-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.2rem 0;
+    }
+
+    .bae-title {
+        font-family: 'Noto Serif KR', serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-primary, #1a1a1a);
+    }
+
+    .bae-empty {
+        text-align: center;
+        padding: 4rem 1rem;
+        color: var(--text-secondary, #999);
+    }
+
+    /* 목록 */
+    .bae-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bae-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: var(--bg-primary, #fff);
+        box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+
+    .bae-item-thumbs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .bae-thumb {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .bae-arrow {
+        font-size: 0.8rem;
+        color: var(--text-secondary, #999);
+    }
+
+    .bae-item-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .bae-item-info strong {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .bae-cat {
+        font-size: 0.72rem;
+        color: var(--text-secondary, #888);
+    }
+
+    .bae-pub {
+        font-size: 0.7rem;
+        color: #999;
+    }
+
+    .bae-pub.pub {
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .bae-item-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    /* 모달 */
+    .bae-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    .bae-modal {
+        background: var(--bg-primary, #fff);
+        border-radius: 16px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .bae-modal-sm {
+        max-width: 400px;
+    }
+
+    .bae-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid var(--border-color, #eee);
+    }
+
+    .bae-modal-header h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .bae-modal-close {
+        border: none;
+        background: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: var(--text-secondary, #666);
+    }
+
+    .bae-modal-body {
+        padding: 1rem 1.2rem;
+    }
+
+    .bae-modal-footer {
+        padding: 0.8rem 1.2rem;
+        border-top: 1px solid var(--border-color, #eee);
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    /* 업로드 */
+    .bae-upload-zone {
+        position: relative;
+    }
+
+    .bae-upload-input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .bae-upload-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 1rem;
+        border: 2px dashed var(--border-color, #ccc);
+        border-radius: 10px;
+        color: var(--text-secondary, #888);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+
+    .bae-upload-label:hover {
+        border-color: var(--text-primary, #333);
+    }
+
+    .bae-upload-label i {
+        font-size: 1.5rem;
+    }
+
+    /* 이미지 미리보기 */
+    .bae-img-preview-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+
+    .bae-img-preview {
+        position: relative;
+        width: 70px;
+        height: 70px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .bae-img-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .bae-img-remove {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(220,53,69,0.8);
+        color: #fff;
+        font-size: 0.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+    }
+</style>

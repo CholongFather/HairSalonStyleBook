@@ -99,6 +99,62 @@
             }
         };
     </script>
+    <!-- 캘린더 키보드 단축키 -->
+    <script>
+        window.calKeyboard = {
+            _ref: null,
+            init: function(dotnetRef) {
+                this._ref = dotnetRef;
+                this._handler = function(e) {
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+                        e.preventDefault();
+                        dotnetRef.invokeMethodAsync('OnKeyDelete');
+                    } else if (e.key === 'Escape') {
+                        dotnetRef.invokeMethodAsync('OnKeyEscape');
+                    } else if (e.ctrlKey && e.key === 'z') {
+                        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+                        e.preventDefault();
+                        dotnetRef.invokeMethodAsync('OnKeyUndo');
+                    } else if (e.ctrlKey && e.key === 'd') {
+                        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+                        e.preventDefault();
+                        dotnetRef.invokeMethodAsync('OnKeyDuplicate');
+                    }
+                };
+                document.addEventListener('keydown', this._handler);
+            },
+            dispose: function() {
+                if (this._handler) document.removeEventListener('keydown', this._handler);
+                this._ref = null;
+            }
+        };
+    </script>
+    <!-- html2canvas (캘린더 이미지 내보내기) -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        window.calExportPng = async function(el) {
+            if (!el || typeof html2canvas === 'undefined') return '';
+            // 선택 표시 임시 제거
+            el.querySelectorAll('.selected').forEach(function(s) { s.classList.add('_exp_sel'); s.classList.remove('selected'); });
+            el.querySelectorAll('.cal-lock-badge').forEach(function(s) { s.style.display = 'none'; });
+            try {
+                var canvas = await html2canvas(el, { backgroundColor: null, scale: 2, useCORS: true, logging: false });
+                var url = canvas.toDataURL('image/png');
+                // 자동 다운로드
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'calendar-deco.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                return url;
+            } finally {
+                el.querySelectorAll('._exp_sel').forEach(function(s) { s.classList.add('selected'); s.classList.remove('_exp_sel'); });
+                el.querySelectorAll('.cal-lock-badge').forEach(function(s) { s.style.display = ''; });
+            }
+        };
+    </script>
     <!-- QR 코드 클라이언트 생성 (외부 API 의존 제거) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>

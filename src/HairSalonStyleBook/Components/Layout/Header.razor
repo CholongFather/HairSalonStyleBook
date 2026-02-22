@@ -1,5 +1,6 @@
 @inject NavigationManager Nav
 @inject IAuthService AuthService
+@inject IShopConfigService ShopConfigService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
 
@@ -17,6 +18,12 @@
             </button>
             <AuthorizeView>
                 <Authorized Context="authContext">
+                    @if (_calendarEnabled)
+                    {
+                        <a href="calendar" class="header-link" title="다꾸 캘린더">
+                            <i class="bi bi-calendar-heart"></i>
+                        </a>
+                    }
                     <AuthorizeView Roles="Admin">
                         <Authorized Context="adminContext">
                             <a href="admin" class="header-link header-admin" title="관리자">
@@ -36,6 +43,7 @@
 
 @code {
     private bool _isDark;
+    private bool _calendarEnabled;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -43,6 +51,14 @@
         {
             var theme = await JS.InvokeAsync<string>("salonTheme.get");
             _isDark = theme == "dark";
+
+            try
+            {
+                var config = await ShopConfigService.GetAsync();
+                _calendarEnabled = config.CalendarEnabled;
+            }
+            catch { /* 피처 플래그 조회 실패 시 비활성 유지 */ }
+
             StateHasChanged();
         }
     }

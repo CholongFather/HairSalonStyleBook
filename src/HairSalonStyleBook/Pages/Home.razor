@@ -28,6 +28,10 @@
             <i class="bi bi-share"></i>
             <span>SNS</span>
         </button>
+        <button class="tab-item" @onclick="GoToBeforeAfter">
+            <i class="bi bi-arrow-left-right"></i>
+            <span>B/A</span>
+        </button>
     </div>
 
     <!-- 탭 콘텐츠 영역 -->
@@ -599,6 +603,8 @@
 }
 
 @code {
+    private void GoToBeforeAfter() => Nav.NavigateTo("before-after");
+
     private List<StylePost> _allStyles = new();
     private List<StylePost> _filteredStyles = new();
     private List<StylePost> _pagedStyles = new();

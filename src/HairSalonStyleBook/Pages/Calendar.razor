@@ -1,0 +1,2648 @@
+@page "/calendar"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@inject ICalendarDecoService CalendarService
+@inject IAuthService AuthService
+@inject IAuditService AuditService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IImageService ImageService
+@using HairSalonStyleBook.Components
+@using Microsoft.AspNetCore.Components.Forms
+@implements IAsyncDisposable
+
+<div class="cal-page">
+    <!-- 헤더: 월 네비게이션 + 액션 버튼 -->
+    <div class="cal-header">
+        <button class="cal-nav-btn" @onclick="PrevMonth" title="이전 달">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="cal-title-area">
+            @if (!string.IsNullOrEmpty(_data.CustomTitle))
+            {
+                <div class="cal-custom-title">@_data.CustomTitle</div>
+            }
+            <h2 class="cal-month-title">@(_data.Year)년 @(_data.Month)월</h2>
+        </div>
+        <button class="cal-nav-btn" @onclick="NextMonth" title="다음 달">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    @if (_isAdmin)
+    {
+        <div class="cal-actions">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Undo" disabled="@(_undoStack.Count == 0)" title="실행 취소 (Ctrl+Z)">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button class="btn btn-sm @(_data.IsPublished ? "btn-success" : "btn-outline-secondary")"
+                    @onclick="TogglePublish" disabled="@_publishing">
+                <i class="bi @(_data.IsPublished ? "bi-eye-fill" : "bi-eye-slash")"></i>
+                @(_data.IsPublished ? "게시중" : "미게시")
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ShowCopyMonth" title="월 복사">
+                <i class="bi bi-copy"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ExportPng" disabled="@_exporting" title="이미지 저장">
+                @if (_exporting)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                }
+                else
+                {
+                    <i class="bi bi-download"></i>
+                }
+            </button>
+            <div class="cal-more-menu">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMoreMenu" title="더보기">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                @if (_showMoreMenu)
+                {
+                    <div class="cal-dropdown" @onclick:stopPropagation="true">
+                        <button class="cal-dropdown-item" @onclick="LockAllElements">
+                            <i class="bi bi-lock"></i> 전체 잠금
+                        </button>
+                        <button class="cal-dropdown-item" @onclick="UnlockAllElements">
+                            <i class="bi bi-unlock"></i> 전체 해제
+                        </button>
+                        <button class="cal-dropdown-item" @onclick="AlignSelectedCenter" disabled="@(_selectedElementId == null)">
+                            <i class="bi bi-align-center"></i> 중앙 정렬
+                        </button>
+                        <hr style="margin:0.25rem 0;" />
+                        <button class="cal-dropdown-item" @onclick="ClearAllElements" disabled="@(_data.FreeElements.Count == 0)">
+                            <i class="bi bi-eraser"></i> 요소 전체 삭제
+                        </button>
+                        <button class="cal-dropdown-item text-danger" @onclick="ResetMonth">
+                            <i class="bi bi-arrow-clockwise"></i> 월 초기화
+                        </button>
+                    </div>
+                }
+            </div>
+            <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-floppy"></i> 저장
+            </button>
+            @if (_saveMessage != null)
+            {
+                <span class="cal-save-msg">@_saveMessage</span>
+            }
+        </div>
+
+        <!-- 월 복사 모달 -->
+        @if (_showCopyModal)
+        {
+            <div class="cal-modal-overlay" @onclick="() => { _showCopyModal = false; StateHasChanged(); }">
+                <div class="cal-modal" @onclick:stopPropagation="true">
+                    <div class="cal-modal-header">
+                        <span><i class="bi bi-copy"></i> 월 복사</span>
+                        <button class="cal-cell-editor-close" @onclick="() => { _showCopyModal = false; StateHasChanged(); }">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="cal-modal-body">
+                        <p style="font-size:0.8rem;color:var(--salon-gray);">현재 @(_data.Year)년 @(_data.Month)월 꾸미기를 다른 달로 복사합니다.</p>
+                        <div class="d-flex gap-2 align-items-center mb-2">
+                            <select class="form-select form-select-sm" style="width:auto;" @bind="_copyTargetYear">
+                                @for (var yr = DateTime.Now.Year - 1; yr <= DateTime.Now.Year + 2; yr++)
+                                {
+                                    <option value="@yr">@(yr)년</option>
+                                }
+                            </select>
+                            <select class="form-select form-select-sm" style="width:auto;" @bind="_copyTargetMonth">
+                                @for (var mo = 1; mo <= 12; mo++)
+                                {
+                                    <option value="@mo">@(mo)월</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" @onclick="CopyMonth" disabled="@_copyingMonth">
+                                @if (_copyingMonth)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                복사하기
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => { _showCopyModal = false; StateHasChanged(); }">취소</button>
+                        </div>
+                        @if (_copyMessage != null)
+                        {
+                            <div class="mt-2" style="font-size:0.75rem;color:var(--salon-green);">@_copyMessage</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-secondary" role="status"></div>
+            <div class="mt-2 text-muted" style="font-size:0.85rem;">캘린더 불러오는 중...</div>
+        </div>
+    }
+    else if (!_isAdmin && !_data.IsPublished)
+    {
+        <!-- Viewer: 미게시 안내 + 게시된 월 목록 -->
+        <div class="cal-empty">
+            <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:0.3;"></i>
+            <div>이 달의 캘린더가 아직 공개되지 않았어요</div>
+            @if (_publishedMonths.Count > 0)
+            {
+                <div class="cal-published-list">
+                    <span style="font-size:0.75rem;color:var(--salon-gray);">공개된 캘린더:</span>
+                    @foreach (var pm in _publishedMonths)
+                    {
+                        var m = pm;
+                        <button class="cal-published-btn" @onclick="() => LoadMonth(m.Year, m.Month)">
+                            @(m.Year)년 @(m.Month)월
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- 캘린더 캔버스 -->
+        <div class="cal-canvas" @ref="_canvasRef"
+             style="background-color:@_data.BackgroundColor; @GetPatternStyle()"
+             @onpointermove="OnCanvasPointerMove"
+             @onpointerup="OnCanvasPointerUp"
+             @onpointerleave="OnCanvasPointerUp">
+            <!-- 요일 헤더 -->
+            <div class="cal-dow-row">
+                <span class="cal-dow sun">일</span>
+                <span class="cal-dow">월</span>
+                <span class="cal-dow">화</span>
+                <span class="cal-dow">수</span>
+                <span class="cal-dow">목</span>
+                <span class="cal-dow">금</span>
+                <span class="cal-dow sat">토</span>
+            </div>
+
+            <!-- 날짜 그리드 -->
+            <div class="cal-grid">
+                @{
+                    var firstDay = new DateTime(_data.Year, _data.Month, 1);
+                    var daysInMonth = DateTime.DaysInMonth(_data.Year, _data.Month);
+                    var startDow = (int)firstDay.DayOfWeek;
+                }
+                @for (var i = 0; i < startDow; i++)
+                {
+                    <div class="cal-cell empty"></div>
+                }
+                @for (var d = 1; d <= daysInMonth; d++)
+                {
+                    var day = d;
+                    var dayStr = day.ToString();
+                    var hasDeco = _data.CellDecos.TryGetValue(dayStr, out var cellDeco) && !cellDeco.IsEmpty;
+                    var isToday = _data.Year == DateTime.Now.Year && _data.Month == DateTime.Now.Month && day == DateTime.Now.Day;
+                    var dow = (int)new DateTime(_data.Year, _data.Month, day).DayOfWeek;
+                    var hasDDay = _data.DDays.TryGetValue(dayStr, out var ddayLabel);
+                    <div class="cal-cell @(isToday ? "today" : "") @(hasDeco ? "decorated" : "") @(dow == 0 ? "sun" : "") @(dow == 6 ? "sat" : "") @(hasDDay ? "dday" : "")"
+                         style="@(hasDeco ? $"background-color:{cellDeco!.BackgroundColor};" : "")"
+                         @onclick="() => OnCellClick(day)">
+                        <span class="cal-day-num">@day</span>
+                        @if (hasDDay)
+                        {
+                            <span class="cal-dday-badge" title="@ddayLabel">@GetDDayText(day)</span>
+                        }
+                        @if (hasDeco)
+                        {
+                            @if (cellDeco!.Stickers.Count > 0)
+                            {
+                                <div class="cal-cell-stickers">
+                                    @foreach (var sticker in cellDeco.Stickers)
+                                    {
+                                        <span>@sticker</span>
+                                    }
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(cellDeco.Memo))
+                            {
+                                <div class="cal-cell-memo" style="@(!string.IsNullOrEmpty(cellDeco.TextColor) ? $"color:{cellDeco.TextColor};" : "")">
+                                    @cellDeco.Memo
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- 자유 배치 요소 (캔버스 오버레이) -->
+            @foreach (var elem in _data.FreeElements.OrderBy(e => e.ZIndex))
+            {
+                var el = elem;
+                <div class="cal-free-elem @(_selectedElementId == el.Id ? "selected" : "") @(el.IsLocked ? "locked" : "")"
+                     style="left:@FPct(el.X);top:@FPct(el.Y);transform:rotate(@FDeg(el.Rotation)) scale(@FScl(el.Scale));opacity:@FScl(el.Opacity);z-index:@(el.ZIndex + 10);"
+                     @onpointerdown="e => OnElementPointerDown(e, el)"
+                     @onpointerdown:preventDefault="@(_isAdmin && !el.IsLocked)">
+                    @switch (el.Type)
+                    {
+                        case "emoji":
+                            <span class="cal-elem-emoji">@el.Content</span>
+                            break;
+                        case "text":
+                            <span class="cal-elem-text gd-font-@el.Font" style="color:@el.Color;">@el.Content</span>
+                            break;
+                        case "washi":
+                            <div class="cal-elem-washi washi-@el.Pattern" style="width:@FPx(el.Width);"></div>
+                            break;
+                        case "svg":
+                            <span class="cal-elem-svg" style="@(el.Color != "#333333" ? $"color:{el.Color};" : "")">@GetSvgSticker(el.Content)</span>
+                            break;
+                        case "image":
+                            <div class="cal-elem-img-wrap cal-frame-@el.Frame">
+                                <img class="cal-elem-img" src="@el.Content" alt="deco" />
+                            </div>
+                            break;
+                    }
+                    @if (el.IsLocked && _isAdmin)
+                    {
+                        <i class="bi bi-lock-fill cal-lock-badge"></i>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- 셀 편집 팝오버 (Admin 전용) -->
+        @if (_isAdmin && _editingDay.HasValue)
+        {
+            var editDayStr = _editingDay.Value.ToString();
+            if (!_data.CellDecos.ContainsKey(editDayStr))
+                _data.CellDecos[editDayStr] = new CalendarCellDeco();
+            var editCell = _data.CellDecos[editDayStr];
+
+            <div class="cal-cell-editor" @onclick:stopPropagation="true">
+                <div class="cal-cell-editor-header">
+                    <span><i class="bi bi-pencil-square"></i> @(_data.Month)월 @(_editingDay)일 꾸미기</span>
+                    <button class="cal-cell-editor-close" @onclick="CloseCellEditor"><i class="bi bi-x-lg"></i></button>
+                </div>
+
+                <!-- 배경색 -->
+                <div class="cal-cell-editor-section">
+                    <label>배경색</label>
+                    <div class="cal-color-grid">
+                        <button class="cal-color-btn @(string.IsNullOrEmpty(editCell.BackgroundColor) ? "active" : "")"
+                                style="background:transparent;border:1px dashed #ccc;"
+                                title="없음"
+                                @onclick="() => { editCell.BackgroundColor = string.Empty; StateHasChanged(); }">
+                            <i class="bi bi-x" style="font-size:0.6rem;color:#ccc;"></i>
+                        </button>
+                        @foreach (var color in _cellColors)
+                        {
+                            var c = color;
+                            <button class="cal-color-btn @(editCell.BackgroundColor == c ? "active" : "")"
+                                    style="background:@c;"
+                                    @onclick="() => { editCell.BackgroundColor = c; StateHasChanged(); }"></button>
+                        }
+                    </div>
+                </div>
+
+                <!-- 메모 -->
+                <div class="cal-cell-editor-section">
+                    <label>메모 <span class="cal-char-count">@(editCell.Memo.Length)/20</span></label>
+                    <input type="text" class="form-control form-control-sm"
+                           maxlength="20" placeholder="짧은 메모..."
+                           value="@editCell.Memo"
+                           @oninput="e => { editCell.Memo = e.Value?.ToString() ?? string.Empty; StateHasChanged(); }" />
+                </div>
+
+                <!-- 메모 텍스트 색상 -->
+                @if (!string.IsNullOrEmpty(editCell.Memo))
+                {
+                    <div class="cal-cell-editor-section">
+                        <label>텍스트 색상</label>
+                        <div class="cal-color-grid">
+                            @foreach (var color in _textColors)
+                            {
+                                var c = color;
+                                <button class="cal-color-btn sm @(editCell.TextColor == c ? "active" : "")"
+                                        style="background:@c;"
+                                        @onclick="() => { editCell.TextColor = c; StateHasChanged(); }"></button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- 스티커 -->
+                <div class="cal-cell-editor-section">
+                    <label>스티커 <span class="cal-char-count">@(editCell.Stickers.Count)/3</span></label>
+                    @if (editCell.Stickers.Count > 0)
+                    {
+                        <div class="cal-placed-stickers">
+                            @for (var si = 0; si < editCell.Stickers.Count; si++)
+                            {
+                                var idx = si;
+                                <span class="cal-placed-sticker" @onclick="() => RemoveCellSticker(editCell, idx)" title="클릭하여 제거">
+                                    @editCell.Stickers[idx] <i class="bi bi-x-circle-fill"></i>
+                                </span>
+                            }
+                        </div>
+                    }
+                    @if (editCell.Stickers.Count < 3)
+                    {
+                        <div class="cal-sticker-grid">
+                            @foreach (var sticker in _cellStickers)
+                            {
+                                var s = sticker;
+                                <button class="cal-sticker-btn" @onclick="() => AddCellSticker(editCell, s)">@s</button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- D-Day 기념일 -->
+                <div class="cal-cell-editor-section">
+                    <label>D-Day 기념일</label>
+                    @if (_data.DDays.ContainsKey(editDayStr))
+                    {
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="text" class="form-control form-control-sm flex-grow-1"
+                                   maxlength="10" placeholder="기념일명..."
+                                   value="@_data.DDays[editDayStr]"
+                                   @oninput="e => { _data.DDays[editDayStr] = e.Value?.ToString() ?? string.Empty; StateHasChanged(); }" />
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => { _data.DDays.Remove(editDayStr); StateHasChanged(); }" title="삭제">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" style="font-size:0.7rem;"
+                                @onclick="() => { _data.DDays[editDayStr] = string.Empty; StateHasChanged(); }">
+                            <i class="bi bi-calendar-heart"></i> D-Day 설정
+                        </button>
+                    }
+                </div>
+
+                <!-- 셀 복사/붙여넣기 -->
+                <div class="cal-cell-editor-section">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" style="font-size:0.7rem;"
+                                @onclick="() => CopyCellDeco(editDayStr)" disabled="@(editCell.IsEmpty)">
+                            <i class="bi bi-clipboard"></i> 복사
+                        </button>
+                        @if (_copiedCellDeco != null)
+                        {
+                            <button class="btn btn-sm btn-outline-primary" style="font-size:0.7rem;"
+                                    @onclick="() => PasteCellDeco(editDayStr)">
+                                <i class="bi bi-clipboard-check"></i> 붙여넣기
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- 자유 배치 도구 툴바 (Admin 전용) -->
+        @if (_isAdmin)
+        {
+            <div class="cal-toolbar">
+                <div class="cal-toolbar-tabs">
+                    <button class="cal-tab @(_toolTab == 0 ? "active" : "")" @onclick="() => SetToolTab(0)" title="이모지">😊</button>
+                    <button class="cal-tab @(_toolTab == 1 ? "active" : "")" @onclick="() => SetToolTab(1)" title="텍스트">Aa</button>
+                    <button class="cal-tab @(_toolTab == 4 ? "active" : "")" @onclick="() => SetToolTab(4)" title="SVG 스티커">✂️</button>
+                    <button class="cal-tab @(_toolTab == 5 ? "active" : "")" @onclick="() => SetToolTab(5)" title="이미지">📷</button>
+                    <button class="cal-tab @(_toolTab == 2 ? "active" : "")" @onclick="() => SetToolTab(2)" title="와시테이프">🎀</button>
+                    <button class="cal-tab @(_toolTab == 3 ? "active" : "")" @onclick="() => SetToolTab(3)" title="배경">🎨</button>
+                    <button class="cal-tab @(_toolTab == 6 ? "active" : "")" @onclick="() => SetToolTab(6)" title="자동 꾸미기">🎲</button>
+                    <span class="cal-elem-count">@(_data.FreeElements.Count)/50</span>
+                </div>
+
+                @if (_toolTab == 0)
+                {
+                    <!-- 이모지 스티커 추가 -->
+                    <div class="cal-tool-panel">
+                        <div class="cal-sticker-grid">
+                            @foreach (var sticker in _freeStickers)
+                            {
+                                var s = sticker;
+                                <button class="cal-sticker-btn" @onclick="() => AddFreeEmoji(s)"
+                                        disabled="@(_data.FreeElements.Count >= 50)">@s</button>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 1)
+                {
+                    <!-- 텍스트 추가 -->
+                    <div class="cal-tool-panel">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-grow-1">
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="텍스트 입력..." maxlength="30"
+                                       @bind="_newText" @bind:event="oninput" />
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="AddFreeText"
+                                    disabled="@(string.IsNullOrWhiteSpace(_newText) || _data.FreeElements.Count >= 50)">
+                                <i class="bi bi-plus"></i> 추가
+                            </button>
+                        </div>
+                        <div class="cal-font-row mt-2">
+                            @foreach (var font in _fonts)
+                            {
+                                var f = font;
+                                <button class="cal-font-btn gd-font-@f.key @(_newTextFont == f.key ? "active" : "")"
+                                        @onclick="() => { _newTextFont = f.key; StateHasChanged(); }">@f.label</button>
+                            }
+                        </div>
+                        <div class="cal-color-grid mt-2">
+                            @foreach (var color in _textColors)
+                            {
+                                var c = color;
+                                <button class="cal-color-btn sm @(_newTextColor == c ? "active" : "")"
+                                        style="background:@c;"
+                                        @onclick="() => { _newTextColor = c; StateHasChanged(); }"></button>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 2)
+                {
+                    <!-- 와시테이프 추가 -->
+                    <div class="cal-tool-panel">
+                        <div class="cal-washi-grid">
+                            @foreach (var pattern in _washiPatterns)
+                            {
+                                var p = pattern;
+                                <button class="cal-washi-btn" @onclick="() => AddFreeWashi(p.key)"
+                                        disabled="@(_data.FreeElements.Count >= 50)">
+                                    <div class="cal-elem-washi washi-@p.key" style="width:80px;height:14px;"></div>
+                                    <span>@p.label</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 3)
+                {
+                    <!-- 캘린더 배경 설정 -->
+                    <div class="cal-tool-panel">
+                        <label style="font-size:0.7rem;font-weight:600;color:var(--salon-gray);">배경색</label>
+                        <div class="cal-color-grid mb-2">
+                            @foreach (var color in _bgColors)
+                            {
+                                var c = color;
+                                <button class="cal-color-btn @(_data.BackgroundColor == c ? "active" : "")"
+                                        style="background:@c;"
+                                        @onclick="() => { _data.BackgroundColor = c; StateHasChanged(); }"></button>
+                            }
+                        </div>
+                        <label style="font-size:0.7rem;font-weight:600;color:var(--salon-gray);">패턴</label>
+                        <div class="cal-pattern-grid">
+                            @foreach (var pat in _bgPatterns)
+                            {
+                                var p = pat;
+                                <button class="cal-pattern-btn @(_data.BackgroundPattern == p.key ? "active" : "")"
+                                        @onclick="() => { _data.BackgroundPattern = p.key; StateHasChanged(); }">
+                                    @p.label
+                                </button>
+                            }
+                        </div>
+                        <label class="mt-2" style="font-size:0.7rem;font-weight:600;color:var(--salon-gray);">커스텀 제목</label>
+                        <input type="text" class="form-control form-control-sm" maxlength="30"
+                               placeholder="예: 2월의 따뜻한 컬러" @bind="_data.CustomTitle" @bind:event="oninput" />
+                        <label class="mt-2" style="font-size:0.7rem;font-weight:600;color:var(--salon-gray);">테마 프리셋</label>
+                        <div class="cal-theme-grid">
+                            @foreach (var theme in _themePresets)
+                            {
+                                var t = theme;
+                                <button class="cal-theme-btn" @onclick="() => ApplyTheme(t)" title="@t.name">
+                                    <div class="cal-theme-preview" style="background:@t.bg;">
+                                        <span style="color:@t.accent;font-size:0.6rem;">@t.icon</span>
+                                    </div>
+                                    <span>@t.name</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 4)
+                {
+                    <!-- SVG 스티커 추가 -->
+                    <div class="cal-tool-panel">
+                        <div class="cal-svg-grid">
+                            @foreach (var sticker in SvgStickerLibrary.Stickers)
+                            {
+                                var s = sticker;
+                                <button class="cal-svg-btn" @onclick="() => AddFreeSvg(s.Key)"
+                                        disabled="@(_data.FreeElements.Count >= 50)" title="@s.Label">
+                                    @(SvgStickerLibrary.GetSvg(s.Key))
+                                    <span>@s.Label</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 5)
+                {
+                    <!-- 이미지 업로드 -->
+                    <div class="cal-tool-panel">
+                        <div class="cal-upload-area">
+                            <InputFile OnChange="OnImageSelected" accept="image/*"
+                                       disabled="@(_uploading || _data.FreeElements.Count >= 50)" />
+                            @if (_uploading)
+                            {
+                                <div class="mt-2 text-center">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                    <span style="font-size:0.75rem;color:var(--salon-gray);">업로드 중...</span>
+                                </div>
+                            }
+                            @if (_uploadError != null)
+                            {
+                                <div class="mt-1" style="font-size:0.7rem;color:#e8847c;">@_uploadError</div>
+                            }
+                        </div>
+                        <div style="font-size:0.65rem;color:var(--salon-gray);margin-top:0.4rem;">
+                            최대 5MB, jpg/png/gif/webp
+                        </div>
+                    </div>
+                }
+                else if (_toolTab == 6)
+                {
+                    <!-- 자동 꾸미기 -->
+                    <div class="cal-tool-panel">
+                        <div style="font-size:0.75rem;color:var(--salon-gray);margin-bottom:0.5rem;">
+                            버튼 하나로 캘린더를 자동 꾸며보세요!
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AutoDecorate(AutoDecoStyle.Cute)">
+                                🌸 귀여운
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AutoDecorate(AutoDecoStyle.Elegant)">
+                                ✨ 우아한
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AutoDecorate(AutoDecoStyle.Salon)">
+                                ✂️ 미용실
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AutoDecorate(AutoDecoStyle.Nature)">
+                                🌿 자연
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AutoDecorate(AutoDecoStyle.Party)">
+                                🎉 파티
+                            </button>
+                        </div>
+                        <div style="font-size:0.6rem;color:var(--salon-gray);margin-top:0.5rem;">
+                            기존 자유 요소 위에 추가됩니다. 실행 취소로 되돌릴 수 있어요.
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- 선택된 자유 요소 속성 편집 패널 -->
+            @if (_selectedElementId != null)
+            {
+                var selElem = _data.FreeElements.FirstOrDefault(e => e.Id == _selectedElementId);
+                if (selElem != null)
+                {
+                    <div class="cal-elem-editor" @onclick:stopPropagation="true">
+                        <div class="cal-elem-editor-header">
+                            <span>
+                                @(selElem.Type switch { "emoji" => "이모지", "text" => "텍스트", "washi" => "와시테이프", "svg" => "SVG", "image" => "이미지", _ => "요소" })
+                                편집
+                            </span>
+                            <div class="d-flex gap-1">
+                                <button class="cal-cell-editor-close" @onclick="() => { _selectedElementId = null; StateHasChanged(); }">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 텍스트 전용: 내용 수정 -->
+                        @if (selElem.Type == "text")
+                        {
+                            <div class="cal-cell-editor-section">
+                                <label>텍스트</label>
+                                <input type="text" class="form-control form-control-sm" maxlength="30"
+                                       value="@selElem.Content"
+                                       @oninput="e => { selElem.Content = e.Value?.ToString() ?? string.Empty; StateHasChanged(); }" />
+                                <div class="cal-font-row mt-1">
+                                    @foreach (var font in _fonts)
+                                    {
+                                        var f = font;
+                                        <button class="cal-font-btn gd-font-@f.key @(selElem.Font == f.key ? "active" : "")"
+                                                @onclick="() => { selElem.Font = f.key; StateHasChanged(); }">@f.label</button>
+                                    }
+                                </div>
+                                <div class="cal-color-grid mt-1">
+                                    @foreach (var color in _textColors)
+                                    {
+                                        var c = color;
+                                        <button class="cal-color-btn sm @(selElem.Color == c ? "active" : "")"
+                                                style="background:@c;"
+                                                @onclick="() => { selElem.Color = c; StateHasChanged(); }"></button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- SVG 전용: 색상 -->
+                        @if (selElem.Type == "svg")
+                        {
+                            <div class="cal-cell-editor-section">
+                                <label>SVG 색상</label>
+                                <div class="cal-color-grid">
+                                    @foreach (var color in _svgColors)
+                                    {
+                                        var c = color;
+                                        <button class="cal-color-btn sm @(selElem.Color == c ? "active" : "")"
+                                                style="background:@c;"
+                                                @onclick="() => { selElem.Color = c; StateHasChanged(); }"></button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- 공통 속성 -->
+                        <div class="cal-cell-editor-section">
+                            <label>크기 <span class="cal-char-count">@selElem.Scale.ToString("F1")x</span></label>
+                            <input type="range" class="form-range" min="0.3" max="5" step="0.1"
+                                   value="@FScl(selElem.Scale)"
+                                   @oninput="e => { if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) selElem.Scale = v; StateHasChanged(); }" />
+                        </div>
+                        <div class="cal-cell-editor-section">
+                            <label>회전 <span class="cal-char-count">@selElem.Rotation.ToString("F0")°</span></label>
+                            <input type="range" class="form-range" min="0" max="360" step="5"
+                                   value="@FScl(selElem.Rotation)"
+                                   @oninput="e => { if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) selElem.Rotation = v; StateHasChanged(); }" />
+                        </div>
+                        <div class="cal-cell-editor-section">
+                            <label>투명도 <span class="cal-char-count">@((selElem.Opacity * 100).ToString("F0"))%</span></label>
+                            <input type="range" class="form-range" min="0.1" max="1" step="0.1"
+                                   value="@FScl(selElem.Opacity)"
+                                   @oninput="e => { if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) selElem.Opacity = v; StateHasChanged(); }" />
+                        </div>
+
+                        @if (selElem.Type == "washi")
+                        {
+                            <div class="cal-cell-editor-section">
+                                <label>길이 <span class="cal-char-count">@selElem.Width.ToString("F0")px</span></label>
+                                <input type="range" class="form-range" min="40" max="300" step="10"
+                                       value="@FScl(selElem.Width)"
+                                       @oninput="e => { if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) selElem.Width = v; StateHasChanged(); }" />
+                            </div>
+                        }
+
+                        @if (selElem.Type == "image")
+                        {
+                            <div class="cal-cell-editor-section">
+                                <label>프레임</label>
+                                <div class="cal-frame-grid">
+                                    @foreach (var frame in _imageFrames)
+                                    {
+                                        var fr = frame;
+                                        <button class="cal-frame-btn @(selElem.Frame == fr.key ? "active" : "")"
+                                                @onclick="() => { selElem.Frame = fr.key; StateHasChanged(); }">
+                                            @fr.label
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="cal-elem-editor-actions">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateElement(selElem)" title="복제"
+                                    disabled="@(_data.FreeElements.Count >= 50)">
+                                <i class="bi bi-copy"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => AlignElement(selElem)" title="중앙 정렬">
+                                <i class="bi bi-align-center"></i>
+                            </button>
+                            <button class="btn btn-sm @(selElem.IsLocked ? "btn-warning" : "btn-outline-secondary")"
+                                    @onclick="() => ToggleLock(selElem)" title="@(selElem.IsLocked ? "잠금 해제" : "잠금")">
+                                <i class="bi @(selElem.IsLocked ? "bi-lock-fill" : "bi-unlock")"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveElementLayer(selElem, 1)" title="앞으로">
+                                <i class="bi bi-layer-forward"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveElementLayer(selElem, -1)" title="뒤로">
+                                <i class="bi bi-layer-backward"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteElement(selElem)">
+                                <i class="bi bi-trash3"></i> 삭제
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    }
+</div>
+
+@code {
+    private CalendarMonth _data = new();
+    private bool _isAdmin;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _publishing;
+    private string? _saveMessage;
+    private string? _selectedElementId;
+    private int? _editingDay;
+    private ElementReference _canvasRef;
+
+    // 셀 배경색 팔레트 (파스텔톤)
+    private static readonly string[] _cellColors = {
+        "#fff0f0", "#fff5eb", "#fffde7", "#f0fff0",
+        "#e8f5e9", "#e3f2fd", "#ede7f6", "#fce4ec",
+        "#f3e5f5", "#e0f7fa", "#fff8e1", "#fbe9e7"
+    };
+
+    // 텍스트 색상 팔레트
+    private static readonly string[] _textColors = {
+        "#333333", "#666666", "#e8847c", "#d4a574",
+        "#7ba383", "#6b8eb5", "#a855f7", "#c9b1d4"
+    };
+
+    // 셀 내 이모지 스티커
+    private static readonly string[] _cellStickers = {
+        "❤️", "💖", "✨", "⭐", "🌸", "🌹", "🌻", "🌼",
+        "🎀", "💎", "👑", "🫶", "☕", "🎵", "📷", "💇‍♀️",
+        "🎂", "🎁", "💰", "✂️", "🌈", "🔥", "💤", "🐶"
+    };
+
+    // 자유 배치 이모지 스티커
+    private static readonly string[] _freeStickers = {
+        "❤️", "💖", "💕", "✨", "⭐", "🌸", "🌹", "🌻",
+        "🌼", "🌷", "🫶", "🍂", "💎", "👑", "🎀", "🎁",
+        "📷", "🎨", "🎵", "☕", "🌈", "🪡", "🐶", "🐱",
+        "💇‍♀️", "✂️", "💈", "🪮", "🎂", "🔥", "💰", "🌙"
+    };
+
+    // 글씨체 목록
+    private static readonly (string key, string label)[] _fonts = {
+        ("default", "기본"), ("handwrite", "손글씨"), ("cute", "귀여운"), ("brush", "붓"),
+        ("elegant", "우아"), ("round", "둥근"), ("bold", "굵은"), ("title", "제목")
+    };
+
+    // 와시테이프 패턴
+    private static readonly (string key, string label)[] _washiPatterns = {
+        ("stripe", "줄무늬"), ("dot", "도트"), ("floral", "플로럴"),
+        ("plaid", "체크"), ("pastel", "파스텔"), ("holographic", "홀로그램")
+    };
+
+    // 캘린더 배경색
+    private static readonly string[] _bgColors = {
+        "#fffdf7", "#fff8f0", "#fff0f5", "#f0f8ff",
+        "#f5fff5", "#faf5ff", "#fffff0", "#f5f5f5",
+        "#ffeef2", "#e8f5e9", "#e3f2fd", "#fff3e0"
+    };
+
+    // 배경 패턴
+    private static readonly (string key, string label)[] _bgPatterns = {
+        ("none", "없음"), ("dots", "도트"), ("grid", "격자"),
+        ("stripes", "줄무늬"), ("hearts", "하트"), ("stars", "별")
+    };
+
+    // 툴바 상태
+    private int _toolTab = -1;
+    private string _newText = "";
+    private string _newTextFont = "default";
+    private string _newTextColor = "#333333";
+
+    // 드래그 상태
+    private bool _isDragging;
+    private CalendarFreeElement? _dragElement;
+
+    // 이미지 업로드 상태
+    private bool _uploading;
+    private string? _uploadError;
+
+    // Viewer용 게시된 월 목록
+    private List<CalendarMonth> _publishedMonths = new();
+
+    // 실행 취소 스택 (JSON 스냅샷)
+    private readonly Stack<string> _undoStack = new();
+    private const int MaxUndoSteps = 20;
+
+    // 월 복사 상태
+    private bool _showCopyModal;
+    private int _copyTargetYear = DateTime.Now.Year;
+    private int _copyTargetMonth = DateTime.Now.Month;
+    private bool _copyingMonth;
+    private string? _copyMessage;
+
+    // 이미지 내보내기 상태
+    private bool _exporting;
+
+    // 더보기 메뉴
+    private bool _showMoreMenu;
+
+    // 셀 데코 복사
+    private CalendarCellDeco? _copiedCellDeco;
+
+    // 키보드 단축키
+    private DotNetObjectReference<Calendar>? _keyboardRef;
+
+    // SVG 색상 팔레트
+    private static readonly string[] _svgColors = {
+        "#333333", "#666666", "#e8847c", "#d4a574",
+        "#7ba383", "#6b8eb5", "#a855f7", "#c9b1d4",
+        "#f8bbd0", "#80cbc4", "#fff176", "#ff8a65"
+    };
+
+    // 이미지 프레임 옵션
+    private static readonly (string key, string label)[] _imageFrames = {
+        ("none", "없음"), ("polaroid", "폴라로이드"), ("rounded", "둥근"),
+        ("circle", "원형"), ("stamp", "우표"), ("shadow", "그림자")
+    };
+
+    // 테마 프리셋
+    private static readonly (string name, string bg, string pattern, string accent, string icon)[] _themePresets = {
+        ("봄 벚꽃", "#fff0f5", "none", "#f8bbd0", "🌸"),
+        ("여름 바다", "#e3f2fd", "dots", "#6b8eb5", "🌊"),
+        ("가을 단풍", "#fff8e1", "none", "#d4a574", "🍂"),
+        ("겨울 눈꽃", "#f5f5f5", "dots", "#b0bec5", "❄️"),
+        ("파스텔 핑크", "#ffeef2", "hearts", "#e8847c", "💖"),
+        ("민트 그린", "#e8f5e9", "grid", "#7ba383", "🌿"),
+        ("라벤더", "#ede7f6", "none", "#a855f7", "💜"),
+        ("레트로", "#fffff0", "stripes", "#d4a574", "🎞️"),
+    };
+
+    // BoundingRect (JS interop용)
+    private record BoundingRect(double Left, double Top, double Width, double Height);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _isAdmin)
+        {
+            _keyboardRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("calKeyboard.init", _keyboardRef);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("calKeyboard.dispose");
+        }
+        catch { /* 페이지 전환 시 무시 */ }
+        _keyboardRef?.Dispose();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = await AuthService.GetRoleAsync();
+        _isAdmin = role == "Admin";
+
+        if (!_isAdmin)
+        {
+            // Viewer: 게시된 월 목록 로드 → 최신 게시 월로 이동
+            _publishedMonths = await CalendarService.GetPublishedMonthsAsync();
+            if (_publishedMonths.Count > 0)
+            {
+                var latest = _publishedMonths.First();
+                await LoadMonth(latest.Year, latest.Month);
+            }
+            else
+            {
+                var now = DateTime.Now;
+                await LoadMonth(now.Year, now.Month);
+            }
+        }
+        else
+        {
+            var now = DateTime.Now;
+            await LoadMonth(now.Year, now.Month);
+        }
+    }
+
+    private async Task LoadMonth(int year, int month)
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _data = await CalendarService.GetMonthAsync(year, month);
+        _selectedElementId = null;
+        _editingDay = null;
+        _undoStack.Clear();
+        _loading = false;
+    }
+
+    private async Task PrevMonth()
+    {
+        if (!_isAdmin && _publishedMonths.Count > 0)
+        {
+            // Viewer: 이전 게시된 월로 이동
+            var current = _publishedMonths.FindIndex(m => m.Year == _data.Year && m.Month == _data.Month);
+            if (current >= 0 && current < _publishedMonths.Count - 1)
+                await LoadMonth(_publishedMonths[current + 1].Year, _publishedMonths[current + 1].Month);
+        }
+        else
+        {
+            var prev = new DateTime(_data.Year, _data.Month, 1).AddMonths(-1);
+            await LoadMonth(prev.Year, prev.Month);
+        }
+    }
+
+    private async Task NextMonth()
+    {
+        if (!_isAdmin && _publishedMonths.Count > 0)
+        {
+            // Viewer: 다음 게시된 월로 이동
+            var current = _publishedMonths.FindIndex(m => m.Year == _data.Year && m.Month == _data.Month);
+            if (current > 0)
+                await LoadMonth(_publishedMonths[current - 1].Year, _publishedMonths[current - 1].Month);
+        }
+        else
+        {
+            var next = new DateTime(_data.Year, _data.Month, 1).AddMonths(1);
+            await LoadMonth(next.Year, next.Month);
+        }
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+        _saveMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await CalendarService.SaveMonthAsync(_data);
+            await AuditService.LogAsync("Update", _data.Id, "다꾸캘린더", $"{_data.Year}년 {_data.Month}월 캘린더 저장");
+            _saveMessage = "저장 완료!";
+        }
+        catch (Exception ex)
+        {
+            _saveMessage = $"저장 실패: {ex.Message}";
+            Console.WriteLine($"[Calendar] 저장 예외: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+            StateHasChanged();
+            // 3초 후 메시지 숨김
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                _saveMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+    }
+
+    private async Task TogglePublish()
+    {
+        if (_publishing) return;
+        _publishing = true;
+        StateHasChanged();
+
+        try
+        {
+            _data.IsPublished = !_data.IsPublished;
+            await CalendarService.SaveMonthAsync(_data);
+            await AuditService.LogAsync(
+                _data.IsPublished ? "Publish" : "Unpublish",
+                _data.Id, "다꾸캘린더",
+                $"{_data.Year}년 {_data.Month}월 캘린더 {(_data.IsPublished ? "게시" : "미게시")}");
+        }
+        catch (Exception ex)
+        {
+            _data.IsPublished = !_data.IsPublished; // 롤백
+            Console.WriteLine($"[Calendar] 게시 토글 예외: {ex.Message}");
+        }
+        finally
+        {
+            _publishing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnCellClick(int day)
+    {
+        if (!_isAdmin) return;
+        // 같은 셀 클릭 시 토글
+        _editingDay = _editingDay == day ? null : day;
+        _selectedElementId = null;
+        StateHasChanged();
+    }
+
+    private void CloseCellEditor()
+    {
+        // 빈 데코는 딕셔너리에서 제거
+        if (_editingDay.HasValue)
+        {
+            var dayStr = _editingDay.Value.ToString();
+            if (_data.CellDecos.TryGetValue(dayStr, out var cell) && cell.IsEmpty)
+                _data.CellDecos.Remove(dayStr);
+        }
+        _editingDay = null;
+        StateHasChanged();
+    }
+
+    private void AddCellSticker(CalendarCellDeco cell, string sticker)
+    {
+        if (cell.Stickers.Count >= 3) return;
+        cell.Stickers.Add(sticker);
+        StateHasChanged();
+    }
+
+    private void RemoveCellSticker(CalendarCellDeco cell, int index)
+    {
+        if (index >= 0 && index < cell.Stickers.Count)
+            cell.Stickers.RemoveAt(index);
+        StateHasChanged();
+    }
+
+    private async Task OnElementPointerDown(PointerEventArgs e, CalendarFreeElement elem)
+    {
+        if (!_isAdmin) return;
+        _selectedElementId = elem.Id;
+        _editingDay = null;
+
+        // 잠긴 요소는 선택만 가능 (드래그 불가)
+        if (!elem.IsLocked)
+        {
+            PushUndo(); // 드래그 시작 시 undo 스냅샷
+            _isDragging = true;
+            _dragElement = elem;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnCanvasPointerMove(PointerEventArgs e)
+    {
+        if (!_isDragging || _dragElement == null) return;
+
+        try
+        {
+            var rect = await JS.InvokeAsync<BoundingRect>("gdGetRect", _canvasRef);
+            if (rect.Width < 1 || rect.Height < 1) return;
+
+            var x = Math.Clamp((e.ClientX - rect.Left) / rect.Width * 100, 0, 100);
+            var y = Math.Clamp((e.ClientY - rect.Top) / rect.Height * 100, 0, 100);
+            _dragElement.X = x;
+            _dragElement.Y = y;
+            StateHasChanged();
+        }
+        catch { /* JS interop 실패 시 무시 */ }
+    }
+
+    private void OnCanvasPointerUp(PointerEventArgs e)
+    {
+        _isDragging = false;
+        _dragElement = null;
+    }
+
+    // -- 도구 탭 --
+    private void SetToolTab(int tab)
+    {
+        _toolTab = _toolTab == tab ? -1 : tab;
+        _editingDay = null;
+        StateHasChanged();
+    }
+
+    // -- 자유 요소 추가 --
+    private void AddFreeEmoji(string emoji)
+    {
+        if (_data.FreeElements.Count >= 50) return;
+        PushUndo();
+        var elem = new CalendarFreeElement
+        {
+            Type = "emoji",
+            Content = emoji,
+            X = 50 + Random.Shared.Next(-15, 15),
+            Y = 50 + Random.Shared.Next(-15, 15),
+            ZIndex = _data.FreeElements.Count + 1
+        };
+        _data.FreeElements.Add(elem);
+        _selectedElementId = elem.Id;
+        StateHasChanged();
+    }
+
+    private void AddFreeText()
+    {
+        if (string.IsNullOrWhiteSpace(_newText) || _data.FreeElements.Count >= 50) return;
+        PushUndo();
+        var elem = new CalendarFreeElement
+        {
+            Type = "text",
+            Content = _newText.Trim(),
+            Font = _newTextFont,
+            Color = _newTextColor,
+            X = 50,
+            Y = 50,
+            ZIndex = _data.FreeElements.Count + 1
+        };
+        _data.FreeElements.Add(elem);
+        _selectedElementId = elem.Id;
+        _newText = "";
+        StateHasChanged();
+    }
+
+    private void AddFreeWashi(string pattern)
+    {
+        if (_data.FreeElements.Count >= 50) return;
+        PushUndo();
+        var elem = new CalendarFreeElement
+        {
+            Type = "washi",
+            Pattern = pattern,
+            Width = 120,
+            X = 50,
+            Y = 30 + Random.Shared.Next(-10, 20),
+            Rotation = Random.Shared.Next(-8, 8),
+            ZIndex = _data.FreeElements.Count + 1
+        };
+        _data.FreeElements.Add(elem);
+        _selectedElementId = elem.Id;
+        StateHasChanged();
+    }
+
+    private void AddFreeSvg(string key)
+    {
+        if (_data.FreeElements.Count >= 50) return;
+        PushUndo();
+        var elem = new CalendarFreeElement
+        {
+            Type = "svg",
+            Content = key,
+            X = 50 + Random.Shared.Next(-15, 15),
+            Y = 50 + Random.Shared.Next(-15, 15),
+            Scale = 1.5,
+            ZIndex = _data.FreeElements.Count + 1
+        };
+        _data.FreeElements.Add(elem);
+        _selectedElementId = elem.Id;
+        StateHasChanged();
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        if (_uploading || _data.FreeElements.Count >= 50) return;
+
+        var file = e.File;
+        _uploadError = null;
+
+        // 5MB 제한 (프로젝트 규칙: silent skip 금지)
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            _uploadError = "파일 크기가 5MB를 초과합니다. 더 작은 파일을 선택해주세요.";
+            StateHasChanged();
+            return;
+        }
+
+        _uploading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var ms = new System.IO.MemoryStream();
+            await stream.CopyToAsync(ms);
+            var data = ms.ToArray();
+
+            var fileName = $"cal_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N[..6]}{System.IO.Path.GetExtension(file.Name)}";
+            var url = await ImageService.UploadAsync(fileName, data, file.ContentType, "calendar");
+
+            PushUndo();
+            var elem = new CalendarFreeElement
+            {
+                Type = "image",
+                Content = url,
+                X = 50,
+                Y = 50,
+                Scale = 1.0,
+                ZIndex = _data.FreeElements.Count + 1
+            };
+            _data.FreeElements.Add(elem);
+            _selectedElementId = elem.Id;
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"업로드 실패: {ex.Message}";
+            Console.WriteLine($"[Calendar] 이미지 업로드 예외: {ex.Message}");
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    // -- 요소 조작 --
+    private void MoveElementLayer(CalendarFreeElement elem, int delta)
+    {
+        PushUndo();
+        elem.ZIndex = Math.Max(1, elem.ZIndex + delta);
+        StateHasChanged();
+    }
+
+    private void DeleteElement(CalendarFreeElement elem)
+    {
+        PushUndo();
+        _data.FreeElements.Remove(elem);
+        _selectedElementId = null;
+        StateHasChanged();
+    }
+
+    // -- 요소 복제 --
+    private void DuplicateElement(CalendarFreeElement elem)
+    {
+        if (_data.FreeElements.Count >= 50) return;
+        PushUndo();
+        var clone = new CalendarFreeElement
+        {
+            Type = elem.Type,
+            Content = elem.Content,
+            X = Math.Min(elem.X + 3, 95),
+            Y = Math.Min(elem.Y + 3, 95),
+            Scale = elem.Scale,
+            Rotation = elem.Rotation,
+            ZIndex = _data.FreeElements.Count + 1,
+            Opacity = elem.Opacity,
+            Font = elem.Font,
+            Color = elem.Color,
+            Width = elem.Width,
+            Pattern = elem.Pattern,
+            Frame = elem.Frame,
+        };
+        _data.FreeElements.Add(clone);
+        _selectedElementId = clone.Id;
+        StateHasChanged();
+    }
+
+    // -- 요소 잠금 토글 --
+    private void ToggleLock(CalendarFreeElement elem)
+    {
+        elem.IsLocked = !elem.IsLocked;
+        StateHasChanged();
+    }
+
+    // -- 실행 취소 --
+    private void PushUndo()
+    {
+        var snapshot = SerializeData();
+        _undoStack.Push(snapshot);
+        // 스택 크기 제한
+        if (_undoStack.Count > MaxUndoSteps)
+        {
+            var temp = _undoStack.ToArray();
+            _undoStack.Clear();
+            for (var i = 0; i < MaxUndoSteps; i++)
+                _undoStack.Push(temp[MaxUndoSteps - 1 - i]);
+        }
+    }
+
+    private void Undo()
+    {
+        if (_undoStack.Count == 0) return;
+        var snapshot = _undoStack.Pop();
+        DeserializeData(snapshot);
+        _selectedElementId = null;
+        _editingDay = null;
+        StateHasChanged();
+    }
+
+    private string SerializeData()
+    {
+        return System.Text.Json.JsonSerializer.Serialize(_data, new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+    }
+
+    private void DeserializeData(string json)
+    {
+        var restored = System.Text.Json.JsonSerializer.Deserialize<CalendarMonth>(json, new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+        if (restored != null) _data = restored;
+    }
+
+    // -- 테마 프리셋 적용 --
+    private void ApplyTheme((string name, string bg, string pattern, string accent, string icon) theme)
+    {
+        PushUndo();
+        _data.BackgroundColor = theme.bg;
+        _data.BackgroundPattern = theme.pattern;
+        StateHasChanged();
+    }
+
+    // -- 월 복사 --
+    private void ShowCopyMonth()
+    {
+        var next = new DateTime(_data.Year, _data.Month, 1).AddMonths(1);
+        _copyTargetYear = next.Year;
+        _copyTargetMonth = next.Month;
+        _copyMessage = null;
+        _showCopyModal = true;
+        StateHasChanged();
+    }
+
+    private async Task CopyMonth()
+    {
+        if (_copyingMonth) return;
+        if (_copyTargetYear == _data.Year && _copyTargetMonth == _data.Month)
+        {
+            _copyMessage = "같은 달로는 복사할 수 없습니다.";
+            StateHasChanged();
+            return;
+        }
+
+        _copyingMonth = true;
+        _copyMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var copy = new CalendarMonth
+            {
+                Year = _copyTargetYear,
+                Month = _copyTargetMonth,
+                BackgroundColor = _data.BackgroundColor,
+                BackgroundPattern = _data.BackgroundPattern,
+                CustomTitle = _data.CustomTitle,
+                DDays = new Dictionary<string, string>(_data.DDays),
+                CellDecos = _data.CellDecos.ToDictionary(
+                    kv => kv.Key,
+                    kv => new CalendarCellDeco
+                    {
+                        BackgroundColor = kv.Value.BackgroundColor,
+                        Memo = kv.Value.Memo,
+                        TextColor = kv.Value.TextColor,
+                        Stickers = new List<string>(kv.Value.Stickers),
+                    }),
+                FreeElements = _data.FreeElements.Select(e => new CalendarFreeElement
+                {
+                    Type = e.Type,
+                    Content = e.Content,
+                    X = e.X,
+                    Y = e.Y,
+                    Scale = e.Scale,
+                    Rotation = e.Rotation,
+                    ZIndex = e.ZIndex,
+                    Opacity = e.Opacity,
+                    Font = e.Font,
+                    Color = e.Color,
+                    Width = e.Width,
+                    Pattern = e.Pattern,
+                    IsLocked = e.IsLocked,
+                    Frame = e.Frame,
+                }).ToList(),
+                IsPublished = false,
+            };
+
+            await CalendarService.SaveMonthAsync(copy);
+            await AuditService.LogAsync("Create", copy.Id, "다꾸캘린더",
+                $"{_data.Year}년 {_data.Month}월 → {_copyTargetYear}년 {_copyTargetMonth}월 복사");
+            _copyMessage = $"{_copyTargetYear}년 {_copyTargetMonth}월로 복사 완료!";
+        }
+        catch (Exception ex)
+        {
+            _copyMessage = $"복사 실패: {ex.Message}";
+            Console.WriteLine($"[Calendar] 월 복사 예외: {ex.Message}");
+        }
+        finally
+        {
+            _copyingMonth = false;
+            StateHasChanged();
+        }
+    }
+
+    // -- 이미지 내보내기 --
+    private async Task ExportPng()
+    {
+        if (_exporting) return;
+        _exporting = true;
+        _selectedElementId = null;
+        StateHasChanged();
+        // 렌더링 완료 대기
+        await Task.Delay(100);
+
+        try
+        {
+            await JS.InvokeAsync<string>("calExportPng", _canvasRef);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Calendar] 내보내기 예외: {ex.Message}");
+        }
+        finally
+        {
+            _exporting = false;
+            StateHasChanged();
+        }
+    }
+
+    // -- 더보기 메뉴 --
+    private void ToggleMoreMenu()
+    {
+        _showMoreMenu = !_showMoreMenu;
+        StateHasChanged();
+    }
+
+    // -- 전체 잠금/해제 --
+    private void LockAllElements()
+    {
+        foreach (var e in _data.FreeElements) e.IsLocked = true;
+        _showMoreMenu = false;
+        StateHasChanged();
+    }
+
+    private void UnlockAllElements()
+    {
+        foreach (var e in _data.FreeElements) e.IsLocked = false;
+        _showMoreMenu = false;
+        StateHasChanged();
+    }
+
+    // -- 전체 요소 삭제 --
+    private void ClearAllElements()
+    {
+        if (_data.FreeElements.Count == 0) return;
+        PushUndo();
+        _data.FreeElements.Clear();
+        _selectedElementId = null;
+        _showMoreMenu = false;
+        StateHasChanged();
+    }
+
+    // -- 월 초기화 --
+    private void ResetMonth()
+    {
+        PushUndo();
+        _data.BackgroundColor = "#fffdf7";
+        _data.BackgroundPattern = "none";
+        _data.CustomTitle = "";
+        _data.CellDecos.Clear();
+        _data.DDays.Clear();
+        _data.FreeElements.Clear();
+        _selectedElementId = null;
+        _editingDay = null;
+        _showMoreMenu = false;
+        StateHasChanged();
+    }
+
+    // -- 요소 정렬 --
+    private void AlignElement(CalendarFreeElement elem)
+    {
+        PushUndo();
+        elem.X = 50;
+        elem.Y = 50;
+        StateHasChanged();
+    }
+
+    private void AlignSelectedCenter()
+    {
+        if (_selectedElementId == null) return;
+        var elem = _data.FreeElements.FirstOrDefault(e => e.Id == _selectedElementId);
+        if (elem != null) AlignElement(elem);
+        _showMoreMenu = false;
+    }
+
+    // -- 키보드 단축키 --
+    [JSInvokable]
+    public void OnKeyDelete()
+    {
+        if (_selectedElementId == null) return;
+        var elem = _data.FreeElements.FirstOrDefault(e => e.Id == _selectedElementId);
+        if (elem != null && !elem.IsLocked)
+        {
+            PushUndo();
+            _data.FreeElements.Remove(elem);
+            _selectedElementId = null;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnKeyEscape()
+    {
+        _selectedElementId = null;
+        _editingDay = null;
+        _showMoreMenu = false;
+        _showCopyModal = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnKeyUndo()
+    {
+        Undo();
+    }
+
+    [JSInvokable]
+    public void OnKeyDuplicate()
+    {
+        if (_selectedElementId == null) return;
+        var elem = _data.FreeElements.FirstOrDefault(e => e.Id == _selectedElementId);
+        if (elem != null) DuplicateElement(elem);
+    }
+
+    // -- 셀 데코 복사/붙여넣기 --
+    private void CopyCellDeco(string dayStr)
+    {
+        if (!_data.CellDecos.TryGetValue(dayStr, out var cell)) return;
+        _copiedCellDeco = new CalendarCellDeco
+        {
+            BackgroundColor = cell.BackgroundColor,
+            Memo = cell.Memo,
+            TextColor = cell.TextColor,
+            Stickers = new List<string>(cell.Stickers),
+        };
+        StateHasChanged();
+    }
+
+    private void PasteCellDeco(string dayStr)
+    {
+        if (_copiedCellDeco == null) return;
+        PushUndo();
+        _data.CellDecos[dayStr] = new CalendarCellDeco
+        {
+            BackgroundColor = _copiedCellDeco.BackgroundColor,
+            Memo = _copiedCellDeco.Memo,
+            TextColor = _copiedCellDeco.TextColor,
+            Stickers = new List<string>(_copiedCellDeco.Stickers),
+        };
+        StateHasChanged();
+    }
+
+    // -- D-Day 텍스트 계산 --
+    private string GetDDayText(int day)
+    {
+        try
+        {
+            var targetDate = new DateTime(_data.Year, _data.Month, day);
+            var today = DateTime.Today;
+            var diff = (targetDate - today).Days;
+            return diff switch
+            {
+                0 => "D-Day",
+                > 0 => $"D-{diff}",
+                < 0 => $"D+{Math.Abs(diff)}"
+            };
+        }
+        catch { return ""; }
+    }
+
+    // -- 자동 꾸미기 --
+    private enum AutoDecoStyle { Cute, Elegant, Salon, Nature, Party }
+
+    private void AutoDecorate(AutoDecoStyle style)
+    {
+        PushUndo();
+
+        var (emojis, svgs, bg, pattern) = style switch
+        {
+            AutoDecoStyle.Cute => (
+                new[] { "💖", "🌸", "🎀", "✨", "🐱", "🌷", "💕", "🫶" },
+                new[] { "heart", "flower", "star" },
+                "#fff0f5", "hearts"),
+            AutoDecoStyle.Elegant => (
+                new[] { "✨", "💎", "👑", "🌙", "⭐", "💜" },
+                new[] { "mirror", "star", "flower" },
+                "#ede7f6", "dots"),
+            AutoDecoStyle.Salon => (
+                new[] { "✂️", "💇‍♀️", "💈", "🪮", "✨" },
+                new[] { "scissors", "dryer", "comb", "brush", "mirror", "spray" },
+                "#fffdf7", "none"),
+            AutoDecoStyle.Nature => (
+                new[] { "🌿", "🌻", "🍂", "🌈", "☕", "🌼" },
+                new[] { "flower" },
+                "#e8f5e9", "grid"),
+            AutoDecoStyle.Party => (
+                new[] { "🎉", "🎂", "🎁", "🔥", "🎵", "💰", "🌈" },
+                new[] { "heart", "star" },
+                "#fff8e1", "stars"),
+            _ => (Array.Empty<string>(), Array.Empty<string>(), "#fffdf7", "none")
+        };
+
+        // 배경 적용
+        _data.BackgroundColor = bg;
+        _data.BackgroundPattern = pattern;
+
+        // 이모지 5~8개 랜덤 배치
+        var rng = Random.Shared;
+        var count = rng.Next(5, Math.Min(9, 51 - _data.FreeElements.Count));
+        for (var i = 0; i < count && _data.FreeElements.Count < 50; i++)
+        {
+            _data.FreeElements.Add(new CalendarFreeElement
+            {
+                Type = "emoji",
+                Content = emojis[rng.Next(emojis.Length)],
+                X = rng.Next(5, 95),
+                Y = rng.Next(5, 95),
+                Scale = 0.8 + rng.NextDouble() * 0.8,
+                Rotation = rng.Next(-15, 15),
+                ZIndex = _data.FreeElements.Count + 1,
+            });
+        }
+
+        // SVG 2~3개 배치
+        var svgCount = rng.Next(2, Math.Min(4, 51 - _data.FreeElements.Count));
+        for (var i = 0; i < svgCount && _data.FreeElements.Count < 50; i++)
+        {
+            _data.FreeElements.Add(new CalendarFreeElement
+            {
+                Type = "svg",
+                Content = svgs[rng.Next(svgs.Length)],
+                X = rng.Next(5, 95),
+                Y = rng.Next(5, 95),
+                Scale = 1.0 + rng.NextDouble() * 1.0,
+                Rotation = rng.Next(-10, 10),
+                Opacity = 0.5 + rng.NextDouble() * 0.5,
+                ZIndex = _data.FreeElements.Count + 1,
+            });
+        }
+
+        // 와시테이프 1~2개
+        var washiCount = rng.Next(1, Math.Min(3, 51 - _data.FreeElements.Count));
+        var washiKeys = new[] { "stripe", "dot", "floral", "pastel" };
+        for (var i = 0; i < washiCount && _data.FreeElements.Count < 50; i++)
+        {
+            _data.FreeElements.Add(new CalendarFreeElement
+            {
+                Type = "washi",
+                Pattern = washiKeys[rng.Next(washiKeys.Length)],
+                Width = rng.Next(80, 200),
+                X = rng.Next(10, 90),
+                Y = rng.Next(10, 90),
+                Rotation = rng.Next(-12, 12),
+                ZIndex = _data.FreeElements.Count + 1,
+            });
+        }
+
+        StateHasChanged();
+    }
+
+    // -- 포맷 헬퍼 --
+    private static string FPct(double v) => $"{v:F1}%";
+    private static string FDeg(double v) => $"{v:F0}deg";
+    private static string FScl(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    private static string FPx(double v) => $"{v:F0}px";
+
+    private string GetPatternStyle()
+    {
+        return _data.BackgroundPattern switch
+        {
+            "dots" => "background-image:radial-gradient(circle,rgba(0,0,0,0.08) 1px,transparent 1px);background-size:16px 16px;",
+            "grid" => "background-image:linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);background-size:20px 20px;",
+            "stripes" => "background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.03) 10px,rgba(0,0,0,0.03) 20px);",
+            "hearts" => "background-image:radial-gradient(circle,rgba(232,132,124,0.15) 2px,transparent 2px);background-size:24px 24px;",
+            "stars" => "background-image:radial-gradient(circle,rgba(255,217,61,0.2) 1.5px,transparent 1.5px);background-size:20px 20px;",
+            _ => ""
+        };
+    }
+
+    private static MarkupString GetSvgSticker(string key) => SvgStickerLibrary.GetSvg(key);
+}
+
+<style>
+    .cal-page {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    /* 헤더 */
+    .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .cal-nav-btn {
+        background: none;
+        border: 1px solid var(--salon-border, #e0e0e0);
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--salon-gray, #888);
+        transition: all 0.2s;
+    }
+
+    .cal-nav-btn:hover {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    .cal-title-area {
+        text-align: center;
+        min-width: 160px;
+    }
+
+    .cal-month-title {
+        font-family: var(--font-serif, serif);
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 0.05em;
+        color: var(--salon-black, #222);
+    }
+
+    .cal-custom-title {
+        font-size: 0.75rem;
+        color: var(--salon-accent, #d4a574);
+        font-family: var(--font-serif, serif);
+        letter-spacing: 0.1em;
+        margin-bottom: 0.15rem;
+    }
+
+    /* 액션 버튼 */
+    .cal-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .cal-save-msg {
+        font-size: 0.75rem;
+        color: var(--salon-green, #7ba383);
+        animation: calFadeIn 0.3s ease;
+    }
+
+    @@keyframes calFadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 빈 상태 */
+    .cal-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--salon-gray, #888);
+        font-size: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .cal-published-list {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .cal-published-btn {
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--salon-green, #7ba383);
+        border-radius: 20px;
+        background: transparent;
+        color: var(--salon-green, #7ba383);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .cal-published-btn:hover {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+    }
+
+    /* 캔버스 */
+    .cal-canvas {
+        position: relative;
+        border-radius: 12px;
+        padding: 0.75rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        overflow: hidden;
+        touch-action: none;
+    }
+
+    /* 요일 헤더 */
+    .cal-dow-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        margin-bottom: 0.4rem;
+    }
+
+    .cal-dow {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--salon-gray, #888);
+        padding: 0.25rem 0;
+        letter-spacing: 0.1em;
+    }
+
+    .cal-dow.sun { color: #e8847c; }
+    .cal-dow.sat { color: #6b8eb5; }
+
+    /* 날짜 그리드 */
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+    .cal-cell {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        padding: 3px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.8rem;
+        cursor: default;
+        position: relative;
+        transition: all 0.15s;
+        background: rgba(255,255,255,0.5);
+        overflow: hidden;
+    }
+
+    .cal-cell.empty {
+        background: transparent;
+    }
+
+    .cal-cell:not(.empty):hover {
+        box-shadow: 0 0 0 2px var(--salon-green, #7ba383);
+    }
+
+    .cal-cell.today {
+        box-shadow: 0 0 0 2px var(--salon-accent, #d4a574);
+    }
+
+    .cal-cell.sun .cal-day-num { color: #e8847c; }
+    .cal-cell.sat .cal-day-num { color: #6b8eb5; }
+
+    .cal-day-num {
+        font-weight: 600;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: var(--salon-black, #333);
+    }
+
+    .cal-cell-stickers {
+        display: flex;
+        gap: 1px;
+        font-size: 0.65rem;
+        line-height: 1;
+        margin-top: 1px;
+    }
+
+    .cal-cell-memo {
+        font-size: 0.5rem;
+        line-height: 1.2;
+        text-align: center;
+        word-break: break-all;
+        overflow: hidden;
+        max-height: 2em;
+        color: #666;
+        margin-top: auto;
+    }
+
+    /* 자유 배치 요소 */
+    .cal-free-elem {
+        position: absolute;
+        cursor: grab;
+        user-select: none;
+        transition: filter 0.15s;
+    }
+
+    .cal-free-elem:active {
+        cursor: grabbing;
+    }
+
+    .cal-free-elem.selected {
+        outline: 2px dashed var(--salon-green, #7ba383);
+        outline-offset: 4px;
+        border-radius: 4px;
+    }
+
+    .cal-elem-emoji {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .cal-elem-text {
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .cal-elem-washi {
+        height: 18px;
+        min-width: 60px;
+        border-radius: 1px;
+        opacity: 0.75;
+    }
+
+    .washi-stripe { background: repeating-linear-gradient(90deg, #ffd1dc 0px, #ffd1dc 4px, #fff 4px, #fff 8px); }
+    .washi-dot { background: radial-gradient(circle, #b5e8c3 2px, #e8f5e9 2px) 0 0/8px 8px; }
+    .washi-floral { background: radial-gradient(circle, #f8bbd0 3px, #fce4ec 3px) 0 0/12px 12px; }
+    .washi-plaid { background: repeating-linear-gradient(0deg, rgba(100,181,246,0.3) 0px, transparent 2px, transparent 6px), repeating-linear-gradient(90deg, rgba(100,181,246,0.3) 0px, transparent 2px, transparent 6px), #e3f2fd; }
+    .washi-pastel { background: linear-gradient(90deg, #ffd1dc, #c5cae9, #b2dfdb, #fff9c4); }
+    .washi-holographic { background: linear-gradient(135deg, #f8bbd0, #b39ddb, #80cbc4, #fff176, #f8bbd0); }
+
+    .cal-elem-svg {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .cal-elem-img {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+
+    /* 셀 편집 팝오버 */
+    .cal-cell-editor {
+        margin-top: 0.75rem;
+        background: var(--salon-white, #fff);
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        animation: calSlideUp 0.2s ease;
+    }
+
+    @@keyframes calSlideUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cal-cell-editor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.6rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--salon-black, #333);
+    }
+
+    .cal-cell-editor-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--salon-gray, #888);
+        padding: 0.2rem;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .cal-cell-editor-close:hover {
+        color: #e8847c;
+        background: rgba(232,132,124,0.1);
+    }
+
+    .cal-cell-editor-section {
+        margin-bottom: 0.6rem;
+    }
+
+    .cal-cell-editor-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .cal-cell-editor-section label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--salon-gray, #888);
+        margin-bottom: 0.3rem;
+        letter-spacing: 0.05em;
+    }
+
+    .cal-char-count {
+        font-weight: 400;
+        color: var(--salon-gray, #aaa);
+    }
+
+    .cal-color-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .cal-color-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.15s;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cal-color-btn:hover {
+        transform: scale(1.15);
+    }
+
+    .cal-color-btn.active {
+        border-color: var(--salon-green, #7ba383);
+        box-shadow: 0 0 0 2px rgba(123,163,131,0.3);
+    }
+
+    .cal-color-btn.sm {
+        width: 22px;
+        height: 22px;
+    }
+
+    .cal-placed-stickers {
+        display: flex;
+        gap: 0.4rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .cal-placed-sticker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.15rem;
+        background: rgba(0,0,0,0.04);
+        border-radius: 20px;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .cal-placed-sticker:hover {
+        background: rgba(232,132,124,0.15);
+    }
+
+    .cal-placed-sticker .bi {
+        font-size: 0.55rem;
+        color: var(--salon-gray, #aaa);
+    }
+
+    .cal-sticker-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .cal-sticker-btn {
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 8px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        padding: 0;
+    }
+
+    .cal-sticker-btn:hover {
+        background: rgba(123,163,131,0.1);
+        border-color: var(--salon-green, #7ba383);
+        transform: scale(1.1);
+    }
+
+    /* 도구 툴바 */
+    .cal-toolbar {
+        margin-top: 0.75rem;
+        background: var(--salon-white, #fff);
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .cal-toolbar-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0.4rem;
+        border-bottom: 1px solid var(--salon-border, #e8e0d8);
+    }
+
+    .cal-tab {
+        flex: 1;
+        padding: 0.35rem 0.5rem;
+        border: none;
+        background: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+    }
+
+    .cal-tab:hover {
+        background: rgba(123,163,131,0.1);
+    }
+
+    .cal-tab.active {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+    }
+
+    .cal-elem-count {
+        font-size: 0.65rem;
+        color: var(--salon-gray, #aaa);
+        padding: 0 0.3rem;
+        white-space: nowrap;
+    }
+
+    .cal-tool-panel {
+        padding: 0.6rem;
+        animation: calSlideUp 0.15s ease;
+    }
+
+    .cal-font-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .cal-font-btn {
+        padding: 0.2rem 0.5rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 6px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        font-size: 0.7rem;
+        transition: all 0.15s;
+    }
+
+    .cal-font-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    .cal-font-btn.active {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    .cal-washi-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .cal-washi-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 8px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .cal-washi-btn span {
+        font-size: 0.6rem;
+        color: var(--salon-gray, #888);
+    }
+
+    .cal-washi-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+        background: rgba(123,163,131,0.05);
+    }
+
+    .cal-pattern-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .cal-pattern-btn {
+        padding: 0.25rem 0.6rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 6px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        font-size: 0.7rem;
+        transition: all 0.15s;
+    }
+
+    .cal-pattern-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    .cal-pattern-btn.active {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    /* 요소 속성 편집 패널 */
+    .cal-elem-editor {
+        margin-top: 0.5rem;
+        background: var(--salon-white, #fff);
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        animation: calSlideUp 0.2s ease;
+    }
+
+    .cal-elem-editor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--salon-black, #333);
+    }
+
+    .cal-elem-editor-actions {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--salon-border, #e8e0d8);
+    }
+
+    .cal-elem-editor-actions .btn {
+        font-size: 0.75rem;
+    }
+
+    /* SVG 스티커 */
+    .cal-svg-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .cal-svg-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 8px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        transition: all 0.15s;
+        width: 56px;
+    }
+
+    .cal-svg-btn span {
+        font-size: 0.55rem;
+        color: var(--salon-gray, #888);
+    }
+
+    .cal-svg-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+        background: rgba(123,163,131,0.05);
+    }
+
+    .cal-svg-icon {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        color: var(--salon-black, #333);
+    }
+
+    .cal-svg-icon svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .cal-elem-svg .cal-svg-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* 이미지 업로드 */
+    .cal-upload-area {
+        padding: 0.5rem;
+    }
+
+    .cal-upload-area input[type="file"] {
+        font-size: 0.75rem;
+    }
+
+    /* 드래그 중 스타일 */
+    .cal-free-elem.dragging {
+        opacity: 0.7 !important;
+        cursor: grabbing !important;
+    }
+
+    /* 잠긴 요소 */
+    .cal-free-elem.locked {
+        cursor: not-allowed;
+    }
+
+    .cal-free-elem.locked.selected {
+        outline-color: var(--salon-accent, #d4a574);
+    }
+
+    .cal-lock-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 0.55rem;
+        color: var(--salon-accent, #d4a574);
+        background: var(--salon-white, #fff);
+        border-radius: 50%;
+        padding: 1px;
+        line-height: 1;
+    }
+
+    /* 모달 */
+    .cal-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: calFadeIn 0.15s ease;
+    }
+
+    .cal-modal {
+        background: var(--salon-white, #fff);
+        border-radius: 12px;
+        padding: 0;
+        width: 90%;
+        max-width: 360px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        animation: calSlideUp 0.2s ease;
+    }
+
+    .cal-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--salon-border, #e8e0d8);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .cal-modal-body {
+        padding: 1rem;
+    }
+
+    /* 테마 프리셋 그리드 */
+    .cal-theme-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .cal-theme-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 0.3rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 8px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        transition: all 0.15s;
+        width: 64px;
+    }
+
+    .cal-theme-btn span {
+        font-size: 0.55rem;
+        color: var(--salon-gray, #888);
+    }
+
+    .cal-theme-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+        background: rgba(123,163,131,0.05);
+    }
+
+    .cal-theme-preview {
+        width: 40px;
+        height: 28px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* 더보기 드롭다운 */
+    .cal-more-menu {
+        position: relative;
+        display: inline-block;
+    }
+
+    .cal-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: var(--salon-white, #fff);
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        min-width: 140px;
+        padding: 0.3rem;
+        z-index: 100;
+        animation: calSlideUp 0.15s ease;
+    }
+
+    .cal-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        width: 100%;
+        padding: 0.35rem 0.5rem;
+        border: none;
+        background: none;
+        font-size: 0.75rem;
+        color: var(--salon-black, #333);
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.15s;
+    }
+
+    .cal-dropdown-item:hover {
+        background: rgba(123,163,131,0.1);
+    }
+
+    .cal-dropdown-item:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .cal-dropdown-item.text-danger {
+        color: #e8847c;
+    }
+
+    .cal-dropdown-item.text-danger:hover {
+        background: rgba(232,132,124,0.1);
+    }
+
+    /* 이미지 프레임 스타일 */
+    .cal-elem-img-wrap {
+        display: inline-block;
+    }
+
+    .cal-frame-none .cal-elem-img {
+        border-radius: 4px;
+    }
+
+    .cal-frame-polaroid {
+        background: #fff;
+        padding: 4px 4px 16px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .cal-frame-polaroid .cal-elem-img {
+        border-radius: 0;
+    }
+
+    .cal-frame-rounded .cal-elem-img {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .cal-frame-circle .cal-elem-img {
+        border-radius: 50%;
+    }
+
+    .cal-frame-stamp {
+        background: #fff;
+        padding: 3px;
+        border: 2px dashed #ccc;
+        border-radius: 2px;
+    }
+
+    .cal-frame-stamp .cal-elem-img {
+        border-radius: 0;
+    }
+
+    .cal-frame-shadow .cal-elem-img {
+        border-radius: 4px;
+        box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+    }
+
+    /* 프레임 선택 그리드 */
+    .cal-frame-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .cal-frame-btn {
+        padding: 0.2rem 0.5rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        border-radius: 6px;
+        background: var(--salon-white, #fff);
+        cursor: pointer;
+        font-size: 0.65rem;
+        transition: all 0.15s;
+    }
+
+    .cal-frame-btn:hover {
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    .cal-frame-btn.active {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    /* D-Day 배지 */
+    .cal-dday-badge {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        font-size: 0.4rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--salon-accent, #d4a574);
+        border-radius: 4px;
+        padding: 0 2px;
+        line-height: 1.4;
+        letter-spacing: -0.02em;
+    }
+
+    .cal-cell.dday {
+        box-shadow: 0 0 0 1.5px var(--salon-accent, #d4a574);
+    }
+
+    /* 모바일 반응형 */
+    @@media (max-width: 576px) {
+        .cal-page {
+            padding: 0.5rem;
+        }
+
+        .cal-month-title {
+            font-size: 1.1rem;
+        }
+
+        .cal-canvas {
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .cal-cell {
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .cal-day-num {
+            font-size: 0.65rem;
+        }
+
+        .cal-cell-stickers {
+            font-size: 0.55rem;
+        }
+
+        .cal-cell-memo {
+            font-size: 0.4rem;
+        }
+
+        .cal-elem-emoji {
+            font-size: 1.2rem;
+        }
+
+        .cal-toolbar-tabs {
+            flex-wrap: wrap;
+        }
+
+        .cal-tab {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.35rem;
+        }
+
+        .cal-sticker-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 0.8rem;
+        }
+
+        .cal-svg-btn {
+            width: 48px;
+            padding: 0.25rem 0.3rem;
+        }
+
+        .cal-svg-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .cal-washi-btn {
+            padding: 0.3rem 0.4rem;
+        }
+    }
+</style>
