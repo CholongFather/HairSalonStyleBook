@@ -1,0 +1,55 @@
+{
+  "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
+  "fields": {
+    "kakaoChannelUrl": {
+      "stringValue": ""
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "kakaoPayEnabled": {
+      "booleanValue": false
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    }
+  },
+  "createTime": "2026-02-11T14:07:24.228539Z",
+  "updateTime": "2026-02-20T06:32:26.390940Z"
+}
