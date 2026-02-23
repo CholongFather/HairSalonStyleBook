@@ -42,7 +42,7 @@
                     <button class="sub-tab-item @(_styleSubTab == 0 ? "active" : "")" @onclick="() => _styleSubTab = 0">
                         <i class="bi bi-grid"></i> 스타일
                     </button>
-                    <button class="sub-tab-item @(_styleSubTab == 1 ? "active" : "")" @onclick="() => { _styleSubTab = 1; _ = LoadBeforeAfterIfNeeded(); }">
+                    <button class="sub-tab-item @(_styleSubTab == 1 ? "active" : "")" @onclick="SwitchToBA">
                         <i class="bi bi-arrow-left-right"></i> Before / After
                     </button>
                 </div>
@@ -715,10 +715,17 @@
     private List<BeforeAfterItem> FilteredBA =>
         _baCat == "전체" ? _baItems : _baItems.Where(x => x.Category == _baCat).ToList();
 
+    private async Task SwitchToBA()
+    {
+        _styleSubTab = 1;
+        await LoadBeforeAfterIfNeeded();
+    }
+
     private async Task LoadBeforeAfterIfNeeded()
     {
         if (_baLoaded) return;
         _baLoading = true;
+        StateHasChanged();
         try
         {
             var (items, hasMore) = await BAService.GetPageAsync(12, null, true);

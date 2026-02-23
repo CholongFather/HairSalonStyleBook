@@ -33,8 +33,8 @@ public class ShopConfig
     public bool NaverPayEnabled { get; set; } = false;
 
     // 기능 플래그
-    /// <summary>다꾸 캘린더 기능 활성화 (개발 완료 전 false)</summary>
-    public bool CalendarEnabled { get; set; } = false;
+    /// <summary>다꾸 캘린더 기능 활성화</summary>
+    public bool CalendarEnabled { get; set; } = true;
 
     // SNS 활성/비활성
     public bool SnsInstagramEnabled { get; set; } = true;

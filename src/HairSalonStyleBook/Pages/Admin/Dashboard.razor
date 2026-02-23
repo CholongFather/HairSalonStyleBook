@@ -8,6 +8,7 @@
 @inject ILoginSecurityService LoginSecurityService
 @inject IFaqService FaqService
 @inject IGalleryService GalleryService
+@inject IBeforeAfterService BAService
 @inject IImageService ImageService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
@@ -24,9 +25,6 @@
         <button class="admin-tab @(_adminTab == 4 ? "active" : "")" @onclick="() => { StopSecurityAutoRefresh(); _adminTab = 4; _ = LoadGalleryIfNeeded(); }">
             <i class="bi bi-images"></i> 갤러리
         </button>
-        <button class="admin-tab" @onclick="GoToBeforeAfter">
-            <i class="bi bi-arrow-left-right"></i> B/A
-        </button>
         <button class="admin-tab @(_adminTab == 1 ? "active" : "")" @onclick="() => { StopSecurityAutoRefresh(); _adminTab = 1; }">
             <i class="bi bi-shop"></i> 매장
         </button>
@@ -37,6 +35,18 @@
 
     @if (_adminTab == 0)
     {
+        <!-- 스타일/B·A 서브탭 -->
+        <div class="admin-sub-tab-bar">
+            <button class="admin-sub-tab @(_styleSubTab == 0 ? "active" : "")" @onclick="() => _styleSubTab = 0">
+                <i class="bi bi-grid"></i> 스타일 관리
+            </button>
+            <button class="admin-sub-tab @(_styleSubTab == 1 ? "active" : "")" @onclick="SwitchToAdminBA">
+                <i class="bi bi-arrow-left-right"></i> Before / After
+            </button>
+        </div>
+
+        @if (_styleSubTab == 0)
+        {
         <!-- 스타일 관리 탭 -->
         <div class="admin-header">
             <h2 class="admin-title">스타일 관리</h2>
@@ -797,6 +807,192 @@
                 }
             </div>
         }
+        } @* 스타일 서브탭 끝 *@
+        else if (_styleSubTab == 1)
+        {
+            @* B/A 관리 서브탭 — 인라인 *@
+            <div class="admin-header">
+                <h2 class="admin-title">Before / After 관리</h2>
+                <button class="btn btn-salon" @onclick="OpenNewBA">
+                    <i class="bi bi-plus-lg"></i> 새 항목
+                </button>
+            </div>
+
+            @if (_baAdminLoading)
+            {
+                <div class="text-center py-5"><div class="spinner-border" role="status"></div></div>
+            }
+            else if (!_baAdminItems.Any())
+            {
+                <div class="text-center py-5" style="color: var(--text-secondary, #999);">
+                    <i class="bi bi-image" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p>등록된 Before/After 항목이 없습니다.</p>
+                </div>
+            }
+            else
+            {
+                <div class="ba-admin-list">
+                    @foreach (var item in _baAdminItems)
+                    {
+                        <div class="ba-admin-item">
+                            <div class="ba-admin-thumbs">
+                                @if (!string.IsNullOrEmpty(item.BeforeThumbnail))
+                                {
+                                    <img src="@item.BeforeThumbnail" alt="Before" class="ba-admin-thumb" />
+                                }
+                                <i class="bi bi-arrow-right" style="color:#999; font-size:0.8rem;"></i>
+                                @if (!string.IsNullOrEmpty(item.AfterThumbnail))
+                                {
+                                    <img src="@item.AfterThumbnail" alt="After" class="ba-admin-thumb" />
+                                }
+                            </div>
+                            <div class="ba-admin-info">
+                                <strong>@item.Title</strong>
+                                <span style="font-size:0.72rem; color:var(--text-secondary,#888);">@item.Category</span>
+                                <span style="font-size:0.7rem; color:@(item.IsPublished ? "#28a745" : "#999");">
+                                    @(item.IsPublished ? "게시중" : "비공개")
+                                </span>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-shrink:0;">
+                                <button class="btn btn-sm btn-salon-outline" @onclick="() => OpenEditBA(item)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => _baDeleteTarget = item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @* B/A 편집 모달 *@
+            @if (_baEditing)
+            {
+                <div class="modal-overlay" @onclick="() => _baEditing = false">
+                    <div class="modal-dialog" @onclick:stopPropagation="true" style="max-width:600px; max-height:90vh; overflow-y:auto; background:var(--bg-primary,#fff); border-radius:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.2rem; border-bottom:1px solid var(--border-color,#eee);">
+                            <h5 style="margin:0;">@(_baIsNew ? "새 Before/After" : "Before/After 편집")</h5>
+                            <button class="btn-close" @onclick="() => _baEditing = false"></button>
+                        </div>
+                        <div style="padding:1rem 1.2rem;">
+                            @* 스타일 선택 *@
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">스타일 선택</label>
+                                <select class="form-select" value="@_baSelectedStyleId" @onchange="OnBAStyleSelected">
+                                    <option value="">-- 스타일을 선택하세요 --</option>
+                                    @foreach (var s in _baStyles)
+                                    {
+                                        <option value="@s.Id">@s.Category.ToString() · @s.Title</option>
+                                    }
+                                </select>
+                                @if (!string.IsNullOrEmpty(_baEditItem.Title))
+                                {
+                                    <div class="mt-2" style="font-size:0.85rem;">
+                                        <span class="badge bg-secondary">@_baEditItem.Category</span>
+                                        <strong class="ms-1">@_baEditItem.Title</strong>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">추가 설명 <span class="text-secondary fw-normal">(선택)</span></label>
+                                <textarea class="form-control" rows="2" @bind="_baEditItem.Description" placeholder="시술 관련 추가 메모"></textarea>
+                            </div>
+
+                            @* Before 이미지 *@
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Before 이미지 (@(_baEditItem.BeforeImageUrls.Count)장)</label>
+                                <InputFile OnChange="e => OnBAImagesSelected(e, true)" multiple accept="image/*" class="form-control" />
+                                @if (_baEditItem.BeforeImageUrls.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @for (int i = 0; i < _baEditItem.BeforeImageUrls.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <div style="position:relative; width:60px; height:60px;">
+                                                <img src="@_baEditItem.BeforeImageUrls[idx]" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" />
+                                                <button class="btn btn-sm" style="position:absolute; top:-4px; right:-4px; background:rgba(220,53,69,0.8); color:#fff; border-radius:50%; width:18px; height:18px; padding:0; font-size:0.55rem; display:flex; align-items:center; justify-content:center;"
+                                                        @onclick="() => RemoveBAImage(true, idx)"><i class="bi bi-x"></i></button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            @* After 이미지 *@
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">After 이미지 (@(_baEditItem.AfterImageUrls.Count)장)</label>
+                                <InputFile OnChange="e => OnBAImagesSelected(e, false)" multiple accept="image/*" class="form-control" />
+                                @if (_baEditItem.AfterImageUrls.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @for (int i = 0; i < _baEditItem.AfterImageUrls.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <div style="position:relative; width:60px; height:60px;">
+                                                <img src="@_baEditItem.AfterImageUrls[idx]" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" />
+                                                <button class="btn btn-sm" style="position:absolute; top:-4px; right:-4px; background:rgba(220,53,69,0.8); color:#fff; border-radius:50%; width:18px; height:18px; padding:0; font-size:0.55rem; display:flex; align-items:center; justify-content:center;"
+                                                        @onclick="() => RemoveBAImage(false, idx)"><i class="bi bi-x"></i></button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            @* 미리보기 *@
+                            @if (_baEditItem.BeforeImageUrls.Any() && _baEditItem.AfterImageUrls.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">미리보기</label>
+                                    <BeforeAfterSlider BeforeImageUrls="_baEditItem.BeforeImageUrls"
+                                                       AfterImageUrls="_baEditItem.AfterImageUrls"
+                                                       Height="220" />
+                                </div>
+                            }
+
+                            <div class="form-check form-switch mb-3">
+                                <input type="checkbox" class="form-check-input" id="baAdminPublish" @bind="_baEditItem.IsPublished" />
+                                <label class="form-check-label" for="baAdminPublish">게시</label>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(_baError))
+                            {
+                                <div class="alert alert-danger py-2">@_baError</div>
+                            }
+                        </div>
+                        <div style="padding:0.8rem 1.2rem; border-top:1px solid var(--border-color,#eee); display:flex; justify-content:flex-end; gap:8px;">
+                            <button class="btn btn-secondary" @onclick="() => _baEditing = false">취소</button>
+                            <button class="btn btn-salon" @onclick="SaveBA" disabled="@_baSaving">
+                                @if (_baSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @* B/A 삭제 확인 *@
+            @if (_baDeleteTarget != null)
+            {
+                <div class="modal-overlay" @onclick="() => _baDeleteTarget = null">
+                    <div class="modal-dialog" @onclick:stopPropagation="true" style="max-width:400px; background:var(--bg-primary,#fff); border-radius:16px;">
+                        <div class="text-center py-4 px-3">
+                            <i class="bi bi-exclamation-triangle text-danger" style="font-size:2rem;"></i>
+                            <h5 class="mt-2">삭제 확인</h5>
+                            <p class="text-secondary">"@_baDeleteTarget.Title" 삭제하시겠습니까?</p>
+                        </div>
+                        <div style="padding:0.8rem 1.2rem; border-top:1px solid var(--border-color,#eee); display:flex; justify-content:flex-end; gap:8px;">
+                            <button class="btn btn-secondary" @onclick="() => _baDeleteTarget = null">취소</button>
+                            <button class="btn btn-danger" @onclick="DoDeleteBA" disabled="@_baDeleting">
+                                @if (_baDeleting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
     }
     else if (_adminTab == 4)
     {
@@ -1107,7 +1303,184 @@
 }
 
 @code {
-    private void GoToBeforeAfter() => Nav.NavigateTo("admin/before-after");
+    // -- 스타일 서브탭 --
+    private int _styleSubTab;
+
+    // -- B/A 관리 (인라인) --
+    private List<BeforeAfterItem> _baAdminItems = new();
+    private List<StylePost> _baStyles = new();
+    private bool _baAdminLoading;
+    private bool _baAdminLoaded;
+    private bool _baEditing;
+    private bool _baIsNew;
+    private BeforeAfterItem _baEditItem = new();
+    private string _baSelectedStyleId = "";
+    private bool _baSaving;
+    private string? _baError;
+    private bool _baUploading;
+    private BeforeAfterItem? _baDeleteTarget;
+    private bool _baDeleting;
+
+    private async Task SwitchToAdminBA()
+    {
+        _styleSubTab = 1;
+        if (!_baAdminLoaded) await LoadBAAdmin();
+    }
+
+    private async Task LoadBAAdmin()
+    {
+        _baAdminLoading = true;
+        StateHasChanged();
+        try
+        {
+            var loadItems = BAService.GetAllAsync();
+            var loadStyles = StyleService.GetAllAsync();
+            await Task.WhenAll(loadItems, loadStyles);
+            _baAdminItems = (await loadItems).OrderByDescending(x => x.CreatedAt).ToList();
+            _baStyles = (await loadStyles).OrderBy(s => s.Category).ThenBy(s => s.Title).ToList();
+            _baAdminLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Dashboard] B/A 로드 실패: {ex.Message}");
+        }
+        finally
+        {
+            _baAdminLoading = false;
+        }
+    }
+
+    private void OnBAStyleSelected(ChangeEventArgs e)
+    {
+        _baSelectedStyleId = e.Value?.ToString() ?? "";
+        var style = _baStyles.FirstOrDefault(s => s.Id == _baSelectedStyleId);
+        if (style != null)
+        {
+            _baEditItem.Title = style.Title;
+            _baEditItem.Category = style.Category.ToString();
+            _baEditItem.Hashtags = new List<string>(style.Hashtags);
+        }
+    }
+
+    private void OpenNewBA()
+    {
+        _baIsNew = true;
+        _baEditItem = new BeforeAfterItem();
+        _baSelectedStyleId = "";
+        _baError = null;
+        _baEditing = true;
+    }
+
+    private void OpenEditBA(BeforeAfterItem item)
+    {
+        _baIsNew = false;
+        _baEditItem = new BeforeAfterItem
+        {
+            Id = item.Id,
+            BeforeImageUrls = new List<string>(item.BeforeImageUrls),
+            AfterImageUrls = new List<string>(item.AfterImageUrls),
+            Title = item.Title,
+            Description = item.Description,
+            Category = item.Category,
+            Hashtags = new List<string>(item.Hashtags),
+            IsPublished = item.IsPublished,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = item.UpdatedAt,
+        };
+        var matched = _baStyles.FirstOrDefault(s => s.Title == item.Title);
+        _baSelectedStyleId = matched?.Id ?? "";
+        _baError = null;
+        _baEditing = true;
+    }
+
+    private async Task OnBAImagesSelected(InputFileChangeEventArgs e, bool isBefore)
+    {
+        if (_baUploading) return;
+        _baUploading = true;
+        _baError = null;
+        var maxSize = 5 * 1024 * 1024;
+        try
+        {
+            foreach (var file in e.GetMultipleFiles(10))
+            {
+                if (file.Size > maxSize)
+                {
+                    _baError = $"'{file.Name}' 5MB 초과 ({file.Size / 1024 / 1024:F1}MB)";
+                    continue;
+                }
+                using var stream = file.OpenReadStream(maxSize);
+                using var ms = new System.IO.MemoryStream();
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                var resized = await JS.InvokeAsync<string>("resizeImage", base64, 1200, 1600, 0.82);
+                var resizedData = Convert.FromBase64String(resized);
+                var nameOnly = Path.GetFileNameWithoutExtension(file.Name);
+                var url = await ImageService.UploadAsync($"{nameOnly}.webp", resizedData, "image/webp", "beforeafter");
+                if (isBefore) _baEditItem.BeforeImageUrls.Add(url);
+                else _baEditItem.AfterImageUrls.Add(url);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) { _baError = $"업로드 실패: {ex.Message}"; }
+        finally { _baUploading = false; }
+    }
+
+    private async void RemoveBAImage(bool isBefore, int idx)
+    {
+        var list = isBefore ? _baEditItem.BeforeImageUrls : _baEditItem.AfterImageUrls;
+        if (idx < 0 || idx >= list.Count) return;
+        var url = list[idx];
+        list.RemoveAt(idx);
+        try { await ImageService.DeleteAsync(url); } catch { }
+        StateHasChanged();
+    }
+
+    private async Task SaveBA()
+    {
+        if (_baSaving) return;
+        if (string.IsNullOrWhiteSpace(_baEditItem.Title)) { _baError = "스타일을 선택해주세요."; return; }
+        if (!_baEditItem.BeforeImageUrls.Any() || !_baEditItem.AfterImageUrls.Any()) { _baError = "Before/After 이미지를 각각 최소 1장 업로드해주세요."; return; }
+        _baSaving = true;
+        _baError = null;
+        try
+        {
+            if (_baIsNew)
+            {
+                var created = await BAService.CreateAsync(_baEditItem);
+                await AuditService.LogAsync("BeforeAfter.Create", created.Id, created.Title,
+                    $"Before {created.BeforeImageUrls.Count}장, After {created.AfterImageUrls.Count}장");
+            }
+            else
+            {
+                await BAService.UpdateAsync(_baEditItem);
+                await AuditService.LogAsync("BeforeAfter.Update", _baEditItem.Id, _baEditItem.Title, "항목 수정");
+            }
+            _baEditing = false;
+            _baAdminLoaded = false;
+            await LoadBAAdmin();
+        }
+        catch (Exception ex) { _baError = $"저장 실패: {ex.Message}"; }
+        finally { _baSaving = false; }
+    }
+
+    private async Task DoDeleteBA()
+    {
+        if (_baDeleteTarget == null || _baDeleting) return;
+        _baDeleting = true;
+        try
+        {
+            foreach (var url in _baDeleteTarget.BeforeImageUrls.Concat(_baDeleteTarget.AfterImageUrls))
+            {
+                try { await ImageService.DeleteAsync(url); } catch { }
+            }
+            await BAService.DeleteAsync(_baDeleteTarget.Id);
+            await AuditService.LogAsync("BeforeAfter.Delete", _baDeleteTarget.Id, _baDeleteTarget.Title, "항목 삭제");
+            _baDeleteTarget = null;
+            _baAdminLoaded = false;
+            await LoadBAAdmin();
+        }
+        finally { _baDeleting = false; }
+    }
 
     // Toast
     private string _toastMessage = "";
@@ -5830,5 +6203,95 @@ Save the file as: {GetSuggestedFilename()}";
 
     .admin-toast i {
         color: var(--salon-green);
+    }
+
+    /* 스타일 서브탭 */
+    .admin-sub-tab-bar {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+
+    .admin-sub-tab {
+        padding: 0.4rem 1.2rem;
+        border: 1px solid var(--salon-light-gray, #ddd);
+        background: var(--bg-primary, #fff);
+        font-size: 0.78rem;
+        color: var(--text-secondary, #666);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .admin-sub-tab.active {
+        background: var(--salon-green, #7ba383);
+        color: #fff;
+        border-color: var(--salon-green, #7ba383);
+    }
+
+    /* B/A 관리 리스트 */
+    .ba-admin-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ba-admin-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: var(--bg-primary, #fff);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .ba-admin-thumbs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .ba-admin-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+
+    .ba-admin-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .ba-admin-info strong {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* 모달 오버레이 (기존 없으면 추가) */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-dialog {
+        width: 100%;
     }
 </style>

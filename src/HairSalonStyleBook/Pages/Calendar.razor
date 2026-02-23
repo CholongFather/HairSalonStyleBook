@@ -76,6 +76,10 @@
                         <button class="cal-dropdown-item text-danger" @onclick="ResetMonth">
                             <i class="bi bi-arrow-clockwise"></i> 월 초기화
                         </button>
+                        <hr style="margin:0.25rem 0;" />
+                        <button class="cal-dropdown-item text-danger" @onclick="DeleteMonthData">
+                            <i class="bi bi-trash3"></i> 월 데이터 삭제
+                        </button>
                     </div>
                 }
             </div>
@@ -736,6 +740,21 @@
     }
 </div>
 
+@* 월 데이터 삭제 확인 모달 *@
+@if (_confirmDelete)
+{
+    <div class="cal-delete-overlay" @onclick="() => { _confirmDelete = false; }">
+        <div class="cal-delete-dialog" @onclick:stopPropagation="true">
+            <p><strong>@(_data.Year)년 @(_data.Month)월</strong> 데이터를 삭제하시겠습니까?</p>
+            <p class="text-muted" style="font-size:0.8rem;">Firestore에서 완전히 삭제됩니다. 복구할 수 없습니다.</p>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => { _confirmDelete = false; }">취소</button>
+                <button class="btn btn-sm btn-danger" @onclick="ConfirmDeleteMonthData">삭제</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private CalendarMonth _data = new();
     private bool _isAdmin;
@@ -799,6 +818,9 @@
         ("none", "없음"), ("dots", "도트"), ("grid", "격자"),
         ("stripes", "줄무늬"), ("hearts", "하트"), ("stars", "별")
     };
+
+    // 삭제 확인 상태
+    private bool _confirmDelete;
 
     // 툴바 상태
     private int _toolTab = -1;
@@ -1481,6 +1503,36 @@
         _editingDay = null;
         _showMoreMenu = false;
         StateHasChanged();
+    }
+
+    // -- 월 데이터 Firestore 삭제 --
+    private void DeleteMonthData()
+    {
+        _showMoreMenu = false;
+        _confirmDelete = true;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteMonthData()
+    {
+        try
+        {
+            await CalendarService.DeleteMonthAsync(_data.Id);
+            await AuditService.LogAsync("Delete", _data.Id, "다꾸캘린더", $"{_data.Year}년 {_data.Month}월 캘린더 데이터 삭제");
+            // 새 빈 데이터로 초기화
+            _data = new CalendarMonth { Year = _data.Year, Month = _data.Month, Id = $"{_data.Year}-{_data.Month:D2}" };
+            _selectedElementId = null;
+            _editingDay = null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Calendar] 삭제 실패: {ex.Message}");
+        }
+        finally
+        {
+            _confirmDelete = false;
+            StateHasChanged();
+        }
     }
 
     // -- 요소 정렬 --
@@ -2644,5 +2696,59 @@
         .cal-washi-btn {
             padding: 0.3rem 0.4rem;
         }
+    }
+
+    /* 삭제 확인 모달 */
+    .cal-delete-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cal-delete-dialog {
+        background: var(--salon-white, #fff);
+        border-radius: 12px;
+        padding: 1.5rem;
+        max-width: 340px;
+        width: 90%;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    /* 다꾸 폰트 클래스 */
+    .gd-font-default {
+        font-family: inherit;
+    }
+
+    .gd-font-handwrite {
+        font-family: 'Nanum Pen Script', cursive;
+    }
+
+    .gd-font-cute {
+        font-family: 'Gamja Flower', cursive;
+    }
+
+    .gd-font-brush {
+        font-family: 'Nanum Myeongjo', serif;
+        font-weight: 700;
+    }
+
+    .gd-font-elegant {
+        font-family: 'Noto Serif KR', serif;
+    }
+
+    .gd-font-round {
+        font-family: 'Gaegu', cursive;
+    }
+
+    .gd-font-bold {
+        font-family: 'Black Han Sans', sans-serif;
+    }
+
+    .gd-font-title {
+        font-family: 'Do Hyeon', sans-serif;
     }
 </style>
