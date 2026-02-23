@@ -942,11 +942,40 @@
         StateHasChanged();
 
         _data = await CalendarService.GetMonthAsync(year, month);
+
+        // 저장된 배경이 없으면 계절별 기본 배경 적용
+        if (string.IsNullOrEmpty(_data.BackgroundColor))
+        {
+            var (bg, pattern) = GetSeasonalDefault(month);
+            _data.BackgroundColor = bg;
+            _data.BackgroundPattern = pattern;
+        }
+
         _selectedElementId = null;
         _editingDay = null;
         _undoStack.Clear();
         _loading = false;
     }
+
+    /// <summary>
+    /// 월별 계절 기본 배경색 + 패턴
+    /// </summary>
+    private static (string bg, string pattern) GetSeasonalDefault(int month) => month switch
+    {
+        1  => ("#f0f0f8", "stars"),    // 겨울: 라벤더 + 별
+        2  => ("#f5f0f8", "stars"),    // 겨울: 연보라 + 별
+        3  => ("#fef5f0", "dots"),     // 봄: 살구 + 도트
+        4  => ("#fff0f3", "hearts"),   // 봄: 핑크 + 하트
+        5  => ("#f0faf0", "dots"),     // 봄: 연초록 + 도트
+        6  => ("#f0f5fa", "stripes"),  // 여름: 하늘 + 스트라이프
+        7  => ("#e8f4fd", "stripes"),  // 여름: 시원한 파랑 + 스트라이프
+        8  => ("#f0f8f5", "dots"),     // 여름: 민트 + 도트
+        9  => ("#faf5f0", "grid"),     // 가을: 베이지 + 그리드
+        10 => ("#fff5e6", "dots"),     // 가을: 주황 + 도트
+        11 => ("#f8f0e8", "grid"),     // 가을: 갈색 + 그리드
+        12 => ("#eef0fa", "stars"),    // 겨울: 파란보라 + 별
+        _  => ("#fffdf7", "none")
+    };
 
     private async Task PrevMonth()
     {
