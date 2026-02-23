@@ -4,6 +4,7 @@
 @inject IShopConfigService ShopConfigService
 @inject IGalleryService GalleryService
 @inject IBeforeAfterService BAService
+@inject ICalendarDecoService CalendarService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -31,7 +32,7 @@
         </button>
         @if (_shopConfig.CalendarEnabled)
         {
-            <button class="tab-item" @onclick="GoToCalendar">
+            <button class="tab-item @(_activeTab == 4 ? "active" : "")" @onclick="() => SwitchToCalendar()">
                 <i class="bi bi-palette"></i>
                 <span>다꾸</span>
             </button>
@@ -652,6 +653,110 @@
                 }
             </div>
         }
+        else if (_activeTab == 4)
+        {
+            <!-- 탭 4: 다꾸 캘린더 (읽기전용) -->
+            <div class="tab-panel tab-fade-in">
+                @if (_calLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-secondary"></div>
+                    </div>
+                }
+                else if (_calData == null || !_calData.IsPublished)
+                {
+                    <div class="text-center text-muted py-4" style="font-size:0.9rem;">
+                        <i class="bi bi-calendar-x" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:0.5rem;"></i>
+                        아직 공개된 캘린더가 없습니다
+                    </div>
+                }
+                else
+                {
+                    <!-- 월 네비게이션 -->
+                    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:0.75rem;">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CalPrevMonth">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <h5 style="margin:0;font-weight:700;">@(_calData.Year)년 @(_calData.Month)월</h5>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CalNextMonth">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- 캘린더 캔버스 -->
+                    <div class="cal-ro-canvas" style="background-color:@_calData.BackgroundColor;@GetCalPatternStyle()">
+                        <div class="cal-ro-dow-row">
+                            <span class="cal-ro-dow" style="color:#e8847c;">일</span>
+                            <span class="cal-ro-dow">월</span>
+                            <span class="cal-ro-dow">화</span>
+                            <span class="cal-ro-dow">수</span>
+                            <span class="cal-ro-dow">목</span>
+                            <span class="cal-ro-dow">금</span>
+                            <span class="cal-ro-dow" style="color:#6b8eb5;">토</span>
+                        </div>
+                        <div class="cal-ro-grid">
+                            @{
+                                var calFirst = new DateTime(_calData.Year, _calData.Month, 1);
+                                var calDays = DateTime.DaysInMonth(_calData.Year, _calData.Month);
+                                var calStart = (int)calFirst.DayOfWeek;
+                            }
+                            @for (var i = 0; i < calStart; i++)
+                            {
+                                <div class="cal-ro-cell empty"></div>
+                            }
+                            @for (var d = 1; d <= calDays; d++)
+                            {
+                                var dayStr = d.ToString();
+                                var hasDeco = _calData.CellDecos.TryGetValue(dayStr, out var cellDeco) && !cellDeco.IsEmpty;
+                                var isToday = _calData.Year == DateTime.Now.Year && _calData.Month == DateTime.Now.Month && d == DateTime.Now.Day;
+                                var dow = (int)new DateTime(_calData.Year, _calData.Month, d).DayOfWeek;
+                                <div class="cal-ro-cell @(isToday ? "today" : "") @(hasDeco ? "decorated" : "") @(dow == 0 ? "sun" : "") @(dow == 6 ? "sat" : "")"
+                                     style="@(hasDeco ? $"background-color:{cellDeco!.BackgroundColor};" : "")">
+                                    <span class="cal-ro-day">@d</span>
+                                    @if (hasDeco)
+                                    {
+                                        @if (cellDeco!.Stickers.Count > 0)
+                                        {
+                                            <div class="cal-ro-stickers">
+                                                @foreach (var s in cellDeco.Stickers)
+                                                {
+                                                    <span>@s</span>
+                                                }
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(cellDeco.Memo))
+                                        {
+                                            <div class="cal-ro-memo" style="@(!string.IsNullOrEmpty(cellDeco.TextColor) ? $"color:{cellDeco.TextColor};" : "")">
+                                                @cellDeco.Memo
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <!-- 자유 배치 요소 -->
+                        @foreach (var el in _calData.FreeElements.OrderBy(e => e.ZIndex))
+                        {
+                            <div class="cal-ro-free" style="left:@FPctCal(el.X);top:@FPctCal(el.Y);transform:rotate(@($"{el.Rotation:F0}deg")) scale(@FSclCal(el.Scale));opacity:@FSclCal(el.Opacity);z-index:@(el.ZIndex + 10);">
+                                @switch (el.Type)
+                                {
+                                    case "emoji":
+                                        <span style="font-size:1.5rem;">@el.Content</span>
+                                        break;
+                                    case "text":
+                                        <span style="color:@el.Color;">@el.Content</span>
+                                        break;
+                                    case "image":
+                                        <img src="@el.Content" alt="deco" style="max-width:60px;border-radius:4px;" />
+                                        break;
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -928,9 +1033,86 @@
         _activeTab = tab;
     }
 
-    private void GoToCalendar()
+    // -- 다꾸 캘린더 (읽기전용) --
+    private CalendarMonth? _calData;
+    private bool _calLoading;
+    private bool _calLoaded;
+
+    private async Task SwitchToCalendar()
     {
-        Nav.NavigateTo("calendar");
+        _activeTab = 4;
+        if (!_calLoaded) await LoadCalendar(DateTime.Now.Year, DateTime.Now.Month);
+    }
+
+    private async Task LoadCalendar(int year, int month)
+    {
+        _calLoading = true;
+        StateHasChanged();
+        try
+        {
+            var data = await CalendarService.GetMonthAsync(year, month);
+            if (data.IsPublished)
+            {
+                _calData = data;
+            }
+            else
+            {
+                // 게시된 월 찾기 (현재 월 근처)
+                var published = await CalendarService.GetPublishedMonthsAsync();
+                if (published.Any())
+                {
+                    var latest = published.First();
+                    _calData = await CalendarService.GetMonthAsync(latest.Year, latest.Month);
+                }
+                else
+                {
+                    _calData = null;
+                }
+            }
+        }
+        catch { _calData = null; }
+        _calLoading = false;
+        _calLoaded = true;
+        StateHasChanged();
+    }
+
+    private async Task CalPrevMonth()
+    {
+        if (_calData == null) return;
+        var prev = new DateTime(_calData.Year, _calData.Month, 1).AddMonths(-1);
+        await LoadCalendar(prev.Year, prev.Month);
+    }
+
+    private async Task CalNextMonth()
+    {
+        if (_calData == null) return;
+        var next = new DateTime(_calData.Year, _calData.Month, 1).AddMonths(1);
+        await LoadCalendar(next.Year, next.Month);
+    }
+
+    private static string FPctCal(double v) => $"{v:F1}%";
+    private static string FSclCal(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    private string GetCalPatternStyle()
+    {
+        if (_calData == null) return "";
+        return _calData.BackgroundPattern switch
+        {
+            "dots" => "background-image:radial-gradient(circle,rgba(0,0,0,0.08) 1px,transparent 1px);background-size:16px 16px;",
+            "grid" => "background-image:linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);background-size:20px 20px;",
+            "stripes" => "background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.03) 10px,rgba(0,0,0,0.03) 20px);",
+            "hearts" => "background-image:radial-gradient(circle,rgba(232,132,124,0.15) 2px,transparent 2px);background-size:24px 24px;",
+            "stars" => "background-image:radial-gradient(circle,rgba(255,217,61,0.2) 1.5px,transparent 1.5px);background-size:20px 20px;",
+            "cherry" => "background-image:radial-gradient(circle,rgba(255,182,193,0.4) 3px,transparent 3px),radial-gradient(circle,rgba(255,160,180,0.25) 2px,transparent 2px);background-size:32px 32px,20px 24px;background-position:0 0,10px 12px;",
+            "snowflake" => "background-image:radial-gradient(circle,rgba(180,210,240,0.5) 2px,transparent 2px),radial-gradient(circle,rgba(200,220,250,0.3) 1.5px,transparent 1.5px);background-size:28px 28px,18px 20px;background-position:0 0,14px 10px;",
+            "forsythia" => "background-image:radial-gradient(circle,rgba(255,215,0,0.35) 3px,transparent 3px),radial-gradient(circle,rgba(255,200,0,0.2) 2px,transparent 2px);background-size:30px 30px,22px 18px;background-position:0 0,15px 9px;",
+            "azalea" => "background-image:radial-gradient(circle,rgba(220,100,150,0.3) 3px,transparent 3px),radial-gradient(circle,rgba(240,120,170,0.2) 2px,transparent 2px);background-size:34px 34px,22px 26px;background-position:0 0,12px 14px;",
+            "hydrangea" => "background-image:radial-gradient(circle,rgba(130,150,220,0.3) 3px,transparent 3px),radial-gradient(circle,rgba(160,130,210,0.25) 2.5px,transparent 2.5px),radial-gradient(circle,rgba(120,170,220,0.2) 2px,transparent 2px);background-size:30px 30px,24px 22px,18px 20px;background-position:0 0,10px 14px,20px 6px;",
+            "sunflower" => "background-image:radial-gradient(circle,rgba(255,180,0,0.35) 3.5px,transparent 3.5px),radial-gradient(circle,rgba(180,120,40,0.2) 2px,transparent 2px);background-size:36px 36px,24px 20px;background-position:0 0,18px 10px;",
+            "maple" => "background-image:radial-gradient(circle,rgba(210,100,40,0.25) 3px,transparent 3px),radial-gradient(circle,rgba(230,150,50,0.2) 2px,transparent 2px);background-size:32px 32px,20px 24px;background-position:0 0,16px 12px;",
+            "cosmos" => "background-image:radial-gradient(circle,rgba(200,100,160,0.25) 2.5px,transparent 2.5px),radial-gradient(circle,rgba(255,255,255,0.3) 1.5px,transparent 1.5px);background-size:28px 28px,18px 22px;background-position:0 0,14px 11px;",
+            _ => ""
+        };
     }
 
     private async Task OpenQr(string data)
@@ -2287,6 +2469,85 @@
 
     @@media (max-width: 480px) {
         .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* 다꾸 캘린더 (읽기전용) */
+    .cal-ro-canvas {
+        position: relative;
+        border-radius: 12px;
+        padding: 0.75rem;
+        border: 1px solid var(--salon-border, #e8e0d8);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        overflow: hidden;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .cal-ro-dow-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        margin-bottom: 0.4rem;
+    }
+
+    .cal-ro-dow {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--salon-gray, #888);
+        padding: 0.2rem 0;
+    }
+
+    .cal-ro-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .cal-ro-cell {
+        aspect-ratio: 1;
+        border-radius: 6px;
+        padding: 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.75rem;
+        background: rgba(255,255,255,0.5);
+        overflow: hidden;
+    }
+
+    .cal-ro-cell.empty { background: transparent; }
+    .cal-ro-cell.today { box-shadow: 0 0 0 2px var(--salon-accent, #d4a574); }
+    .cal-ro-cell.sun .cal-ro-day { color: #e8847c; }
+    .cal-ro-cell.sat .cal-ro-day { color: #6b8eb5; }
+
+    .cal-ro-day {
+        font-weight: 600;
+        font-size: 0.7rem;
+        line-height: 1;
+        color: var(--salon-black, #333);
+    }
+
+    .cal-ro-stickers {
+        font-size: 0.55rem;
+        line-height: 1;
+        display: flex;
+        gap: 1px;
+    }
+
+    .cal-ro-memo {
+        font-size: 0.4rem;
+        line-height: 1.2;
+        color: var(--salon-gray, #666);
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    .cal-ro-free {
+        position: absolute;
+        pointer-events: none;
     }
 
     /* B/A 서브탭 */

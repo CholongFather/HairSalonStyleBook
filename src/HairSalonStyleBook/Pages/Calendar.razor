@@ -1,5 +1,5 @@
 @page "/calendar"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Admin")]
 @using Microsoft.AspNetCore.Authorization
 @inject ICalendarDecoService CalendarService
 @inject IAuthService AuthService

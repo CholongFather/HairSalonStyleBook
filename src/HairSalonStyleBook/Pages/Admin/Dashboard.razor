@@ -31,6 +31,12 @@
         <button class="admin-tab @(_adminTab == 3 ? "active" : "")" @onclick="OpenSecurityTab">
             <i class="bi bi-shield-lock"></i> 보안
         </button>
+        @if (_shopConfig.CalendarEnabled)
+        {
+            <button class="admin-tab" @onclick="GoToCalendarEditor">
+                <i class="bi bi-palette"></i> 다꾸
+            </button>
+        }
     </div>
 
     @if (_adminTab == 0)
@@ -1782,6 +1788,11 @@
         if (!_loginAttempts.Any())
             await LoadSecurityData();
         StartSecurityAutoRefresh();
+    }
+
+    private void GoToCalendarEditor()
+    {
+        Nav.NavigateTo("calendar");
     }
 
     private void StartSecurityAutoRefresh()
