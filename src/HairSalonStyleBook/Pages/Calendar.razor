@@ -816,7 +816,7 @@
     // 배경 패턴
     private static readonly (string key, string label)[] _bgPatterns = {
         ("none", "없음"), ("dots", "도트"), ("grid", "격자"),
-        ("stripes", "줄무늬"), ("hearts", "하트"), ("stars", "별")
+        ("stripes", "줄무늬"), ("hearts", "하트"), ("stars", "별"), ("cherry", "벚꽃")
     };
 
     // 삭제 확인 상태
@@ -964,7 +964,7 @@
     {
         1  => ("#f0f0f8", "stars"),    // 겨울: 라벤더 + 별
         2  => ("#f5f0f8", "stars"),    // 겨울: 연보라 + 별
-        3  => ("#fef5f0", "dots"),     // 봄: 살구 + 도트
+        3  => ("#fff5f6", "cherry"),   // 봄: 벚꽃
         4  => ("#fff0f3", "hearts"),   // 봄: 핑크 + 하트
         5  => ("#f0faf0", "dots"),     // 봄: 연초록 + 도트
         6  => ("#f0f5fa", "stripes"),  // 여름: 하늘 + 스트라이프
@@ -1771,6 +1771,7 @@
             "stripes" => "background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.03) 10px,rgba(0,0,0,0.03) 20px);",
             "hearts" => "background-image:radial-gradient(circle,rgba(232,132,124,0.15) 2px,transparent 2px);background-size:24px 24px;",
             "stars" => "background-image:radial-gradient(circle,rgba(255,217,61,0.2) 1.5px,transparent 1.5px);background-size:20px 20px;",
+            "cherry" => "background-image:radial-gradient(circle,rgba(255,182,193,0.4) 3px,transparent 3px),radial-gradient(circle,rgba(255,160,180,0.25) 2px,transparent 2px);background-size:32px 32px,20px 24px;background-position:0 0,10px 12px;",
             _ => ""
         };
     }
