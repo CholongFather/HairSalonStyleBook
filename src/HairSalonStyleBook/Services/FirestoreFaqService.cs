@@ -114,7 +114,7 @@ public class FirestoreFaqService : IFaqService
                 Title = GetStr(fields, "title"),
                 Description = GetStr(fields, "description"),
                 Category = GetStr(fields, "category"),
-                ImageUrl = GetStr(fields, "imageUrl"),
+                ImageUrls = GetImageUrls(fields),
                 Order = GetInt(fields, "order"),
                 IsPublished = GetBool(fields, "isPublished", true),
                 CreatedAt = GetTimestamp(fields, "createdAt"),
@@ -137,7 +137,13 @@ public class FirestoreFaqService : IFaqService
                 ["title"] = new() { StringValue = item.Title },
                 ["description"] = new() { StringValue = item.Description },
                 ["category"] = new() { StringValue = item.Category },
-                ["imageUrl"] = new() { StringValue = item.ImageUrl },
+                ["imageUrls"] = new()
+                {
+                    ArrayValue = new FirestoreArrayValue
+                    {
+                        Values = item.ImageUrls.Select(u => new FirestoreValue { StringValue = u }).ToList()
+                    }
+                },
                 ["order"] = new() { IntegerValue = item.Order.ToString() },
                 ["isPublished"] = new() { BooleanValue = item.IsPublished },
                 ["createdAt"] = new() { TimestampValue = item.CreatedAt.ToString("o") },
@@ -157,4 +163,20 @@ public class FirestoreFaqService : IFaqService
 
     private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
         => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
+
+    /// <summary>
+    /// imageUrls 배열 우선, 없으면 기존 imageUrl 단일 필드 호환
+    /// </summary>
+    private static List<string> GetImageUrls(Dictionary<string, FirestoreValue> fields)
+    {
+        // 새 배열 필드 우선
+        if (fields.TryGetValue("imageUrls", out var arr) && arr.ArrayValue?.Values != null)
+            return arr.ArrayValue.Values.Where(x => x.StringValue != null).Select(x => x.StringValue!).ToList();
+
+        // 기존 단일 필드 호환
+        if (fields.TryGetValue("imageUrl", out var single) && !string.IsNullOrEmpty(single.StringValue))
+            return new List<string> { single.StringValue };
+
+        return new List<string>();
+    }
 }

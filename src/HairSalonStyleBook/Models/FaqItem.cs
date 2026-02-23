@@ -15,9 +15,26 @@ public class FaqItem
     public string Category { get; set; } = string.Empty;
 
     /// <summary>
-    /// 스크린샷/이미지 URL (Firebase Storage)
+    /// 스크린샷/이미지 URL 목록 (Firebase Storage)
     /// </summary>
-    public string ImageUrl { get; set; } = string.Empty;
+    public List<string> ImageUrls { get; set; } = new();
+
+    /// <summary>
+    /// 하위 호환용 단일 이미지 URL (첫 번째 이미지)
+    /// </summary>
+    public string ImageUrl
+    {
+        get => ImageUrls.FirstOrDefault() ?? "";
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+            if (ImageUrls.Count == 0)
+                ImageUrls.Add(value);
+            else
+                ImageUrls[0] = value;
+        }
+    }
 
     /// <summary>
     /// 정렬 순서 (낮을수록 먼저 노출)

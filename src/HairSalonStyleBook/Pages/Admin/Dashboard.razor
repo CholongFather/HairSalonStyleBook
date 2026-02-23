@@ -647,17 +647,22 @@
                             <RichTextEditor @bind-Value="_faqEditing.Description" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">스크린샷 / 이미지</label>
-                            @if (!string.IsNullOrEmpty(_faqEditing.ImageUrl))
+                            <label class="form-label fw-bold">스크린샷 / 이미지 (@(_faqEditing.ImageUrls.Count)장)</label>
+                            @if (_faqEditing.ImageUrls.Any())
                             {
-                                <div class="faq-edit-image-preview mb-2">
-                                    <img src="@_faqEditing.ImageUrl" alt="미리보기" />
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFaqImage">
-                                        <i class="bi bi-x-lg"></i> 제거
-                                    </button>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    @for (int i = 0; i < _faqEditing.ImageUrls.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <div style="position:relative; width:80px; height:80px;">
+                                            <img src="@_faqEditing.ImageUrls[idx]" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" />
+                                            <button class="btn btn-sm" style="position:absolute; top:-4px; right:-4px; background:rgba(220,53,69,0.85); color:#fff; border-radius:50%; width:20px; height:20px; padding:0; font-size:0.6rem; display:flex; align-items:center; justify-content:center;"
+                                                    @onclick="() => RemoveFaqImage(idx)"><i class="bi bi-x"></i></button>
+                                        </div>
+                                    }
                                 </div>
                             }
-                            <InputFile OnChange="OnFaqImageSelected" accept="image/*" class="form-control form-control-sm" />
+                            <InputFile OnChange="OnFaqImageSelected" multiple accept="image/*" class="form-control form-control-sm" />
                             @if (_faqUploading)
                             {
                                 <div class="mt-1 text-muted small">
@@ -757,10 +762,15 @@
                                     @if (_expandedFaqId == faq.Id)
                                     {
                                         <div class="faq-acc-body">
-                                            @if (!string.IsNullOrEmpty(faq.ImageUrl))
+                                            @if (faq.ImageUrls.Any())
                                             {
-                                                <div class="faq-acc-image">
-                                                    <img src="@faq.ImageUrl" alt="@faq.Title" />
+                                                <div class="faq-acc-images">
+                                                    @foreach (var imgUrl in faq.ImageUrls)
+                                                    {
+                                                        <div class="faq-acc-image">
+                                                            <img src="@imgUrl" alt="@faq.Title" />
+                                                        </div>
+                                                    }
                                                 </div>
                                             }
                                             <div class="faq-acc-desc">@((MarkupString)HairSalonStyleBook.Services.HtmlSanitizer.Sanitize(faq.Description ?? ""))</div>
@@ -1919,7 +1929,7 @@
             Title = faq.Title,
             Description = faq.Description,
             Category = faq.Category,
-            ImageUrl = faq.ImageUrl,
+            ImageUrls = new List<string>(faq.ImageUrls),
             Order = faq.Order,
             IsPublished = faq.IsPublished,
             CreatedAt = faq.CreatedAt,
@@ -1979,30 +1989,38 @@
     private async Task OnFaqImageSelected(InputFileChangeEventArgs e)
     {
         if (_faqEditing == null) return;
-        var file = e.File;
-        if (file.Size > 5 * 1024 * 1024) return; // 5MB 제한
 
         _faqUploading = true;
         StateHasChanged();
 
-        try
+        foreach (var file in e.GetMultipleFiles(10))
         {
-            var buffer = new byte[file.Size];
-            await using var stream = file.OpenReadStream(5 * 1024 * 1024);
-            await stream.ReadExactlyAsync(buffer);
-            var url = await ImageService.UploadAsync($"faq_{file.Name}", buffer, file.ContentType);
-            _faqEditing.ImageUrl = url;
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                await JS.InvokeVoidAsync("alert", $"{file.Name}: 5MB 초과로 건너뜁니다");
+                continue;
+            }
+
+            try
+            {
+                var buffer = new byte[file.Size];
+                await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+                await stream.ReadExactlyAsync(buffer);
+                var url = await ImageService.UploadAsync($"faq_{file.Name}", buffer, file.ContentType);
+                _faqEditing.ImageUrls.Add(url);
+                StateHasChanged();
+            }
+            catch { }
         }
-        catch { }
 
         _faqUploading = false;
         StateHasChanged();
     }
 
-    private void RemoveFaqImage()
+    private void RemoveFaqImage(int index)
     {
-        if (_faqEditing != null)
-            _faqEditing.ImageUrl = "";
+        if (_faqEditing != null && index >= 0 && index < _faqEditing.ImageUrls.Count)
+            _faqEditing.ImageUrls.RemoveAt(index);
     }
 
     // ─── 갤러리 메서드 ───
@@ -5668,8 +5686,14 @@ Save the file as: {GetSuggestedFilename()}";
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .faq-acc-image {
+    .faq-acc-images {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
         margin-bottom: 1rem;
+    }
+
+    .faq-acc-image {
         border-radius: 8px;
         overflow: hidden;
         border: 1px solid #eee;
