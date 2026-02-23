@@ -209,7 +209,7 @@
                     var isToday = _data.Year == DateTime.Now.Year && _data.Month == DateTime.Now.Month && day == DateTime.Now.Day;
                     var dow = (int)new DateTime(_data.Year, _data.Month, day).DayOfWeek;
                     var hasDDay = _data.DDays.TryGetValue(dayStr, out var ddayLabel);
-                    <div class="cal-cell @(isToday ? "today" : "") @(hasDeco ? "decorated" : "") @(dow == 0 ? "sun" : "") @(dow == 6 ? "sat" : "") @(hasDDay ? "dday" : "")"
+                    <div class="cal-cell @(isToday ? "today" : "") @(hasDeco ? "decorated" : "") @(dow == 0 ? "sun" : "") @(dow == 6 ? "sat" : "") @(hasDDay ? "dday" : "") @(_editingDay == day ? "editing" : "")"
                          style="@(hasDeco ? $"background-color:{cellDeco!.BackgroundColor};" : "")"
                          @onclick="() => OnCellClick(day)">
                         <span class="cal-day-num">@day</span>
@@ -1751,7 +1751,7 @@
 
 <style>
     .cal-page {
-        max-width: 600px;
+        max-width: 100%;
         margin: 0 auto;
         padding: 1rem;
     }
@@ -1926,6 +1926,11 @@
 
     .cal-cell.today {
         box-shadow: 0 0 0 2px var(--salon-accent, #d4a574);
+    }
+
+    .cal-cell.editing {
+        box-shadow: 0 0 0 2.5px var(--salon-green, #7ba383);
+        background: rgba(123, 163, 131, 0.12) !important;
     }
 
     .cal-cell.sun .cal-day-num { color: #e8847c; }
