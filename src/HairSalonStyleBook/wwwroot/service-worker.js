@@ -1,6 +1,6 @@
 // 늘~오던 헤어살롱 - 이미지 캐싱 + 앱 셸 캐싱 + 오프라인 폴백 Service Worker
 const IMAGE_CACHE = 'salon-image-cache-v2';
-const STATIC_CACHE = 'salon-static-v1';
+const STATIC_CACHE = 'salon-static-v2';
 const OFFLINE_CACHE = 'salon-offline-v1';
 const OFFLINE_URL = 'offline.html';
 
@@ -38,6 +38,8 @@ function isImageRequest(url) {
 
 function isStaticAsset(url) {
     const urlLower = url.toLowerCase();
+    // Blazor _framework 파일은 SRI 검증이 있으므로 SW에서 캐싱하지 않음
+    if (urlLower.includes('/_framework/')) return false;
     // 외부 CDN 폰트/CSS도 캐싱
     if (urlLower.includes('fonts.googleapis.com') || urlLower.includes('fonts.gstatic.com')) return true;
     if (urlLower.includes('cdn.jsdelivr.net')) return true;
