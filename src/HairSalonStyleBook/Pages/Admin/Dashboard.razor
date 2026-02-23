@@ -261,8 +261,8 @@
         @* B/A 편집 모달 *@
         @if (_baEditing)
         {
-            <div class="modal-overlay" @onclick="() => _baEditing = false">
-                <div class="modal-dialog" @onclick:stopPropagation="true" style="max-width:600px; max-height:90vh; overflow-y:auto; background:var(--bg-primary,#fff); border-radius:16px;">
+            <div class="modal-overlay">
+                <div class="modal-dialog" style="max-width:600px; max-height:90vh; overflow-y:auto; background:var(--bg-primary,#fff); border-radius:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.2rem; border-bottom:1px solid var(--border-color,#eee);">
                         <h5 style="margin:0;">@(_baIsNew ? "새 Before/After" : "Before/After 편집")</h5>
                         <button class="btn-close" @onclick="() => _baEditing = false"></button>
