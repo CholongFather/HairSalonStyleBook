@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -90,10 +91,10 @@ public class FirestoreAuditService : IAuditService
             return new AuditLog
             {
                 Id = id,
-                Action = GetString(fields, "action"),
-                TargetId = GetString(fields, "targetId"),
-                TargetTitle = GetString(fields, "targetTitle"),
-                Details = GetString(fields, "details"),
+                Action = GetStr(fields, "action"),
+                TargetId = GetStr(fields, "targetId"),
+                TargetTitle = GetStr(fields, "targetTitle"),
+                Details = GetStr(fields, "details"),
                 Timestamp = GetTimestamp(fields, "timestamp")
             };
         }
@@ -119,9 +120,4 @@ public class FirestoreAuditService : IAuditService
         };
     }
 
-    private static string GetString(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
-
-    private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
 }

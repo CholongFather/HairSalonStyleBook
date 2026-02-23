@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -151,18 +152,6 @@ public class FirestoreFaqService : IFaqService
             }
         };
     }
-
-    private static string GetStr(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
-
-    private static int GetInt(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && int.TryParse(v.IntegerValue, out var n) ? n : 0;
-
-    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool fallback)
-        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : fallback;
-
-    private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
 
     /// <summary>
     /// imageUrls 배열 우선, 없으면 기존 imageUrl 단일 필드 호환

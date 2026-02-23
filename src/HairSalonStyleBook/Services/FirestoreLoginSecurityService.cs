@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -170,11 +171,11 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
             return new LoginAttempt
             {
                 Id = doc.Name?.Split('/').LastOrDefault() ?? "",
-                DeviceFingerprint = GetString(fields, "deviceFingerprint"),
-                DeviceInfo = GetString(fields, "deviceInfo"),
-                ScreenSize = GetString(fields, "screenSize"),
+                DeviceFingerprint = GetStr(fields, "deviceFingerprint"),
+                DeviceInfo = GetStr(fields, "deviceInfo"),
+                ScreenSize = GetStr(fields, "screenSize"),
                 Timestamp = GetTimestamp(fields, "timestamp"),
-                Success = fields.TryGetValue("success", out var v) && v.BooleanValue == true
+                Success = GetBool(fields, "success")
             };
         }
         catch (Exception ex)
@@ -184,9 +185,4 @@ public class FirestoreLoginSecurityService : ILoginSecurityService
         }
     }
 
-    private static string GetString(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
-
-    private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
 }

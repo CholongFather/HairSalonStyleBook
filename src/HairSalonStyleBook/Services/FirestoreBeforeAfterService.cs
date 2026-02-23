@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -270,22 +271,6 @@ public class FirestoreBeforeAfterService : IBeforeAfterService
                 ["updatedAt"] = new() { TimestampValue = item.UpdatedAt.ToString("o") },
             }
         };
-    }
-
-    private static string GetStr(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
-
-    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool defaultVal = false)
-        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : defaultVal;
-
-    private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
-
-    private static List<string> GetStringArray(Dictionary<string, FirestoreValue> fields, string key)
-    {
-        if (!fields.TryGetValue(key, out var v) || v.ArrayValue?.Values == null)
-            return new List<string>();
-        return v.ArrayValue.Values.Where(x => x.StringValue != null).Select(x => x.StringValue!).ToList();
     }
 
     #endregion

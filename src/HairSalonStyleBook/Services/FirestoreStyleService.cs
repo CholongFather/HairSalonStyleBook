@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -181,28 +182,28 @@ public class FirestoreStyleService : IStyleService
             return new StylePost
             {
                 Id = id,
-                Title = GetStringValue(fields, "title"),
-                Description = GetStringValue(fields, "description"),
-                Category = Enum.TryParse<StyleCategory>(GetStringValue(fields, "category"), out var cat) ? cat : StyleCategory.여성숏,
-                Service = Enum.TryParse<ServiceType>(GetStringValue(fields, "service"), out var svc) ? svc : ServiceType.커트,
-                ImageUrls = GetArrayValue(fields, "imageUrls"),
-                Hashtags = GetArrayValue(fields, "hashtags"),
-                RelatedPostIds = GetArrayValue(fields, "relatedPostIds"),
-                StylingTip = GetStringValue(fields, "stylingTip"),
-                TreatmentDifficulty = GetIntValue(fields, "treatmentDifficulty"),
-                MaintenanceLevel = GetIntValue(fields, "maintenanceLevel"),
-                Duration = GetStringValue(fields, "duration"),
-                RecommendedFaceShapes = GetArrayValue(fields, "recommendedFaceShapes"),
-                RecommendedHairTypes = GetArrayValue(fields, "recommendedHairTypes"),
-                RecommendedFor = GetArrayValue(fields, "recommendedFor"),
-                RecommendedAge = GetStringValue(fields, "recommendedAge"),
-                Mood = GetStringValue(fields, "mood"),
-                CreatedAt = GetTimestampValue(fields, "createdAt"),
-                UpdatedAt = GetTimestampValue(fields, "updatedAt"),
-                CreatedBy = GetStringValue(fields, "createdBy"),
-                IsFeatured = GetBoolValue(fields, "isFeatured"),
-                IsSignature = GetBoolValue(fields, "isSignature"),
-                IsPublished = GetBoolValue(fields, "isPublished")
+                Title = GetStr(fields, "title"),
+                Description = GetStr(fields, "description"),
+                Category = Enum.TryParse<StyleCategory>(GetStr(fields, "category"), out var cat) ? cat : StyleCategory.여성숏,
+                Service = Enum.TryParse<ServiceType>(GetStr(fields, "service"), out var svc) ? svc : ServiceType.커트,
+                ImageUrls = GetStringArray(fields, "imageUrls"),
+                Hashtags = GetStringArray(fields, "hashtags"),
+                RelatedPostIds = GetStringArray(fields, "relatedPostIds"),
+                StylingTip = GetStr(fields, "stylingTip"),
+                TreatmentDifficulty = GetInt(fields, "treatmentDifficulty"),
+                MaintenanceLevel = GetInt(fields, "maintenanceLevel"),
+                Duration = GetStr(fields, "duration"),
+                RecommendedFaceShapes = GetStringArray(fields, "recommendedFaceShapes"),
+                RecommendedHairTypes = GetStringArray(fields, "recommendedHairTypes"),
+                RecommendedFor = GetStringArray(fields, "recommendedFor"),
+                RecommendedAge = GetStr(fields, "recommendedAge"),
+                Mood = GetStr(fields, "mood"),
+                CreatedAt = GetTimestamp(fields, "createdAt"),
+                UpdatedAt = GetTimestamp(fields, "updatedAt"),
+                CreatedBy = GetStr(fields, "createdBy"),
+                IsFeatured = GetBool(fields, "isFeatured"),
+                IsSignature = GetBool(fields, "isSignature"),
+                IsPublished = GetBool(fields, "isPublished")
             };
         }
         catch (Exception ex)
@@ -242,25 +243,6 @@ public class FirestoreStyleService : IStyleService
                 ["isPublished"] = new() { BooleanValue = style.IsPublished }
             }
         };
-    }
-
-    private static string GetStringValue(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? "" : "";
-
-    private static int GetIntValue(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && int.TryParse(v.IntegerValue, out var n) ? n : 0;
-
-    private static bool GetBoolValue(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && v.BooleanValue == true;
-
-    private static DateTime GetTimestampValue(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
-
-    private static List<string> GetArrayValue(Dictionary<string, FirestoreValue> fields, string key)
-    {
-        if (!fields.TryGetValue(key, out var v) || v.ArrayValue?.Values == null)
-            return new List<string>();
-        return v.ArrayValue.Values.Select(x => x.StringValue ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList();
     }
 
     #endregion

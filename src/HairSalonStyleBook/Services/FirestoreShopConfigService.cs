@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -120,9 +121,4 @@ public class FirestoreShopConfigService : IShopConfigService
         _cache = config; // 캐시 즉시 갱신
     }
 
-    private static string GetStr(Dictionary<string, FirestoreValue> fields, string key, string fallback)
-        => fields.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v.StringValue) ? v.StringValue : fallback;
-
-    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool fallback)
-        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : fallback;
 }

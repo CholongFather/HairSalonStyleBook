@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HairSalonStyleBook.Models;
 using Microsoft.Extensions.Configuration;
+using static HairSalonStyleBook.Services.FirestoreHelper;
 
 namespace HairSalonStyleBook.Services;
 
@@ -352,30 +353,6 @@ public class FirestoreCalendarDecoService : ICalendarDecoService
         ["isLocked"] = new() { BooleanValue = e.IsLocked },
         ["frame"] = new() { StringValue = e.Frame },
     };
-
-    // -- 유틸리티 --
-
-    private static string GetStr(Dictionary<string, FirestoreValue> fields, string key, string fallback = "")
-        => fields.TryGetValue(key, out var v) ? v.StringValue ?? fallback : fallback;
-
-    private static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool defaultVal = false)
-        => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : defaultVal;
-
-    private static double GetDouble(Dictionary<string, FirestoreValue> fields, string key, double defaultVal = 0)
-        => fields.TryGetValue(key, out var v) && v.DoubleValue.HasValue ? v.DoubleValue.Value : defaultVal;
-
-    private static int GetInt(Dictionary<string, FirestoreValue> fields, string key, int defaultVal = 0)
-        => fields.TryGetValue(key, out var v) && int.TryParse(v.IntegerValue, out var n) ? n : defaultVal;
-
-    private static DateTime GetTimestamp(Dictionary<string, FirestoreValue> fields, string key)
-        => fields.TryGetValue(key, out var v) && DateTime.TryParse(v.TimestampValue, out var dt) ? dt : DateTime.UtcNow;
-
-    private static List<string> GetStringArray(Dictionary<string, FirestoreValue> fields, string key)
-    {
-        if (!fields.TryGetValue(key, out var v) || v.ArrayValue?.Values == null)
-            return new();
-        return v.ArrayValue.Values.Where(x => x.StringValue != null).Select(x => x.StringValue!).ToList();
-    }
 
     #endregion
 }
