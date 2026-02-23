@@ -1212,10 +1212,9 @@
         var file = e.File;
         _uploadError = null;
 
-        // 5MB 제한 (프로젝트 규칙: silent skip 금지)
-        if (file.Size > 5 * 1024 * 1024)
+        if (file.Size > ImageUploadHelper.MaxFileSize)
         {
-            _uploadError = "파일 크기가 5MB를 초과합니다. 더 작은 파일을 선택해주세요.";
+            _uploadError = ImageUploadHelper.FileSizeExceededMessage;
             StateHasChanged();
             return;
         }
@@ -1225,7 +1224,7 @@
 
         try
         {
-            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var stream = file.OpenReadStream(ImageUploadHelper.MaxFileSize);
             using var ms = new System.IO.MemoryStream();
             await stream.CopyToAsync(ms);
             var data = ms.ToArray();

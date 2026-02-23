@@ -1433,17 +1433,16 @@
         if (_baUploading) return;
         _baUploading = true;
         _baError = null;
-        var maxSize = 5 * 1024 * 1024;
         try
         {
             foreach (var file in e.GetMultipleFiles(10))
             {
-                if (file.Size > maxSize)
+                if (file.Size > ImageUploadHelper.MaxFileSize)
                 {
                     _baError = $"'{file.Name}' 5MB 초과 ({file.Size / 1024 / 1024:F1}MB)";
                     continue;
                 }
-                using var stream = file.OpenReadStream(maxSize);
+                using var stream = file.OpenReadStream(ImageUploadHelper.MaxFileSize);
                 using var ms = new System.IO.MemoryStream();
                 await stream.CopyToAsync(ms);
                 var base64 = Convert.ToBase64String(ms.ToArray());
@@ -2006,16 +2005,16 @@
 
         foreach (var file in e.GetMultipleFiles(10))
         {
-            if (file.Size > 5 * 1024 * 1024)
+            if (file.Size > ImageUploadHelper.MaxFileSize)
             {
-                await JS.InvokeVoidAsync("alert", $"{file.Name}: 5MB 초과로 건너뜁니다");
+                await JS.InvokeVoidAsync("alert", ImageUploadHelper.GetFileSizeExceededMessage(file.Name));
                 continue;
             }
 
             try
             {
                 var buffer = new byte[file.Size];
-                await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+                await using var stream = file.OpenReadStream(ImageUploadHelper.MaxFileSize);
                 await stream.ReadExactlyAsync(buffer);
                 var url = await ImageService.UploadAsync($"faq_{file.Name}", buffer, file.ContentType);
                 _faqEditing.ImageUrls.Add(url);
@@ -2060,11 +2059,17 @@
 
         foreach (var file in files)
         {
-            if (file.Size > 5 * 1024 * 1024) { _gallerySkippedCount++; _galleryUploadedCount++; continue; }
+            if (file.Size > ImageUploadHelper.MaxFileSize)
+            {
+                _gallerySkippedCount++;
+                _galleryUploadedCount++;
+                StateHasChanged();
+                continue;
+            }
             try
             {
                 var buffer = new byte[file.Size];
-                await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+                await using var stream = file.OpenReadStream(ImageUploadHelper.MaxFileSize);
                 await stream.ReadExactlyAsync(buffer);
                 // 이미지 리사이징 (최대 1200px, WebP 변환)
                 var base64 = Convert.ToBase64String(buffer);
