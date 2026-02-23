@@ -85,9 +85,11 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    // 성공하면 캐시에도 저장
-                    const clone = response.clone();
-                    caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+                    // 성공(2xx)만 캐시 (404 등은 캐싱하지 않음)
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+                    }
                     return response;
                 })
                 .catch(() =>
