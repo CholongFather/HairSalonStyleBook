@@ -343,7 +343,7 @@
 
     private async Task OnFilesSelected(InputFileChangeEventArgs e)
     {
-        var maxSize = 5 * 1024 * 1024; // 5MB
+        var maxSize = ImageUploadHelper.MaxFileSize;
         var files = e.GetMultipleFiles(10);
         _uploading = true;
         _uploadedCount = 0;

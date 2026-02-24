@@ -36,7 +36,11 @@ public class FirebaseStorageService : IImageService
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var token = json.GetProperty("downloadTokens").GetString();
+        if (!json.TryGetProperty("downloadTokens", out var tokenProp))
+            throw new InvalidOperationException("Firebase Storage 응답에 downloadTokens가 없습니다.");
+
+        var token = tokenProp.GetString()
+            ?? throw new InvalidOperationException("Firebase Storage downloadToken이 null입니다.");
 
         // 다운로드 URL 구성
         return $"https://firebasestorage.googleapis.com/v0/b/{_bucket}/o/{encodedPath}?alt=media&token={token}";

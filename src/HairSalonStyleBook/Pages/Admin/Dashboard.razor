@@ -1411,7 +1411,7 @@
     private string _toastMessage = "";
     private bool _toastVisible;
 
-    private async void ShowToast(string message)
+    private async Task ShowToast(string message)
     {
         _toastMessage = message;
         _toastVisible = true;
@@ -2358,7 +2358,7 @@ Save the file as: {GetSuggestedFilename()}";
             style.IsPublished = !style.IsPublished;
             await StyleService.UpdateAsync(style);
             await AuditService.LogAsync("Publish", style.Id, style.Title, $"게시 상태 → {(style.IsPublished ? "게시" : "비게시")}");
-            ShowToast(style.IsPublished ? "게시로 변경됨" : "비게시로 변경됨");
+            _ = ShowToast(style.IsPublished ? "게시로 변경됨" : "비게시로 변경됨");
         }
         finally { _togglingIds.Remove(style.Id); }
     }
@@ -2371,7 +2371,7 @@ Save the file as: {GetSuggestedFilename()}";
             style.IsFeatured = !style.IsFeatured;
             await StyleService.UpdateAsync(style);
             await AuditService.LogAsync("Update", style.Id, style.Title, $"인기 배지 → {(style.IsFeatured ? "ON" : "OFF")}");
-            ShowToast(style.IsFeatured ? "인기 배지 ON" : "인기 배지 OFF");
+            _ = ShowToast(style.IsFeatured ? "인기 배지 ON" : "인기 배지 OFF");
         }
         finally { _togglingIds.Remove($"f_{style.Id}"); }
     }
@@ -2384,7 +2384,7 @@ Save the file as: {GetSuggestedFilename()}";
             style.IsSignature = !style.IsSignature;
             await StyleService.UpdateAsync(style);
             await AuditService.LogAsync("Update", style.Id, style.Title, $"시그니처 배지 → {(style.IsSignature ? "ON" : "OFF")}");
-            ShowToast(style.IsSignature ? "시그니처 배지 ON" : "시그니처 배지 OFF");
+            _ = ShowToast(style.IsSignature ? "시그니처 배지 ON" : "시그니처 배지 OFF");
         }
         finally { _togglingIds.Remove($"s_{style.Id}"); }
     }
@@ -2428,7 +2428,7 @@ Save the file as: {GetSuggestedFilename()}";
             }
             if (targets.Any())
                 await AuditService.LogAsync("BulkPublish", "", "", $"{targets.Count}건 일괄 {(publish ? "게시" : "비게시")}");
-            ShowToast($"{targets.Count}건 {(publish ? "게시" : "비게시")} 완료");
+            _ = ShowToast($"{targets.Count}건 {(publish ? "게시" : "비게시")} 완료");
             _selectedIds.Clear();
         }
         finally { _bulkProcessing = false; }
@@ -2449,7 +2449,7 @@ Save the file as: {GetSuggestedFilename()}";
             }
             if (targets.Any())
                 await AuditService.LogAsync("BulkDelete", "", "", $"{targets.Count}건 일괄 삭제: {string.Join(", ", targets.Select(t => t.Title))}");
-            ShowToast($"{targets.Count}건 삭제 완료");
+            _ = ShowToast($"{targets.Count}건 삭제 완료");
             _selectedIds.Clear();
         }
         finally { _bulkProcessing = false; }

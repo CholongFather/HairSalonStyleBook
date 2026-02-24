@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Components;
 
 namespace HairSalonStyleBook.Components;
@@ -25,13 +26,13 @@ public static class SvgStickerLibrary
         ("flower", "꽃", "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><circle cx='12' cy='12' r='3' fill='#ffd93d'/><circle cx='12' cy='6' r='3' fill='#f8bbd0'/><circle cx='17' cy='9.5' r='3' fill='#f8bbd0'/><circle cx='15.5' cy='15.5' r='3' fill='#f8bbd0'/><circle cx='8.5' cy='15.5' r='3' fill='#f8bbd0'/><circle cx='7' cy='9.5' r='3' fill='#f8bbd0'/></svg>"),
     };
 
-    /// <summary>SVG 마크업 반환</summary>
+    /// <summary>SVG 마크업 반환 (key/label은 HTML 인코딩하여 XSS 방지)</summary>
     public static MarkupString GetSvg(string key)
     {
         var sticker = Stickers.FirstOrDefault(s => s.Key == key);
         if (sticker == default)
-            return new MarkupString($"<span>{key}</span>");
+            return new MarkupString($"<span>{WebUtility.HtmlEncode(key)}</span>");
 
-        return new MarkupString($"<span class='cal-svg-icon' title='{sticker.Label}'>{sticker.Svg}</span>");
+        return new MarkupString($"<span class='cal-svg-icon' title='{WebUtility.HtmlEncode(sticker.Label)}'>{sticker.Svg}</span>");
     }
 }

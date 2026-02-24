@@ -330,7 +330,7 @@
         if (_uploading) return;
         _uploading = true;
         _uploadError = null;
-        var maxSize = 5 * 1024 * 1024; // 5MB
+        var maxSize = ImageUploadHelper.MaxFileSize;
 
         try
         {
@@ -374,7 +374,7 @@
         }
     }
 
-    private async void RemoveImage(bool isBefore, int idx)
+    private async Task RemoveImage(bool isBefore, int idx)
     {
         var list = isBefore ? _editItem.BeforeImageUrls : _editItem.AfterImageUrls;
         if (idx < 0 || idx >= list.Count) return;

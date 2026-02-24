@@ -95,14 +95,21 @@
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        // 나가는 애니메이션
-        _animClass = "page-exit";
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            // 나가는 애니메이션
+            _animClass = "page-exit";
+            await InvokeAsync(StateHasChanged);
 
-        // 짧은 딜레이 후 들어오는 애니메이션
-        await Task.Delay(250);
-        _animClass = "page-enter";
-        await InvokeAsync(StateHasChanged);
+            // 짧은 딜레이 후 들어오는 애니메이션
+            await Task.Delay(250);
+            _animClass = "page-enter";
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MainLayout] 페이지 전환 애니메이션 오류: {ex.Message}");
+        }
     }
 
     private void RecoverFromError()
