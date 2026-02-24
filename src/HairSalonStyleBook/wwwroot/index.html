@@ -186,6 +186,26 @@
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // PWA 설치 프롬프트 캡처
+        window.pwaInstall = {
+            deferredPrompt: null,
+            canInstall: function() { return !!this.deferredPrompt; },
+            prompt: function() {
+                if (this.deferredPrompt) {
+                    this.deferredPrompt.prompt();
+                    this.deferredPrompt = null;
+                }
+            }
+        };
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window.pwaInstall.deferredPrompt = e;
+        });
+        window.addEventListener('appinstalled', function() {
+            window.pwaInstall.deferredPrompt = null;
+        });
+    </script>
+    <script>
         // Service Worker 등록 (이미지 캐싱)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js')

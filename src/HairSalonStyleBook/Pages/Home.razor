@@ -30,7 +30,7 @@
             <i class="bi bi-share"></i>
             <span>SNS</span>
         </button>
-        @if (_shopConfig.CalendarEnabled)
+        @if (_shopConfig.CalendarEnabled && _hasPublishedCalendar)
         {
             <button class="tab-item @(_activeTab == 4 ? "active" : "")" @onclick="() => SwitchToCalendar()">
                 <i class="bi bi-palette"></i>
@@ -900,6 +900,7 @@
 
     // 매장 정보 (캐시에서 로드)
     private ShopConfig _shopConfig = new();
+    private bool _hasPublishedCalendar;
 
     // 갤러리
     private List<GalleryItem> _galleryItems = new();
@@ -968,6 +969,17 @@
         var loadGalleryTask = LoadGallery();
         await Task.WhenAll(loadStylesTask, loadShopTask, loadGalleryTask);
         _shopConfig = loadShopTask.Result;
+
+        // 다꾸 탭: 피처 플래그 ON + 공개된 캘린더 존재 시에만 표시
+        if (_shopConfig.CalendarEnabled)
+        {
+            try
+            {
+                var published = await CalendarService.GetPublishedMonthsAsync();
+                _hasPublishedCalendar = published.Any();
+            }
+            catch { _hasPublishedCalendar = false; }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

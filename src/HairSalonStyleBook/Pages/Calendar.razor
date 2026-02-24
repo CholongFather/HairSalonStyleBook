@@ -12,6 +12,9 @@
 @implements IAsyncDisposable
 
 <div class="cal-page">
+    <div class="cal-back-row">
+        <a href="admin" class="cal-back-link"><i class="bi bi-arrow-left"></i> 대시보드</a>
+    </div>
     <!-- 헤더: 월 네비게이션 + 액션 버튼 -->
     <div class="cal-header">
         <button class="cal-nav-btn" @onclick="PrevMonth" title="이전 달">
@@ -1751,6 +1754,24 @@
         max-width: 720px;
         margin: 0 auto;
         padding: 1rem;
+    }
+
+    .cal-back-row {
+        padding-bottom: 0.3rem;
+    }
+
+    .cal-back-link {
+        font-size: 0.8rem;
+        color: var(--text-secondary, #888);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.2s;
+    }
+
+    .cal-back-link:hover {
+        color: var(--text-primary, #333);
     }
 
     /* 헤더 */

@@ -13,6 +13,12 @@
             <span class="logo-deco">&#10047;</span>
         </a>
         <div class="header-actions">
+            @if (_canInstallPwa)
+            {
+                <button class="header-link pwa-install" @onclick="InstallPwa" title="홈 화면에 추가">
+                    <i class="bi bi-download"></i>
+                </button>
+            }
             <button class="header-link theme-toggle" @onclick="ToggleTheme" title="@(_isDark ? "라이트 모드" : "다크 모드")">
                 <i class="bi @(_isDark ? "bi-sun-fill" : "bi-moon-fill")"></i>
             </button>
@@ -25,6 +31,9 @@
                             </a>
                         </Authorized>
                     </AuthorizeView>
+                    <span class="header-role-badge @(_role == "Admin" ? "role-admin" : "role-viewer")">
+                        @(_role == "Admin" ? "관리자" : "뷰어")
+                    </span>
                     <button class="header-link" @onclick="HandleLogout" title="로그아웃">
                         <i class="bi bi-box-arrow-right"></i>
                     </button>
@@ -38,6 +47,8 @@
 @code {
     private bool _isDark;
     private bool _calendarEnabled;
+    private bool _canInstallPwa;
+    private string _role = "Viewer";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -45,6 +56,16 @@
         {
             var theme = await JS.InvokeAsync<string>("salonTheme.get");
             _isDark = theme == "dark";
+
+            // PWA 설치 가능 여부 (standalone이 아닐 때만)
+            var isStandalone = await JS.InvokeAsync<bool>("eval", "window.matchMedia('(display-mode: standalone)').matches");
+            if (!isStandalone)
+            {
+                _canInstallPwa = await JS.InvokeAsync<bool>("pwaInstall.canInstall");
+            }
+
+            // 역할 확인
+            _role = await AuthService.GetRoleAsync() ?? "Viewer";
 
             try
             {
@@ -55,6 +76,12 @@
 
             StateHasChanged();
         }
+    }
+
+    private async Task InstallPwa()
+    {
+        await JS.InvokeVoidAsync("pwaInstall.prompt");
+        _canInstallPwa = false;
     }
 
     private async Task ToggleTheme()
@@ -152,6 +179,32 @@
         color: var(--salon-green);
     }
 
+    .pwa-install {
+        color: var(--salon-accent);
+    }
+
+    .pwa-install:hover {
+        color: var(--salon-green);
+    }
+
+    .header-role-badge {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    .role-admin {
+        background: rgba(123, 163, 131, 0.15);
+        color: var(--salon-green);
+    }
+
+    .role-viewer {
+        background: rgba(0, 0, 0, 0.06);
+        color: var(--salon-gray);
+    }
+
     .theme-toggle i {
         transition: transform 0.3s ease;
     }
@@ -175,6 +228,11 @@
 
         .header-subtitle {
             font-size: 0.6rem;
+        }
+
+        .header-role-badge {
+            font-size: 0.5rem;
+            padding: 1px 4px;
         }
     }
 </style>

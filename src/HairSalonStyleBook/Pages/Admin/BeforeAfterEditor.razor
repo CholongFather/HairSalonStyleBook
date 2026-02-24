@@ -6,10 +6,14 @@
 @inject IAuditService AuditService
 @inject IImageService ImageService
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <PageTitle>Before/After 관리 - 늘~오던 헤어살롱</PageTitle>
 
 <div class="container bae-page">
+    <div class="bae-back-row">
+        <a href="admin" class="bae-back-link"><i class="bi bi-arrow-left"></i> 대시보드</a>
+    </div>
     <div class="bae-header">
         <h2 class="bae-title"><i class="bi bi-arrow-left-right"></i> Before / After 관리</h2>
         <button class="btn btn-salon" @onclick="OpenNewEditor">
@@ -466,6 +470,24 @@
 <style>
     .bae-page {
         padding-bottom: 2rem;
+    }
+
+    .bae-back-row {
+        padding-top: 0.8rem;
+    }
+
+    .bae-back-link {
+        font-size: 0.8rem;
+        color: var(--text-secondary, #888);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.2s;
+    }
+
+    .bae-back-link:hover {
+        color: var(--text-primary, #333);
     }
 
     .bae-header {
