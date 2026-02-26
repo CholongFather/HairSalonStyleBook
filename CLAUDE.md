@@ -60,9 +60,62 @@ src/HairSalonStyleBook/
 - Razor에서 `&quot;` HTML 엔티티 대신 C# 메서드로 분리
 
 ## Firebase 설정
-- **Firestore 컬렉션**: `styles/`, `config/shop`, `auditLogs/`, `loginAttempts/`
+- **Firestore 컬렉션**: `styles/`, `config/shop`, `faqs/`, `gallery/`, `auditLogs/`, `loginAttempts/`, `blockedDevices/`, `calendarDeco/`
 - **Storage 경로**: `styles/{timestamp}_{filename}`
 - 설정값: `wwwroot/appsettings.json` (ProjectId, ApiKey, StorageBucket)
+
+## Firestore 직접 데이터 삽입 (FAQ 시딩 등)
+
+### ⚠️ 중요: Windows 환경에서 curl로 한글 데이터 삽입 금지
+- bash/curl로 한글이 포함된 JSON을 Firestore에 보내면 **인코딩이 깨진다** (cp949 문제)
+- **반드시 Python 스크립트로 삽입**하고, 실행 시 `PYTHONUTF8=1` 환경변수 설정
+
+### FAQ 시딩 방법
+1. Python 스크립트 작성 (프로젝트 루트에 `seed_xxx_faq.py`)
+2. `PYTHONUTF8=1 python3 seed_xxx_faq.py` 로 실행
+3. 실행 후 스크립트 삭제 (일회성)
+
+### 스크립트 템플릿
+```python
+import urllib.request, urllib.error, json
+from datetime import datetime, timezone
+
+API_KEY = "AIzaSyBUC61LDhLONI-O0QOFl3y2C4uWMapbbI0"
+PROJECT = "always-hair-salon"
+BASE = f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents"
+NOW = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+faqs = [
+    {"id": "unique_id_01", "order": 42, "title": "제목", "category": "카테고리명",
+     "desc": "<h5>소제목</h5><p>내용 (HTML)</p>"},
+]
+
+for faq in faqs:
+    body = {
+        "fields": {
+            "title": {"stringValue": faq["title"]},
+            "description": {"stringValue": faq["desc"]},
+            "category": {"stringValue": faq["category"]},
+            "imageUrls": {"arrayValue": {"values": []}},
+            "order": {"integerValue": str(faq["order"])},
+            "isPublished": {"booleanValue": True},
+            "createdAt": {"timestampValue": NOW},
+            "updatedAt": {"timestampValue": NOW},
+        }
+    }
+    url = f"{BASE}/faqs?documentId={faq['id']}&key={API_KEY}"
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req) as resp:
+        print(f"[OK] {faq['title']}")
+```
+
+### FAQ 카테고리 추가 시 체크리스트
+1. `Dashboard.razor` datalist에 `<option>` 추가
+2. `GetFaqCategoryIcon()` 메서드에 아이콘 매핑 추가
+3. FAQ 데이터 삽입 (Python 스크립트)
+4. 기존 FAQ order 최대값 조회 후 이어서 번호 부여
 
 ## 스타일 데이터
 - 총 96개 스타일 (커트/펌)

@@ -492,6 +492,7 @@
                                 <option value="네이버 플레이스" />
                                 <option value="톡톡 파트너스" />
                                 <option value="카카오 채널" />
+                                <option value="토스 결제" />
                                 <option value="매장 운영" />
                             </datalist>
                         </div>
@@ -1855,6 +1856,9 @@
 
     private void CloseFaqEditor() => _faqEditing = null;
 
+    // NOTE: FAQ 대량 삽입은 Python 스크립트로 진행 (CLAUDE.md 참고)
+    // Windows bash/curl은 한글 인코딩 깨짐 → PYTHONUTF8=1 python3 사용 필수
+
     private void ToggleFaqAccordion(string id) =>
         _expandedFaqId = _expandedFaqId == id ? null : id;
 
@@ -1863,6 +1867,7 @@
         "네이버 플레이스" => "bi-geo-alt-fill",
         "톡톡 파트너스" => "bi-chat-dots-fill",
         "카카오 채널" => "bi-chat-heart-fill",
+        "토스 결제" => "bi-credit-card-fill",
         "매장 운영" => "bi-shop",
         _ => "bi-question-circle"
     };
