@@ -1,0 +1,322 @@
+/* ============================
+   늘~오던 헤어살롱 스타일북
+   글로벌 스타일
+   ============================ */
+
+:root {
+    --salon-black: #2c2c2c;
+    --salon-dark: #3d3d3d;
+    --salon-gray: #706b66;
+    --salon-light-gray: #e8e3dc;
+    --salon-bg: #f7f3ec;
+    --salon-white: #fffdf7;
+    --salon-accent: #c9a96e;
+    --salon-green: #7ba383;
+    --salon-green-light: #a8c5ad;
+    --salon-rose: #d4a0a0;
+    --salon-rose-light: #ecd4d4;
+    --font-serif: 'Noto Serif KR', serif;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(123, 163, 131, 0.15);
+}
+
+/* 다크 모드 */
+[data-theme="dark"] {
+    --salon-black: #e8e3dc;
+    --salon-dark: #d4cfc8;
+    --salon-gray: #a09a94;
+    --salon-light-gray: #3d3a36;
+    --salon-bg: #1e1c1a;
+    --salon-white: #2a2826;
+    --salon-accent: #d4b87a;
+    --salon-green: #8bb893;
+    --salon-green-light: #6a9b72;
+    --salon-rose: #d4a0a0;
+    --salon-rose-light: #4a3535;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(139, 184, 147, 0.15);
+}
+
+[data-theme="dark"] .table { --bs-table-bg: var(--salon-white); --bs-table-color: var(--salon-black); }
+[data-theme="dark"] .form-control, [data-theme="dark"] .form-select {
+    background-color: #353230;
+    border-color: #4a4743;
+    color: var(--salon-black);
+}
+[data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
+    background-color: #3a3836;
+    border-color: var(--salon-green);
+    color: var(--salon-black);
+}
+[data-theme="dark"] .form-check-input { background-color: #353230; border-color: #5a5753; }
+[data-theme="dark"] .form-check-input:checked { background-color: var(--salon-green); border-color: var(--salon-green); }
+[data-theme="dark"] .modal-content { background-color: var(--salon-white); color: var(--salon-black); }
+[data-theme="dark"] .btn-close { filter: invert(1); }
+
+/* 기본 레이아웃 */
+html, body {
+    font-family: var(--font-serif);
+    background-color: var(--salon-bg);
+    color: var(--salon-black);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    scroll-behavior: smooth;
+}
+
+html {
+    overflow-x: hidden;
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* 링크 */
+a {
+    color: var(--salon-black);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--salon-accent);
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--salon-light-gray);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--salon-gray);
+}
+
+/* 글로벌 애니메이션 유틸리티 */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* 버튼 오버라이드 */
+.btn-salon {
+    background-color: var(--salon-black);
+    color: var(--salon-white);
+    border: none;
+    border-radius: 2px;
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-salon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(201, 169, 110, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.btn-salon:hover::after {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-salon:hover {
+    background-color: var(--salon-dark);
+    color: var(--salon-accent);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-salon-outline {
+    background-color: transparent;
+    color: var(--salon-black);
+    border: 1px solid var(--salon-black);
+    border-radius: 2px;
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+}
+
+.btn-salon-outline:hover {
+    background-color: var(--salon-black);
+    color: var(--salon-white);
+    box-shadow: var(--shadow-md);
+}
+
+/* 로딩 화면 */
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--salon-bg);
+    transition: opacity 0.4s ease;
+}
+
+.loading-scissors {
+    animation: scissorSnip 1.5s ease-in-out infinite;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes scissorSnip {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(-10deg) scale(1.05); }
+    50% { transform: rotate(10deg) scale(1); }
+    75% { transform: rotate(-5deg) scale(1.02); }
+}
+
+.loading-logo {
+    font-family: var(--font-serif);
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--salon-black);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+}
+
+.loading-subtitle {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--salon-gray);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+}
+
+.loading-dots {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.loading-dots span {
+    width: 8px;
+    height: 8px;
+    background-color: var(--salon-black);
+    border-radius: 50%;
+    animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* 스켈레톤 로딩 */
+.skeleton {
+    background: linear-gradient(90deg, #e8e3d8 25%, #f0ebe0 50%, #e8e3d8 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+    aspect-ratio: 3/4;
+    width: 100%;
+    border-radius: 12px;
+}
+
+.skeleton-text {
+    height: 1rem;
+    width: 70%;
+    margin: 0.5rem 0;
+}
+
+.skeleton-text-sm {
+    height: 0.75rem;
+    width: 50%;
+}
+
+.skeleton-title {
+    height: 1.5rem;
+    width: 60%;
+    margin: 1rem auto;
+}
+
+.skeleton-image {
+    aspect-ratio: 4/3;
+    width: 100%;
+    border-radius: 12px;
+}
+
+/* Blazor 에러 UI */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: #fff3cd;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    font-family: var(--font-serif);
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: #f8d7da;
+    padding: 1rem;
+    color: #842029;
+}
+
+.blazor-error-boundary::after {
+    content: "오류가 발생했습니다."
+}
+
