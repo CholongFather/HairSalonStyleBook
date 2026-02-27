@@ -1,0 +1,64 @@
+{
+  "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
+  "fields": {
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "kakaoPayEnabled": {
+      "booleanValue": false
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "naverPayEnabled": {
+      "booleanValue": false
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    }
+  },
+  "createTime": "2026-02-11T14:07:24.228539Z",
+  "updateTime": "2026-02-23T10:22:26.237416Z"
+}
