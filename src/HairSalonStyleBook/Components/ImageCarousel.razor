@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div id="@_carouselId" class="carousel slide salon-carousel" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
     @if (ImageUrls.Count > 1)
@@ -109,42 +110,27 @@
         _fullscreenUrl = ImageUrls[_fullscreenIndex];
     }
 
+    private bool _jsInitialized;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && ImageUrls.Count > 1)
         {
-            await JS.InvokeVoidAsync("eval", $@"
-                (function() {{
-                    var el = document.getElementById('{_carouselId}');
-                    if (!el) return;
-                    new bootstrap.Carousel(el, {{ touch: true, interval: false }});
+            await JS.InvokeVoidAsync("salonApp.initCarousel", _carouselId);
+            _jsInitialized = true;
+        }
+    }
 
-                    // 슬라이드 카운터 업데이트
-                    el.addEventListener('slid.bs.carousel', function(e) {{
-                        var counter = el.querySelector('.carousel-counter-current');
-                        if (counter) counter.textContent = e.to + 1;
-                    }});
-
-                    // 커스텀 터치 스와이프
-                    var startX = 0, startY = 0, moving = false;
-                    el.addEventListener('touchstart', function(e) {{
-                        startX = e.touches[0].clientX;
-                        startY = e.touches[0].clientY;
-                        moving = true;
-                    }}, {{ passive: true }});
-                    el.addEventListener('touchend', function(e) {{
-                        if (!moving) return;
-                        moving = false;
-                        var diffX = e.changedTouches[0].clientX - startX;
-                        var diffY = e.changedTouches[0].clientY - startY;
-                        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {{
-                            var inst = bootstrap.Carousel.getInstance(el);
-                            if (diffX < 0) inst.next();
-                            else inst.prev();
-                        }}
-                    }}, {{ passive: true }});
-                }})();
-            ");
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsInitialized)
+        {
+            try
+            {
+                // Bootstrap Carousel 인스턴스 정리
+                await JS.InvokeVoidAsync("salonApp.disposeCarousel", _carouselId);
+            }
+            catch (JSDisconnectedException) { }
         }
     }
 }

@@ -994,7 +994,7 @@
     {
         try
         {
-            var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+            var width = await JS.InvokeAsync<int>("salonApp.getWindowWidth");
             var cols = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
             var newSize = cols * Rows;
             if (newSize != _pageSize)

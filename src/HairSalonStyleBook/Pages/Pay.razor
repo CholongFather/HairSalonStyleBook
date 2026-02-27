@@ -117,19 +117,11 @@
         if (firstRender)
         {
             // iOS/Android 자동 감지
-            _isIOS = await JS.InvokeAsync<bool>("eval", "(/iPhone|iPad|iPod/i).test(navigator.userAgent)");
+            _isIOS = await JS.InvokeAsync<bool>("salonApp.isIOS");
 
             // 비활동 타이머 시작
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("eval", @"
-                window._payTimer = {
-                    lastActivity: Date.now(),
-                    reset: function() { this.lastActivity = Date.now(); }
-                };
-                ['touchstart','click','scroll','keydown','keyup'].forEach(function(evt) {
-                    document.addEventListener(evt, function() { window._payTimer.reset(); }, {passive:true});
-                });
-            ");
+            await JS.InvokeVoidAsync("salonApp.payTimer.init");
             StartCountdown();
             StateHasChanged();
         }
@@ -144,8 +136,7 @@
             try
             {
                 // JS에서 마지막 활동 시간 확인
-                var elapsed = await JS.InvokeAsync<double>("eval",
-                    "Date.now() - window._payTimer.lastActivity");
+                var elapsed = await JS.InvokeAsync<double>("salonApp.payTimer.getElapsedMs");
 
                 var secondsSinceActivity = (int)(elapsed / 1000);
                 var newRemaining = 120 - secondsSinceActivity;
@@ -207,10 +198,7 @@
 
     private async Task TryOpenApp(string scheme, string fallback)
     {
-        await JS.InvokeVoidAsync("eval", $@"
-            var w = window.open('{scheme}', '_self');
-            setTimeout(function() {{ if(document.hasFocus()) window.location.href = '{fallback}'; }}, 1500);
-        ");
+        await JS.InvokeVoidAsync("salonApp.tryOpenApp", scheme, fallback);
     }
 
     // 토스 딥링크용 한글 은행명 (숫자 코드가 아닌 한글명 사용)
@@ -239,16 +227,7 @@
         _remainingSeconds = 0;
         _countdownTimer?.Dispose();
         // 탭 닫기 시도, 실패하면 뒤로가기 방지용 히스토리 조작
-        await JS.InvokeVoidAsync("eval", @"
-            window.close();
-            setTimeout(function() {
-                history.replaceState(null, '', location.href);
-                history.pushState(null, '', location.href);
-                window.addEventListener('popstate', function() {
-                    history.pushState(null, '', location.href);
-                });
-            }, 100);
-        ");
+        await JS.InvokeVoidAsync("salonApp.closePage");
     }
 
     public void Dispose()

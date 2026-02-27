@@ -17,6 +17,8 @@ public class FirestoreShopConfigService : IShopConfigService
     private readonly string _baseUrl;
     private readonly string _apiKey;
     private ShopConfig? _cache;
+    private DateTime _cacheTime;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -34,7 +36,7 @@ public class FirestoreShopConfigService : IShopConfigService
 
     public async Task<ShopConfig> GetAsync()
     {
-        if (_cache != null)
+        if (_cache != null && DateTime.UtcNow - _cacheTime < CacheTtl)
             return _cache;
 
         try
@@ -43,17 +45,18 @@ public class FirestoreShopConfigService : IShopConfigService
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"[ShopConfigService] 설정 조회 실패: {response.StatusCode}");
-                _cache = new ShopConfig(); // 기본값 사용
-                return _cache;
+                return new ShopConfig(); // 실패 시 캐시하지 않음 (재시도 허용)
             }
 
             var doc = await response.Content.ReadFromJsonAsync<FirestoreDocument>(JsonOptions);
             if (doc?.Fields == null)
             {
                 _cache = new ShopConfig();
+                _cacheTime = DateTime.UtcNow;
                 return _cache;
             }
 
+            _cacheTime = DateTime.UtcNow;
             _cache = new ShopConfig
             {
                 WifiName5G = GetStr(doc.Fields, "wifiName5G", ""),
@@ -81,8 +84,7 @@ public class FirestoreShopConfigService : IShopConfigService
         catch (Exception ex)
         {
             Console.WriteLine($"[ShopConfigService] 설정 조회 예외: {ex.Message}");
-            _cache = new ShopConfig();
-            return _cache;
+            return new ShopConfig(); // 예외 시 캐시하지 않음 (재시도 허용)
         }
     }
 
@@ -119,6 +121,7 @@ public class FirestoreShopConfigService : IShopConfigService
             Console.WriteLine($"[ShopConfigService] 설정 저장 실패: {response.StatusCode}");
         response.EnsureSuccessStatusCode();
         _cache = config; // 캐시 즉시 갱신
+        _cacheTime = DateTime.UtcNow;
     }
 
 }

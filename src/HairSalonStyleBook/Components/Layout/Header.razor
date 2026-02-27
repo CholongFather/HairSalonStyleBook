@@ -58,7 +58,7 @@
             _isDark = theme == "dark";
 
             // PWA 설치 가능 여부 (standalone이 아닐 때만)
-            var isStandalone = await JS.InvokeAsync<bool>("eval", "window.matchMedia('(display-mode: standalone)').matches");
+            var isStandalone = await JS.InvokeAsync<bool>("salonApp.isStandalonePWA");
             if (!isStandalone)
             {
                 _canInstallPwa = await JS.InvokeAsync<bool>("pwaInstall.canInstall");

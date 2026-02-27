@@ -87,38 +87,31 @@
     {
         if (firstRender)
         {
-            // 초기 HTML 설정
-            await JS.InvokeVoidAsync("eval",
-                $"document.getElementById('{_editorId}').innerHTML = {System.Text.Json.JsonSerializer.Serialize(Value ?? "")};");
+            await JS.InvokeVoidAsync("salonApp.richEditor.setHtml", _editorId, Value ?? "");
             _initialized = true;
         }
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        // 외부에서 Value가 변경된 경우 (예: 수정 모드 진입)
         if (_initialized)
         {
-            var currentHtml = await JS.InvokeAsync<string>("eval",
-                $"document.getElementById('{_editorId}').innerHTML");
+            var currentHtml = await JS.InvokeAsync<string>("salonApp.richEditor.getHtml", _editorId);
             if (currentHtml != Value)
             {
-                await JS.InvokeVoidAsync("eval",
-                    $"document.getElementById('{_editorId}').innerHTML = {System.Text.Json.JsonSerializer.Serialize(Value ?? "")};");
+                await JS.InvokeVoidAsync("salonApp.richEditor.setHtml", _editorId, Value ?? "");
             }
         }
     }
 
     private async Task ExecCommand(string command)
     {
-        await JS.InvokeVoidAsync("eval",
-            $"document.getElementById('{_editorId}').focus(); document.execCommand('{command}', false, null);");
+        await JS.InvokeVoidAsync("salonApp.richEditor.execCommand", _editorId, command, null);
     }
 
     private async Task InsertHeading()
     {
-        await JS.InvokeVoidAsync("eval",
-            $"document.getElementById('{_editorId}').focus(); document.execCommand('formatBlock', false, 'h3');");
+        await JS.InvokeVoidAsync("salonApp.richEditor.execCommand", _editorId, "formatBlock", "h3");
     }
 
     private bool _showIconPalette;
@@ -130,14 +123,12 @@
 
     private async Task InsertIcon(string icon)
     {
-        await JS.InvokeVoidAsync("eval",
-            $"document.getElementById('{_editorId}').focus(); document.execCommand('insertText', false, '{icon} ');");
+        await JS.InvokeVoidAsync("salonApp.richEditor.insertText", _editorId, icon + " ");
     }
 
     private async Task OnContentChanged()
     {
-        var html = await JS.InvokeAsync<string>("eval",
-            $"document.getElementById('{_editorId}').innerHTML");
+        var html = await JS.InvokeAsync<string>("salonApp.richEditor.getHtml", _editorId);
         if (html != Value)
         {
             await ValueChanged.InvokeAsync(html);

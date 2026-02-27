@@ -175,7 +175,7 @@ public class FirestoreCalendarDecoService : ICalendarDecoService
 
     private static CalendarMonth MapFromFirestore(FirestoreDocument doc)
     {
-        var fields = doc.Fields!;
+        var fields = doc.Fields ?? new Dictionary<string, FirestoreValue>();
         var id = doc.Name?.Split('/').LastOrDefault() ?? "";
 
         return new CalendarMonth

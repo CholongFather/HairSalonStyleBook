@@ -91,34 +91,9 @@
             // 기기 핑거프린트 생성
             try
             {
-                _fingerprint = await JS.InvokeAsync<string>("eval", @"
-                    (function() {
-                        var ua = navigator.userAgent;
-                        var screen = window.screen.width + 'x' + window.screen.height;
-                        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                        var lang = navigator.language;
-                        var raw = ua + '|' + screen + '|' + tz + '|' + lang;
-                        // 간단한 해시 (FNV-1a)
-                        var hash = 0x811c9dc5;
-                        for (var i = 0; i < raw.length; i++) {
-                            hash ^= raw.charCodeAt(i);
-                            hash = Math.imul(hash, 0x01000193);
-                        }
-                        return (hash >>> 0).toString(16).padStart(8, '0');
-                    })()
-                ");
-                _deviceInfo = await JS.InvokeAsync<string>("eval", @"
-                    (function() {
-                        var ua = navigator.userAgent;
-                        if (ua.includes('iPhone')) return 'iPhone';
-                        if (ua.includes('iPad')) return 'iPad';
-                        if (ua.includes('Android')) return 'Android';
-                        if (ua.includes('Windows')) return 'Windows';
-                        if (ua.includes('Mac')) return 'Mac';
-                        return 'Unknown';
-                    })()
-                ");
-                _screenSize = await JS.InvokeAsync<string>("eval", "window.screen.width + 'x' + window.screen.height");
+                _fingerprint = await JS.InvokeAsync<string>("salonApp.getDeviceFingerprint");
+                _deviceInfo = await JS.InvokeAsync<string>("salonApp.getDeviceInfo");
+                _screenSize = await JS.InvokeAsync<string>("salonApp.getScreenSize");
 
                 // 차단 여부 확인
                 _isBlocked = await SecurityService.IsBlockedAsync(_fingerprint);

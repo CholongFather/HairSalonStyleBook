@@ -1,0 +1,2676 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using HairSalonStyleBook.Models;
+using HairSalonStyleBook.Services;
+
+namespace HairSalonStyleBook.Pages.Admin;
+
+/// <summary>
+/// Dashboard 스타일 관리 (CRUD, 검색, 정렬, AI 프롬프트, 이미지 최적화, 시드 데이터)
+/// </summary>
+public partial class Dashboard
+{
+    // -- 이미지 최적화 --
+    private bool _optScanning;
+    private bool _optimizing;
+    private int _optTotal;
+    private int _optDone;
+    private string? _optCurrentFile;
+    private string? _optScanResult;
+    private string? _optResult;
+    private string? _optError;
+
+    private async Task ScanAndOptimize()
+    {
+        _optScanning = true;
+        _optResult = null;
+        _optError = null;
+        _optScanResult = null;
+        StateHasChanged();
+
+        try
+        {
+            // 모든 컬렉션에서 이미지 URL 수집
+            var urls = new List<(string collection, string itemId, string url, Action<string> updater)>();
+
+            var allStyles = await StyleService.GetAllAsync();
+            foreach (var style in allStyles)
+            {
+                foreach (var url in style.ImageUrls)
+                {
+                    if (!IsWebP(url))
+                    {
+                        var capturedStyle = style;
+                        var capturedIdx = style.ImageUrls.IndexOf(url);
+                        urls.Add(("styles", style.Id, url, newUrl => capturedStyle.ImageUrls[capturedIdx] = newUrl));
+                    }
+                }
+            }
+
+            var allGallery = await GalleryService.GetAllAsync();
+            foreach (var g in allGallery)
+            {
+                if (!string.IsNullOrEmpty(g.ImageUrl) && !IsWebP(g.ImageUrl))
+                {
+                    var capturedG = g;
+                    urls.Add(("gallery", g.Id, g.ImageUrl, newUrl => capturedG.ImageUrl = newUrl));
+                }
+            }
+
+            var allBA = await BAService.GetAllAsync();
+            foreach (var ba in allBA)
+            {
+                for (int i = 0; i < ba.BeforeImageUrls.Count; i++)
+                {
+                    if (!IsWebP(ba.BeforeImageUrls[i]))
+                    {
+                        var capturedBA = ba;
+                        var capturedIdx = i;
+                        urls.Add(("beforeAfters", ba.Id, ba.BeforeImageUrls[i], newUrl => capturedBA.BeforeImageUrls[capturedIdx] = newUrl));
+                    }
+                }
+                for (int i = 0; i < ba.AfterImageUrls.Count; i++)
+                {
+                    if (!IsWebP(ba.AfterImageUrls[i]))
+                    {
+                        var capturedBA = ba;
+                        var capturedIdx = i;
+                        urls.Add(("afterImages", ba.Id, ba.AfterImageUrls[i], newUrl => capturedBA.AfterImageUrls[capturedIdx] = newUrl));
+                    }
+                }
+            }
+
+            if (urls.Count == 0)
+            {
+                _optScanResult = "모든 이미지가 이미 WebP 형식입니다.";
+                _optScanning = false;
+                StateHasChanged();
+                return;
+            }
+
+            _optScanning = false;
+            _optimizing = true;
+            _optTotal = urls.Count;
+            _optDone = 0;
+            StateHasChanged();
+
+            int success = 0;
+            int failed = 0;
+
+            foreach (var (collection, itemId, url, updater) in urls)
+            {
+                _optCurrentFile = $"{collection}/{itemId}";
+                StateHasChanged();
+
+                try
+                {
+                    // 이미지 다운로드
+                    var imgData = await JS.InvokeAsync<string>("salonApp.fetchImageAsBase64", url);
+
+                    if (string.IsNullOrEmpty(imgData))
+                    {
+                        failed++;
+                        _optDone++;
+                        continue;
+                    }
+
+                    // 리사이즈 + WebP 변환
+                    var resized = await JS.InvokeAsync<string>("resizeImage", imgData, 1200, 1600, 0.82);
+                    var resizedData = Convert.FromBase64String(resized);
+
+                    // 새 파일명으로 업로드
+                    var folder = collection == "styles" ? "styles" : collection == "gallery" ? "gallery" : "beforeafter";
+                    var newUrl = await ImageService.UploadAsync($"opt_{Guid.NewGuid():N}.webp", resizedData, "image/webp", folder);
+
+                    updater(newUrl);
+                    success++;
+                }
+                catch
+                {
+                    failed++;
+                }
+                _optDone++;
+                StateHasChanged();
+            }
+
+            // 변경된 항목 저장
+            var updatedCollections = urls.Select(u => u.collection).Distinct().ToList();
+            foreach (var style in allStyles.Where(s => urls.Any(u => u.itemId == s.Id && u.collection == "styles")))
+                await StyleService.UpdateAsync(style);
+            foreach (var g in allGallery.Where(g => urls.Any(u => u.itemId == g.Id && u.collection == "gallery")))
+                await GalleryService.UpdateAsync(g);
+            foreach (var ba in allBA.Where(b => urls.Any(u => u.itemId == b.Id)))
+                await BAService.UpdateAsync(ba);
+
+            await AuditService.LogAsync("ImageOptimize", "batch", "이미지 최적화",
+                $"총 {urls.Count}건 중 {success}건 성공, {failed}건 실패");
+
+            _optResult = $"최적화 완료: {success}건 변환, {failed}건 실패";
+            _optimizing = false;
+            _optCurrentFile = null;
+        }
+        catch (Exception ex)
+        {
+            _optError = $"최적화 실패: {ex.Message}";
+            _optimizing = false;
+            _optScanning = false;
+        }
+        StateHasChanged();
+    }
+
+    private static bool IsWebP(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return true;
+        var path = url.Split('?')[0].ToLowerInvariant();
+        return path.EndsWith(".webp") || path.Contains(".webp");
+    }
+    private List<StylePost> _styles = new();
+    private bool _seeding;
+    // 일괄 선택
+    private HashSet<string> _selectedIds = new();
+    private bool _bulkProcessing;
+    private int _seedProgress;
+    private int _seedTotal;
+    private string _searchText = "";
+    private bool? _publishFilter; // null=전체, true=게시, false=미게시
+    private string _sortField = "date"; // title, category, published, date
+    private bool _sortAsc; // false=내림차순(기본)
+    // AI 프롬프트
+    private StylePost? _promptStyle;
+    private string _promptAgeGroup = "20대";
+    private string _promptAgeDetail = "중반";
+    private string _promptAge => $"{_promptAgeGroup} {_promptAgeDetail}";
+    private string _promptMood = "자연스러움";
+    private string _promptAngle = "front";
+    private string _promptAi = "nanobanana";
+    private bool _promptCopied;
+
+    private readonly (string key, string label, string icon)[] _angleOptions = new[]
+    {
+        ("front", "정면", "bi-person"),
+        ("side", "측면", "bi-person-fill"),
+        ("back", "후면", "bi-person-x"),
+        ("three-quarter", "반측면", "bi-person-check"),
+    };
+
+    private IEnumerable<StylePost> FilteredStyles
+    {
+        get
+        {
+            IEnumerable<StylePost> result = _styles;
+            if (_publishFilter.HasValue)
+                result = result.Where(s => s.IsPublished == _publishFilter.Value);
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var q = _searchText.Trim();
+                var isChoseong = q.All(c => _choseongs.Contains(c));
+                result = result.Where(s =>
+                    MatchText(s.Title, q, isChoseong) ||
+                    s.Hashtags.Any(h => MatchText(h, q, isChoseong)));
+            }
+            result = (_sortField, _sortAsc) switch
+            {
+                ("title", true) => result.OrderBy(s => s.Title),
+                ("title", false) => result.OrderByDescending(s => s.Title),
+                ("images", true) => result.OrderBy(s => s.ImageUrls.Count),
+                ("images", false) => result.OrderByDescending(s => s.ImageUrls.Count),
+                ("category", true) => result.OrderBy(s => s.Category),
+                ("category", false) => result.OrderByDescending(s => s.Category),
+                ("published", true) => result.OrderBy(s => s.IsPublished),
+                ("published", false) => result.OrderByDescending(s => s.IsPublished),
+                ("date", true) => result.OrderBy(s => s.CreatedAt),
+                _ => result.OrderByDescending(s => s.CreatedAt),
+            };
+            return result;
+        }
+    }
+
+    private void TogglePublishFilter()
+    {
+        // null → true → false → null 순환
+        _publishFilter = _publishFilter switch { null => true, true => false, false => null };
+    }
+
+    private void ToggleSort(string field)
+    {
+        if (_sortField == field)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortField = field;
+            _sortAsc = field == "title" || field == "category"; // 텍스트는 오름차순 기본
+        }
+    }
+
+    private MarkupString SortIcon(string field)
+    {
+        if (_sortField != field) return new("");
+        return new(_sortAsc ? "<i class=\"bi bi-caret-up-fill sort-icon\"></i>" : "<i class=\"bi bi-caret-down-fill sort-icon\"></i>");
+    }
+
+    // 초성 검색
+    private static readonly char[] _choseongs = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ".ToCharArray();
+
+    private static bool MatchText(string text, string query, bool isChoseong)
+    {
+        if (text.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!isChoseong) return false;
+        // 텍스트에서 초성 추출 후 매칭
+        var textChoseong = ExtractChoseongs(text);
+        return textChoseong.Contains(query);
+    }
+
+    private static string ExtractChoseongs(string text)
+    {
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text)
+        {
+            if (c >= 0xAC00 && c <= 0xD7A3)
+            {
+                var idx = (c - 0xAC00) / (21 * 28);
+                sb.Append(_choseongs[idx]);
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString();
+    }
+    private void ShowPrompt(StylePost style)
+    {
+        _promptStyle = style;
+        _promptCopied = false;
+        _promptAi = "nanobanana";
+
+        // 스타일에 저장된 나이대/분위기 우선, 없으면 기본값
+        if (!string.IsNullOrEmpty(style.RecommendedAge) && style.RecommendedAge.Contains("대"))
+        {
+            var parts = style.RecommendedAge.Split(' ', 2);
+            _promptAgeGroup = parts[0];
+            _promptAgeDetail = parts.Length > 1 ? parts[1] : "중반";
+        }
+        else
+        {
+            _promptAgeGroup = "20대";
+            _promptAgeDetail = style.Category == StyleCategory.남성 ? "중반" : "후반";
+        }
+
+        _promptMood = !string.IsNullOrEmpty(style.Mood) ? style.Mood : "자연스러움";
+        _promptAngle = "front";
+    }
+
+    private void ClosePrompt() => _promptStyle = null;
+
+    private void SelectAi(string ai)
+    {
+        _promptAi = ai;
+        _promptCopied = false;
+    }
+
+    private (string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) GetPromptParts()
+    {
+        var gender = _promptStyle!.Category == StyleCategory.남성 ? "male" : "female";
+        var genderKr = _promptStyle.Category == StyleCategory.남성 ? "남성" : "여성";
+        var length = _promptStyle.Category switch
+        {
+            StyleCategory.남성 => "short",
+            StyleCategory.여성숏 => "short",
+            StyleCategory.여성단발 => "bob-length",
+            StyleCategory.여성미디움 => "medium-length",
+            StyleCategory.여성롱 => "long",
+            _ => "medium-length"
+        };
+        var service = _promptStyle.Service switch
+        {
+            ServiceType.펌 => "permed wavy",
+            _ => "freshly cut"
+        };
+        var mood = _promptMood switch
+        {
+            "발랄함" => "cheerful and lively",
+            "섹시함" => "alluring and confident",
+            "귀여움" => "cute and adorable",
+            "시크함" => "chic and cool",
+            "청순함" => "innocent and pure",
+            "세련됨" => "sophisticated and elegant",
+            _ => "natural and relaxed"
+        };
+        var angle = _promptAngle switch
+        {
+            "side" => "from the side profile view",
+            "back" => "from behind showing the back of the head",
+            "three-quarter" => "from a three-quarter angle view",
+            _ => "facing the camera from the front"
+        };
+        var angleKr = _promptAngle switch
+        {
+            "side" => "측면",
+            "back" => "뒷모습",
+            "three-quarter" => "반측면 (3/4 앵글)",
+            _ => "정면"
+        };
+        return (gender, genderKr, length, service, _promptStyle.Title, mood, angle, angleKr);
+    }
+
+    // 랜덤 배경/얼굴 변형
+    private static readonly Random _rng = new();
+    private static readonly string[] _backgrounds = new[]
+    {
+        "salon mirrors and styling chairs",
+        "salon waiting area with magazines",
+        "salon wash station with shampoo bottles",
+        "salon reception desk area",
+        "salon window with street view outside",
+        "salon product shelf display",
+        "salon styling station with hair tools",
+    };
+    private static readonly string[] _backgroundsKr = new[]
+    {
+        "미용실 거울과 스타일링 의자",
+        "미용실 대기석과 잡지",
+        "미용실 샴푸대와 제품들",
+        "미용실 프론트 데스크",
+        "미용실 창가, 바깥 거리가 보이는",
+        "미용실 제품 진열대",
+        "미용실 시술대와 도구들",
+    };
+    private static readonly string[] _faces = new[]
+    {
+        "round face", "oval face", "long face", "square jaw", "heart-shaped face",
+        "small face", "high cheekbones",
+    };
+    private static readonly string[] _facesKr = new[]
+    {
+        "둥근 얼굴형", "계란형 얼굴", "긴 얼굴형", "각진 턱", "하트형 얼굴",
+        "작은 얼굴", "높은 광대",
+    };
+
+    private string GetGeneratedPrompt()
+    {
+        if (_promptStyle == null) return "";
+        var p = GetPromptParts();
+        var bgIdx = _rng.Next(_backgrounds.Length);
+        var faceIdx = _rng.Next(_faces.Length);
+
+        return _promptAi switch
+        {
+            "nanobanana" => GetNanoBananaPrompt(p, _backgrounds[bgIdx], _faces[faceIdx]),
+            "gemini" => GetGeminiPrompt(p, _backgroundsKr[bgIdx], _facesKr[faceIdx]),
+            "chatgpt" => GetChatGptPrompt(p, _backgrounds[bgIdx], _faces[faceIdx]),
+            _ => GetNanoBananaPrompt(p, _backgrounds[bgIdx], _faces[faceIdx])
+        };
+    }
+
+    private string GetStyleDescription()
+    {
+        if (_promptStyle == null || string.IsNullOrEmpty(_promptStyle.Description)) return "";
+        var desc = _promptStyle.Description;
+        // "쉽게 말하면?" 섹션 추출
+        var startTag = "<h3>쉽게 말하면?</h3>";
+        var startIdx = desc.IndexOf(startTag, StringComparison.OrdinalIgnoreCase);
+        if (startIdx < 0) return "";
+        var contentStart = startIdx + startTag.Length;
+        // 다음 h3 태그까지 또는 끝까지
+        var endIdx = desc.IndexOf("<h3>", contentStart, StringComparison.OrdinalIgnoreCase);
+        var section = endIdx > 0 ? desc[contentStart..endIdx] : desc[contentStart..];
+        // HTML 태그 제거
+        return System.Text.RegularExpressions.Regex.Replace(section, "<[^>]+>", "").Trim();
+    }
+
+    private string GetNanoBananaPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
+    {
+        var fn = GetSuggestedFilename();
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $" This hairstyle is: {desc}" : "";
+        return $@"A candid photo of a Korean {p.gender} with {face} in their {_promptAge}, {p.angle}, in a real hair salon after getting a ""{p.title}"" hairstyle ({p.service}, {p.length} hair).{descPart} {p.mood} expression. Shot on an old smartphone, low resolution, slight image noise and grain, soft edges not overly sharp. CRITICAL: Use f/8 narrow aperture, deep depth of field, EVERYTHING must be in sharp focus including the background. There must be ZERO background blur, ZERO bokeh, ZERO out-of-focus areas anywhere in the image. The background must be just as sharp as the subject. Soft natural window light, warm tones, no retouching, visible skin pores, background showing {bg}, imperfect and authentic looking. --ar 3:4 --style raw
+
+Save the file as: {fn}";
+    }
+
+    private string GetGeminiPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bgKr, string faceKr)
+    {
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $"\n스타일 설명: {desc}" : "";
+        return $@"실제 미용실에서 촬영한 것 같은 자연스러운 헤어 사진을 만들어주세요. AI가 만든 것처럼 보이면 안 됩니다.
+
+모델: 한국인 {p.genderKr}, {_promptAge}, {faceKr}, {_promptMood} 분위기
+헤어스타일: ""{p.title}"" ({p.service}, {p.length}){descPart}
+촬영 앵글: {p.angleKr}
+배경: {bgKr}
+
+중요한 점:
+- 오래된 스마트폰으로 찍은 듯한 낮은 해상도
+- 약간의 이미지 노이즈와 그레인이 있어야 함
+- 윤곽선이 너무 선명하면 안 됨, 자연스럽게 부드러운 경계
+- 과도한 보정 없이 자연스러운 피부와 머릿결
+- 배경에 {bgKr}이 보이게
+- 배경 흐림(보케) 효과 금지, 배경도 포커스 안에
+- 창문에서 들어오는 자연광 위주
+- {p.angleKr} 앵글에서 헤어스타일이 잘 보이도록
+- 완벽하지 않고 실제 사진 같은 느낌이 중요
+
+세로 비율(3:4)로 생성해주세요.
+
+저장 파일명: {GetSuggestedFilename()}";
+    }
+
+    private string GetChatGptPrompt((string gender, string genderKr, string length, string service, string title, string mood, string angle, string angleKr) p, string bg, string face)
+    {
+        var desc = GetStyleDescription();
+        var descPart = !string.IsNullOrEmpty(desc) ? $"\nStyle description: {desc}" : "";
+        return $@"Create a natural-looking photo that could pass as a real hair salon snapshot, not an AI-generated image.
+
+Subject: Korean {p.gender} with {face} in their {_promptAge}, {p.mood} expression, shot {p.angle}
+Hairstyle: ""{p.title}"" - {p.service}, {p.length} hair{descPart}
+Setting: Real hair salon interior, background showing {bg}
+
+Key requirements:
+- Shot on an older smartphone, lower resolution, NOT ultra-sharp or high-res
+- Visible image noise and slight grain, like a real phone photo in indoor lighting
+- Soft edges, do NOT make outlines too crisp or defined
+- Natural window lighting, warm tones
+- No retouching, visible skin pores and natural texture
+- No bokeh, background in focus showing {bg}
+- Hair should look real, not digitally perfect
+- Imperfect and authentic, as if casually taken by salon staff
+- The hairstyle should be clearly visible from the {_promptAngle} angle
+
+Vertical 3:4 aspect ratio.
+
+Save the file as: {GetSuggestedFilename()}";
+    }
+
+    private async Task CopyPrompt()
+    {
+        var prompt = GetGeneratedPrompt();
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", prompt);
+        _promptCopied = true;
+        StateHasChanged();
+    }
+
+    private string GetSuggestedFilename()
+    {
+        if (_promptStyle == null) return "";
+        var category = _promptStyle.Category switch
+        {
+            StyleCategory.남성 => "남성",
+            StyleCategory.여성숏 => "여성숏",
+            StyleCategory.여성단발 => "여성단발",
+            StyleCategory.여성미디움 => "여성미디움",
+            StyleCategory.여성롱 => "여성롱",
+            _ => "기타"
+        };
+        var angleTag = _promptAngle switch
+        {
+            "side" => "_측면",
+            "back" => "_후면",
+            "three-quarter" => "_반측면",
+            _ => ""
+        };
+        return $"{category}_{_promptStyle.Title}{angleTag}.webp";
+    }
+
+    private async Task CopyFilename()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetSuggestedFilename());
+    }
+
+    private async Task TogglePublish(StylePost style)
+    {
+        if (!_togglingIds.Add(style.Id)) return; // 연타 방지
+        try
+        {
+            style.IsPublished = !style.IsPublished;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Publish", style.Id, style.Title, $"게시 상태 → {(style.IsPublished ? "게시" : "비게시")}");
+            _ = ShowToast(style.IsPublished ? "게시로 변경됨" : "비게시로 변경됨");
+        }
+        catch (Exception ex)
+        {
+            style.IsPublished = !style.IsPublished; // 롤백
+            Console.WriteLine($"[Dashboard] 게시 토글 실패: {ex.Message}");
+            _ = ShowToast("게시 상태 변경에 실패했습니다.");
+        }
+        finally { _togglingIds.Remove(style.Id); }
+    }
+
+    private async Task ToggleFeatured(StylePost style)
+    {
+        if (!_togglingIds.Add($"f_{style.Id}")) return;
+        try
+        {
+            style.IsFeatured = !style.IsFeatured;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Update", style.Id, style.Title, $"인기 배지 → {(style.IsFeatured ? "ON" : "OFF")}");
+            _ = ShowToast(style.IsFeatured ? "인기 배지 ON" : "인기 배지 OFF");
+        }
+        catch (Exception ex)
+        {
+            style.IsFeatured = !style.IsFeatured; // 롤백
+            Console.WriteLine($"[Dashboard] 인기 배지 토글 실패: {ex.Message}");
+            _ = ShowToast("인기 배지 변경에 실패했습니다.");
+        }
+        finally { _togglingIds.Remove($"f_{style.Id}"); }
+    }
+
+    private async Task ToggleSignature(StylePost style)
+    {
+        if (!_togglingIds.Add($"s_{style.Id}")) return;
+        try
+        {
+            style.IsSignature = !style.IsSignature;
+            await StyleService.UpdateAsync(style);
+            await AuditService.LogAsync("Update", style.Id, style.Title, $"시그니처 배지 → {(style.IsSignature ? "ON" : "OFF")}");
+            _ = ShowToast(style.IsSignature ? "시그니처 배지 ON" : "시그니처 배지 OFF");
+        }
+        catch (Exception ex)
+        {
+            style.IsSignature = !style.IsSignature; // 롤백
+            Console.WriteLine($"[Dashboard] 시그니처 배지 토글 실패: {ex.Message}");
+            _ = ShowToast("시그니처 배지 변경에 실패했습니다.");
+        }
+        finally { _togglingIds.Remove($"s_{style.Id}"); }
+    }
+
+    private async Task DeleteStyle(StylePost style)
+    {
+        try
+        {
+            await StyleService.DeleteAsync(style.Id);
+            await AuditService.LogAsync("Delete", style.Id, style.Title, $"스타일 '{style.Title}' 삭제");
+            _styles.Remove(style);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Dashboard] 스타일 삭제 실패: {ex.Message}");
+            _ = ShowToast("스타일 삭제에 실패했습니다.");
+        }
+    }
+
+
+    // 일괄 선택
+    private bool IsAllSelected => FilteredStyles.Any() && FilteredStyles.All(s => _selectedIds.Contains(s.Id));
+
+    private void ToggleSelectAll()
+    {
+        if (IsAllSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var s in FilteredStyles) _selectedIds.Add(s.Id);
+    }
+
+    private void ToggleSelect(string id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+    }
+
+    private async Task BulkPublish(bool publish)
+    {
+        if (_bulkProcessing || !_selectedIds.Any()) return;
+        _bulkProcessing = true;
+        StateHasChanged();
+        try
+        {
+            var targets = _styles.Where(s => _selectedIds.Contains(s.Id) && s.IsPublished != publish).ToList();
+            foreach (var style in targets)
+            {
+                style.IsPublished = publish;
+                await StyleService.UpdateAsync(style);
+            }
+            if (targets.Any())
+                await AuditService.LogAsync("BulkPublish", "", "", $"{targets.Count}건 일괄 {(publish ? "게시" : "비게시")}");
+            _ = ShowToast($"{targets.Count}건 {(publish ? "게시" : "비게시")} 완료");
+            _selectedIds.Clear();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Dashboard] 일괄 게시 변경 실패: {ex.Message}");
+            _ = ShowToast("일괄 게시 변경에 실패했습니다.");
+        }
+        finally { _bulkProcessing = false; }
+    }
+
+    private async Task BulkDelete()
+    {
+        if (_bulkProcessing || !_selectedIds.Any()) return;
+        _bulkProcessing = true;
+        StateHasChanged();
+        try
+        {
+            var targets = _styles.Where(s => _selectedIds.Contains(s.Id)).ToList();
+            foreach (var style in targets)
+            {
+                await StyleService.DeleteAsync(style.Id);
+                _styles.Remove(style);
+            }
+            if (targets.Any())
+                await AuditService.LogAsync("BulkDelete", "", "", $"{targets.Count}건 일괄 삭제: {string.Join(", ", targets.Select(t => t.Title))}");
+            _ = ShowToast($"{targets.Count}건 삭제 완료");
+            _selectedIds.Clear();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Dashboard] 일괄 삭제 실패: {ex.Message}");
+            _ = ShowToast("일괄 삭제에 실패했습니다.");
+        }
+        finally { _bulkProcessing = false; }
+    }
+    private async Task SeedInitialData()
+    {
+        _seeding = true;
+        _seedProgress = 0;
+        StateHasChanged();
+
+        // 기존 스타일의 이미지를 제목+카테고리 키로 보존
+        var existingImageMap = _styles
+            .Where(s => s.ImageUrls.Any())
+            .ToDictionary(s => $"{s.Category}|{s.Title}", s => s.ImageUrls);
+
+        // 기존 데이터 병렬 삭제 (5개씩 배치)
+        _seedTotal = _styles.Count;
+        foreach (var batch in _styles.Chunk(5))
+        {
+            await Task.WhenAll(batch.Select(s => StyleService.DeleteAsync(s.Id)));
+            _seedProgress += batch.Length;
+            StateHasChanged();
+        }
+
+        // 1단계: 스타일 데이터 준비 (해시태그·추천대상 미리 세팅)
+        var styles = GetInitialStyles();
+        foreach (var style in styles)
+        {
+            // 해시태그 보강
+            var extraTags = new List<string>();
+            if (style.RecommendedHairTypes.Contains("직모")) extraTags.Add("직모");
+            if (style.RecommendedHairTypes.Any(t => t.Contains("곱슬"))) extraTags.Add("곱슬");
+            if (style.RecommendedHairTypes.Contains("가는모") || style.RecommendedHairTypes.Contains("부드러운모")) extraTags.Add("가는모");
+            if (style.RecommendedHairTypes.Contains("굵은모") || style.RecommendedHairTypes.Contains("뻣뻣한모")) extraTags.Add("굵은모");
+            if (style.RecommendedHairTypes.Contains("숱많은")) extraTags.Add("숱많은");
+            if (style.RecommendedHairTypes.Contains("숱적은")) extraTags.Add("숱적은");
+            style.Hashtags.AddRange(extraTags.Where(t => !style.Hashtags.Contains(t)));
+
+            // 추천 대상 자동 생성 (_recommendedForOptions 체크박스와 일치하는 값만 사용)
+            if (!style.RecommendedFor.Any())
+            {
+                var recs = new List<string>();
+                switch (style.Service)
+                {
+                    case ServiceType.펌:
+                        if (style.RecommendedHairTypes.Any(t => t is "가는모" or "부드러운모" or "숱적은"))
+                            recs.Add("볼륨이 부족해 고민인 분");
+                        else
+                            recs.Add("자연스러운 웨이브를 원하는 분");
+                        recs.Add("매일 고데기가 귀찮은 분");
+                        break;
+                    case ServiceType.염색:
+                        recs.Add("분위기 변화를 원하는 분");
+                        recs.Add("스타일 변화를 원하는 분");
+                        break;
+                    case ServiceType.커트:
+                        if (style.Category == StyleCategory.남성)
+                            recs.Add("깔끔한 인상을 원하는 분");
+                        else if (style.Category == StyleCategory.여성숏)
+                            recs.Add("가볍고 시원한 스타일을 원하는 분");
+                        else
+                            recs.Add("세련된 이미지를 원하는 분");
+                        recs.Add("스타일 변화를 원하는 분");
+                        break;
+                }
+                if (style.RecommendedHairTypes.Any(t => t.Contains("곱슬")))
+                    recs.Add("곱슬기를 살리고 싶은 분");
+                if (style.RecommendedHairTypes.Contains("숱많은"))
+                    recs.Add("숱 정리가 필요한 분");
+                if (style.RecommendedHairTypes.Contains("숱적은") && !recs.Contains("볼륨이 부족해 고민인 분"))
+                {
+                    recs.Add("풍성해 보이고 싶은 분");
+                    if (!recs.Contains("숱이 적어 고민인 분"))
+                        recs.Add("숱이 적어 고민인 분");
+                }
+                style.RecommendedFor = recs.Take(3).ToList();
+            }
+
+            // AI 프롬프트용 나이대·분위기 자동 세팅
+            if (string.IsNullOrEmpty(style.RecommendedAge))
+                style.RecommendedAge = GetRecommendedAge(style);
+            if (string.IsNullOrEmpty(style.Mood))
+                style.Mood = GetRecommendedMood(style);
+        }
+
+        // 2단계: 같은 스타일의 기존 이미지 복원 (중복 URL 제거)
+        foreach (var style in styles)
+        {
+            var key = $"{style.Category}|{style.Title}";
+            if (existingImageMap.TryGetValue(key, out var images))
+                style.ImageUrls = images.Distinct().ToList();
+        }
+
+        // 3단계: 병렬 생성 (5개씩 배치)
+        _seedProgress = 0;
+        _seedTotal = styles.Count;
+        StateHasChanged();
+
+        foreach (var batch in styles.Chunk(5))
+        {
+            await Task.WhenAll(batch.Select(s => StyleService.CreateAsync(s)));
+            _seedProgress += batch.Length;
+            StateHasChanged();
+        }
+
+        _styles = await StyleService.GetAllAsync();
+        _styles = _styles.OrderByDescending(s => s.CreatedAt).ToList();
+        _seeding = false;
+        await AuditService.LogAsync("Seed", "", "", $"데이터 초기화: {styles.Count}건 생성");
+    }
+
+    private static string GetRecommendedAge(StylePost style)
+    {
+        var t = style.Title;
+        // ── 남성 ──
+        if (style.Category == StyleCategory.남성)
+        {
+            if (t.Contains("버즈")) return "20대 초반";
+            if (t.Contains("크롭") || t.Contains("페이드") || t.Contains("머쉬룸")) return "20대 초반";
+            if (t.Contains("투블록") || t.Contains("콤마") || t.Contains("쉼표") || t.Contains("셋팅")) return "20대 중반";
+            if (t.Contains("가르마") || t.Contains("센터파트") || t.Contains("내추럴")) return "20대 중반";
+            if (t.Contains("쉐도우") || t.Contains("스왈로") || t.Contains("스핀스")) return "20대 중반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("리프")) return "20대 초반";
+            if (t.Contains("테이퍼")) return "20대 후반";
+            if (t.Contains("댄디") || t.Contains("리젠트") || t.Contains("포마드")) return "30대 초반";
+            if (t.Contains("다운펌") || t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("실버") || t.Contains("그레이")) return "20대 초반";
+            if (t.Contains("블론드") || t.Contains("금발")) return "20대 초반";
+            if (t.Contains("브라운") || t.Contains("카키")) return "20대 후반";
+            if (t.Contains("투펌")) return "20대 중반";
+            return "20대 중반";
+        }
+        // ── 여성 숏 ──
+        if (style.Category == StyleCategory.여성숏)
+        {
+            if (t.Contains("픽시")) return "20대 중반";
+            if (t.Contains("허쉬")) return "20대 후반";
+            if (t.Contains("보이쉬") || t.Contains("크롭")) return "20대 초반";
+            if (t.Contains("시스루")) return "20대 중반";
+            if (t.Contains("웨이브") || t.Contains("핑거")) return "30대 초반";
+            if (t.Contains("투블록")) return "20대 초반";
+            if (t.Contains("빅시")) return "20대 후반";
+            if (t.Contains("이어 허그")) return "20대 후반";
+            if (t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("라벤더") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("오렌지")) return "20대 초반";
+            if (t.Contains("애쉬")) return "20대 중반";
+            return "20대 후반";
+        }
+        // ── 여성 단발 ──
+        if (style.Category == StyleCategory.여성단발)
+        {
+            if (t.Contains("원랭스")) return "20대 후반";
+            if (t.Contains("태슬")) return "20대 중반";
+            if (t.Contains("칼단발") || t.Contains("블런트")) return "20대 후반";
+            if (t.Contains("히메")) return "10대 후반";
+            if (t.Contains("커튼뱅")) return "20대 초반";
+            if (t.Contains("보브") || t.Contains("밥")) return "20대 중반";
+            if (t.Contains("S컬") || t.Contains("C컬") || t.Contains("엔드컬")) return "20대 중반";
+            if (t.Contains("물결")) return "20대 후반";
+            if (t.Contains("A라인")) return "30대 초반";
+            if (t.Contains("미니")) return "20대 초반";
+            if (t.Contains("애플")) return "20대 초반";
+            if (t.Contains("밀크티")) return "20대 초반";
+            if (t.Contains("올리브")) return "20대 후반";
+            if (t.Contains("투톤") || t.Contains("와인")) return "20대 중반";
+            if (t.Contains("허니")) return "20대 중반";
+            if (t.Contains("블루")) return "20대 초반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("매직")) return "30대 초반";
+            return "20대 중반";
+        }
+        // ── 여성 미디움 ──
+        if (style.Category == StyleCategory.여성미디움)
+        {
+            if (t.Contains("레이어드 허그") || t.Contains("쇄골")) return "20대 후반";
+            if (t.Contains("가르마") || t.Contains("빌드")) return "20대 중반";
+            if (t.Contains("에어")) return "20대 초반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("로즈")) return "20대 중반";
+            if (t.Contains("발레야쥬")) return "20대 후반";
+            if (t.Contains("허쉬")) return "20대 후반";
+            if (t.Contains("이태리")) return "20대 후반";
+            if (t.Contains("젤리피쉬")) return "10대 후반";
+            if (t.Contains("엘리자벳")) return "30대 초반";
+            if (t.Contains("보헤미안")) return "20대 후반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("디지털") || t.Contains("S컬")) return "20대 중반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("뿌리")) return "30대 초반";
+            if (t.Contains("매직") || t.Contains("스트레이트")) return "20대 후반";
+            if (t.Contains("셋팅")) return "20대 중반";
+            if (t.Contains("체리") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("하이라이트")) return "20대 후반";
+            return "20대 중반";
+        }
+        // ── 여성 롱 ──
+        if (style.Category == StyleCategory.여성롱)
+        {
+            if (t.Contains("히피")) return "20대 초반";
+            if (t.Contains("애즈")) return "20대 중반";
+            if (t.Contains("바디 웨이브")) return "20대 후반";
+            if (t.Contains("글래머") || t.Contains("글램")) return "30대 초반";
+            if (t.Contains("페이스 프레이밍")) return "20대 후반";
+            if (t.Contains("밀크티")) return "20대 초반";
+            if (t.Contains("블루블랙")) return "20대 초반";
+            if (t.Contains("브릿지") || t.Contains("하이라이트")) return "20대 후반";
+            if (t.Contains("레이어드 물결")) return "20대 중반";
+            if (t.Contains("이어링")) return "20대 초반";
+            if (t.Contains("옴브레")) return "20대 중반";
+            if (t.Contains("원랭스")) return "20대 후반";
+            if (t.Contains("허그")) return "20대 중반";
+            if (t.Contains("워터")) return "20대 중반";
+            if (t.Contains("V컷")) return "20대 후반";
+            if (t.Contains("C컬") || t.Contains("볼륨 매직")) return "30대 초반";
+            if (t.Contains("디지털")) return "20대 중반";
+            if (t.Contains("아이롱")) return "20대 후반";
+            if (t.Contains("시스루")) return "20대 초반";
+            if (t.Contains("울프")) return "20대 초반";
+            if (t.Contains("U컷")) return "20대 후반";
+            if (t.Contains("그라데이션") || t.Contains("핑크")) return "20대 초반";
+            if (t.Contains("카키") || t.Contains("베이지")) return "20대 후반";
+            if (t.Contains("섀도우")) return "20대 후반";
+            if (t.Contains("허니") || t.Contains("블론드")) return "20대 초반";
+            if (t.Contains("투톤")) return "20대 중반";
+            if (t.Contains("체리") || t.Contains("레드")) return "20대 초반";
+            if (t.Contains("블랙빈") || t.Contains("흑갈색")) return "30대 초반";
+            if (t.Contains("가일")) return "20대 중반";
+            return "20대 중반";
+        }
+        return "20대 중반";
+    }
+
+    private static string GetRecommendedMood(StylePost style)
+    {
+        var t = style.Title;
+        // ── 남성 ──
+        if (style.Category == StyleCategory.남성)
+        {
+            if (t.Contains("댄디") || t.Contains("리젠트") || t.Contains("포마드")) return "세련됨";
+            if (t.Contains("크롭") || t.Contains("페이드") || t.Contains("버즈")) return "시크함";
+            if (t.Contains("울프") || t.Contains("머쉬룸")) return "발랄함";
+            if (t.Contains("실버") || t.Contains("블론드") || t.Contains("금발")) return "시크함";
+            if (t.Contains("가르마") || t.Contains("내추럴") || t.Contains("센터파트")) return "자연스러움";
+            if (t.Contains("콤마") || t.Contains("쉼표")) return "귀여움";
+            if (t.Contains("테이퍼")) return "세련됨";
+            return "자연스러움";
+        }
+        // ── 여성 숏 ──
+        if (style.Category == StyleCategory.여성숏)
+        {
+            if (t.Contains("픽시") || t.Contains("보이쉬") || t.Contains("크롭")) return "시크함";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("이어 허그")) return "귀여움";
+            if (t.Contains("핑거 웨이브")) return "세련됨";
+            if (t.Contains("투블록")) return "시크함";
+            if (t.Contains("빅시")) return "발랄함";
+            if (t.Contains("라벤더") || t.Contains("핑크") || t.Contains("오렌지")) return "발랄함";
+            if (t.Contains("허쉬")) return "시크함";
+            if (t.Contains("울프")) return "시크함";
+            if (style.Service == ServiceType.펌) return "발랄함";
+            return "시크함";
+        }
+        // ── 여성 단발 ──
+        if (style.Category == StyleCategory.여성단발)
+        {
+            if (t.Contains("히메")) return "귀여움";
+            if (t.Contains("칼단발") || t.Contains("블런트") || t.Contains("원랭스")) return "세련됨";
+            if (t.Contains("커튼뱅")) return "청순함";
+            if (t.Contains("태슬")) return "세련됨";
+            if (t.Contains("S컬") || t.Contains("물결")) return "자연스러움";
+            if (t.Contains("C컬") || t.Contains("애플") || t.Contains("엔드컬")) return "귀여움";
+            if (t.Contains("미니")) return "귀여움";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("A라인")) return "세련됨";
+            if (t.Contains("밀크티") || t.Contains("허니")) return "청순함";
+            if (t.Contains("와인") || t.Contains("투톤")) return "세련됨";
+            if (t.Contains("블루")) return "시크함";
+            if (t.Contains("올리브")) return "자연스러움";
+            return "자연스러움";
+        }
+        // ── 여성 미디움 ──
+        if (style.Category == StyleCategory.여성미디움)
+        {
+            if (t.Contains("울프") || t.Contains("젤리피쉬")) return "시크함";
+            if (t.Contains("에어")) return "청순함";
+            if (t.Contains("허쉬") || t.Contains("이태리")) return "시크함";
+            if (t.Contains("엘리자벳")) return "세련됨";
+            if (t.Contains("보헤미안")) return "자연스러움";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("로즈") || t.Contains("핑크") || t.Contains("체리")) return "발랄함";
+            if (t.Contains("발레야쥬") || t.Contains("하이라이트")) return "세련됨";
+            if (t.Contains("가르마") || t.Contains("빌드")) return "자연스러움";
+            if (t.Contains("S컬") || t.Contains("디지털")) return "자연스러움";
+            if (t.Contains("레이어드 허그") || t.Contains("쇄골")) return "자연스러움";
+            return "자연스러움";
+        }
+        // ── 여성 롱 ──
+        if (style.Category == StyleCategory.여성롱)
+        {
+            if (t.Contains("히피")) return "발랄함";
+            if (t.Contains("글래머") || t.Contains("글램")) return "섹시함";
+            if (t.Contains("바디 웨이브") || t.Contains("워터")) return "섹시함";
+            if (t.Contains("페이스 프레이밍")) return "세련됨";
+            if (t.Contains("울프")) return "시크함";
+            if (t.Contains("밀크티") || t.Contains("허니") || t.Contains("블론드")) return "청순함";
+            if (t.Contains("블루블랙") || t.Contains("블랙빈")) return "시크함";
+            if (t.Contains("발레야쥬") || t.Contains("하이라이트") || t.Contains("브릿지")) return "세련됨";
+            if (t.Contains("이어링")) return "발랄함";
+            if (t.Contains("그라데이션") || t.Contains("핑크") || t.Contains("체리")) return "발랄함";
+            if (t.Contains("옴브레") || t.Contains("투톤")) return "세련됨";
+            if (t.Contains("원랭스")) return "청순함";
+            if (t.Contains("시스루")) return "청순함";
+            if (t.Contains("V컷") || t.Contains("U컷")) return "세련됨";
+            if (t.Contains("허그") || t.Contains("레이어드 물결")) return "자연스러움";
+            if (t.Contains("애즈")) return "자연스러움";
+            if (t.Contains("가일")) return "자연스러움";
+            return "자연스러움";
+        }
+        return "자연스러움";
+    }
+
+    private static List<StylePost> GetInitialStyles()
+    {
+        return new List<StylePost>
+        {
+            // ══════════════════════════════════
+            // ── 남성 커트 ──
+            // ══════════════════════════════════
+            new()
+            {
+                Title = "투블록 텍스쳐 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>옆머리와 뒷머리는 짧게 밀고, 윗머리만 길게 남겨서 자유롭게 스타일링하는 커트예요. 한국 남성 헤어의 '국민 스타일'이라고 할 수 있어요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 캐주얼한 느낌이에요. 출근할 때는 단정하게 넘기고, 주말에는 자연스럽게 흩어뜨릴 수 있어서 활용도가 높아요. '무난하지만 촌스럽지 않은' 딱 그 느낌이죠.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "투블록", "텍스쳐컷", "남성커트", "직장인헤어", "깔끔한스타일" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "드라이기로 윗머리를 앞에서 뒤로 말리며 볼륨을 주면 자연스러운 세팅 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "댄디 리젠트 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>앞머리를 이마 위로 올려 넘기고, 옆머리는 짧게 정리하는 스타일이에요. 이마를 시원하게 드러내서 깔끔하고 남성적인 인상을 줘요.</p><h3>어떤 느낌이에요?</h3><p>정장에 특히 잘 어울리는 '댄디한' 느낌이에요. 면접, 결혼식 같은 중요한 자리에도 손색없고, 평소에도 자신감 있는 이미지를 연출할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "리젠트", "댄디컷", "남성커트", "정장헤어", "볼륨" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모", "숱많은" },
+                StylingTip = "왁스를 손에 펴 바른 뒤 앞에서 뒤로 쓸어 올리면 볼륨감 있는 리젠트 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "크롭 페이드 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>옆머리와 뒷머리를 아래에서 위로 갈수록 점점 길어지게 자르는 '페이드' 기법에, 앞머리는 짧게 내려뜨린 스타일이에요. 외국 바버샵에서 유래한 트렌디한 커트죠.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 힙한 느낌이에요. 짧은 앞머리가 동안 이미지를 만들어주고, 옆면의 자연스러운 그라데이션이 세련미를 더해줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "크롭컷", "페이드", "남성커트", "트렌드", "힙한스타일" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모" },
+                StylingTip = "앞머리를 손으로 가볍게 내려주기만 하면 끝! 왁스 없이도 깔끔해요",
+                IsPublished = false
+            },
+
+            // ── 남성 펌 ──
+            new()
+            {
+                Title = "내추럴 가르마 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>'펌'이라고 하면 곱슬곱슬한 머리를 떠올리기 쉽지만, 가르마 펌은 머리카락에 살짝 방향만 잡아주는 거예요. 가르마(가리마) 라인을 따라 자연스럽게 옆으로 넘어가도록 뿌리에 볼륨을 주는 시술이에요.</p><h3>어떤 느낌이에요?</h3><p>티 안 나게 멋있는 '꾸안꾸' 스타일이에요. 아침에 물만 뿌리고 드라이하면 자연스럽게 세팅이 되니까 바쁜 아침에 정말 편해요. 과하지 않아서 회사에서도 부담 없어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "가르마펌", "남성펌", "C컬펌", "내추럴펌", "뿌리볼륨" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "샤워 후 가르마 방향으로 드라이기 바람을 쐬면 자동 세팅 완료",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "쉐도우 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락이 자연스럽게 이마 쪽으로 떨어지면서, 뿌리 부분에는 살짝 볼륨이 살아있는 펌이에요. '다운펌'(머리를 눌러주는 펌)의 업그레이드 버전이라고 생각하면 돼요.</p><h3>어떤 느낌이에요?</h3><p>펌을 한 티가 거의 안 나요. '원래 이 머리인가?' 싶을 정도로 자연스럽고, 부드러운 인상을 줘요. 곱슬처럼 튀는 게 아니라 그림자처럼 은은한 결이 생기는 거라 '쉐도우'라는 이름이 붙었어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "쉐도우펌", "남성펌", "다운펌", "트렌드", "자연스러운펌" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모", "숱많은" },
+                StylingTip = "드라이기를 위에서 아래로 쐬며 손으로 가볍게 눌러주면 자연스러운 볼륨 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "스왈로 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>앞머리부터 옆머리까지 자연스럽게 뒤로 넘어가는 흐름을 만들어주는 펌이에요. 이름처럼 제비(Swallow)가 날아가는 듯한 부드러운 곡선이 포인트예요.</p><h3>어떤 느낌이에요?</h3><p>리젠트컷처럼 강하지 않고, 가르마펌처럼 조용하지도 않은 딱 중간 느낌이에요. 볼륨감이 있으면서도 부드러워서 남성적이면서 세련된 분위기를 동시에 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "스왈로펌", "남성펌", "볼륨", "트렌드", "뒤로넘기기" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이 시 앞에서 뒤로 손가락을 빗질하듯 넘기면 자연스러운 흐름 완성",
+                IsPublished = false
+            },
+
+            // ── 남성 염색 ──
+            new()
+            {
+                Title = "애쉬 그레이 투톤",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 윗부분만 회색빛이 도는 '애쉬 그레이' 색으로 밝게 염색하고, 옆머리는 원래 검은색을 유지하는 '투톤' 염색이에요. 블리치(탈색)를 1회 한 뒤에 색을 얹는 방식이에요.</p><h3>어떤 느낌이에요?</h3><p>차갑고 도시적인 무드예요. 전체를 밝게 하면 부담스러울 수 있는데, 윗부분만 포인트로 밝히니까 세련되면서도 과하지 않아요. 사진 찍을 때 특히 예쁘게 나와요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "애쉬그레이", "남성염색", "투톤", "블리치", "트렌드컬러" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "보라색 샴푸(퍼플 샴푸)를 주 1~2회 사용하면 노란 끼를 잡아줘요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "내추럴 브라운 염색",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>블리치(탈색) 없이 검은 머리를 자연스러운 갈색으로 바꾸는 염색이에요. '염색했어?'라는 질문을 받을 정도로 자연스러워서 남성 첫 염색으로 가장 많이 선택하는 컬러예요.</p><h3>어떤 느낌이에요?</h3><p>검은 머리보다 훨씬 가볍고 부드러운 인상이에요. 실내에서는 자연스러운 블랙에 가깝고, 햇빛 아래에서 은은한 브라운이 비쳐요. 피부도 밝아 보이는 효과가 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "브라운염색", "남성염색", "자연스러운", "첫염색", "직장인컬러" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "컬러 전용 샴푸를 사용하면 색이 더 오래 유지돼요",
+                IsPublished = false
+            },
+
+            // ══════════════════════════════════
+            // ── 여성 숏 커트 ──
+            // ══════════════════════════════════
+            new()
+            {
+                Title = "픽시 레이어드 컷",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>귀가 보일 정도로 짧게 자르되, 윗머리에 층(레이어드)을 넣어 입체감을 살린 짧은 여성 커트예요. '보이시한데 여성스러운' 매력을 가진 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 시원한 느낌이에요. 얼굴 라인이 깔끔하게 드러나면서 목선이 길어 보이는 효과가 있어요. 왁스로 살짝 흩뜨리면 카페 사장님 같은 분위기도 낼 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "픽시컷", "숏컷", "레이어드", "여성숏헤어", "세련된스타일" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "왁스를 손끝에 살짝 묻혀 윗머리를 흩뜨려주면 세련된 질감 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "시스루 뱅 숏보브",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>턱 위로 올라오는 짧은 단발(보브)에, 이마가 살짝 비치는 얇은 앞머리(시스루 뱅)를 더한 스타일이에요. '시스루'는 '비쳐 보이는'이라는 뜻으로, 앞머리를 얇게 내려 이마가 자연스럽게 비치게 해요.</p><h3>어떤 느낌이에요?</h3><p>가볍고 청순한 느낌이에요. 짧은 길이가 시원해 보이면서도, 얇은 앞머리 덕분에 부드러운 인상을 줘요. 여름에 특히 인기가 많은 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "숏보브", "시스루뱅", "여름헤어", "청순헤어", "턱선보브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "롤 브러시로 안쪽으로 살짝 말아주면 깔끔한 실루엣 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "허쉬 컷",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>정수리 부분은 짧고 볼륨 있게, 옆머리와 뒷머리는 자연스럽게 흘러내리도록 층을 넣은 커트예요. '울프컷'에서 영감을 받았지만 좀 더 부드럽고 정돈된 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>멋스럽고 개성 있는 분위기예요. 정수리에 볼륨이 생겨서 머리가 납작해 보이는 고민도 해결해줘요. 스타일링 방법에 따라 시크하게도, 부드럽게도 연출할 수 있어서 '변신 가능한' 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허쉬컷", "울프컷", "개성헤어", "레이어드컷", "트렌드" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이 시 정수리를 반대 방향으로 말려주면 자연스러운 볼륨 UP",
+                IsPublished = false
+            },
+
+            // ── 여성 숏 펌 ──
+            new()
+            {
+                Title = "이어 허그 펌",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락 끝이 귀를 감싸듯 안쪽으로 말리는 펌이에요. 'C컬'이라고도 부르는데, 머리카락이 알파벳 C 모양으로 안으로 동글동글 말리는 거예요.</p><h3>어떤 느낌이에요?</h3><p>짧은 머리인데도 여성스럽고 부드러운 느낌이에요. 얼굴 옆을 감싸주니까 얼굴이 작아 보이는 효과도 있어요. 드라이만 해도 컬이 자연스럽게 살아나서 관리도 편해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "이어허그", "숏펌", "C컬", "여성숏", "얼굴형보정" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이 시 귀 방향으로 안쪽으로 감아 말려주면 C컬이 살아나요",
+                IsPublished = false
+            },
+
+            // ── 여성 숏 염색 ──
+            new()
+            {
+                Title = "핑크 베이지 숏 염색",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>핑크(분홍)와 베이지(살구색)를 섞은 밝고 화사한 색이에요. 블리치(탈색)를 2회 해서 머리를 밝게 만든 다음 색을 올리는 방식이에요. '고명도'라고 하면 아주 밝은 색이라는 뜻이에요.</p><h3>어떤 느낌이에요?</h3><p>화사하고 러블리한 느낌이에요. 짧은 머리에 밝은 컬러가 더해지면 얼굴이 환하게 밝아 보이고, 거울 볼 때마다 기분이 좋아지는 색이에요. 사진 찍으면 정말 예쁘게 나와요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "핑크베이지", "숏염색", "블리치", "화사한컬러", "트렌드컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "컬러 전용 샴푸와 트리트먼트로 색 빠짐을 최대한 늦춰보세요",
+                IsPublished = false
+            },
+
+            // ══════════════════════════════════
+            // ── 여성 단발 커트 ──
+            // ══════════════════════════════════
+            new()
+            {
+                Title = "원랭스 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>모든 머리카락을 같은 길이로 일자로 자르는 가장 기본적인 단발이에요. '원랭스'는 영어 One-Length, 즉 '한 길이'라는 뜻이에요. 층 없이 깔끔하게 떨어지는 게 특징이죠.</p><h3>어떤 느낌이에요?</h3><p>클래식하고 단정한 느낌이에요. 유행을 타지 않는 스타일이라 몇 년이 지나도 촌스럽지 않아요. 턱선 아래로 떨어지는 깔끔한 라인이 얼굴을 갸름하게 보이게 해줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "원랭스", "단발", "보브컷", "클래식단발", "턱선단발" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "드라이 후 고데기로 끝을 살짝 안으로 말면 더 깔끔해요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "태슬 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락 끝부분을 가볍게 쳐내서 바깥으로 자연스럽게 튕기게 만든 단발이에요. '태슬'은 실이 풀어진 장식을 뜻하는데, 머리 끝이 그처럼 가볍게 흩어지는 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>경쾌하고 밝은 느낌이에요. 일반 단발이 무겁게 느껴지시는 분에게 딱이에요. 바람이 불면 머리카락이 가볍게 날리는 모습이 자유로우면서도 스타일리시해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "태슬컷", "단발", "가벼운단발", "외쿡거리", "경쾌한스타일" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모", "숱많은" },
+                StylingTip = "고데기로 끝을 바깥쪽으로 살짝 튕겨주면 경쾌한 느낌이 살아나요",
+                IsPublished = false
+            },
+
+            // ── 여성 단발 펌 ──
+            new()
+            {
+                Title = "볼륨 S컬 단발 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발 머리 끝부분에 알파벳 S 모양의 물결(S컬)을 넣어주는 펌이에요. 머리카락이 안으로 말렸다 바깥으로 나갔다 하면서 자연스러운 볼륨이 생겨요.</p><h3>어떤 느낌이에요?</h3><p>풍성하고 자연스러운 느낌이에요. 단발인데 밋밋하게 떨어지는 게 아니라, 끝에 움직임이 있어서 생기 있어 보여요. 드라이만 해도 컬이 예쁘게 나오니까 아침에 정말 편해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "S컬펌", "단발펌", "볼륨펌", "자연스러운펌", "웨이브단발" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이 시 머리를 움켜쥐듯 말려주면 S컬이 더 예쁘게 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "히메 컷 + 보브 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>'히메'는 일본어로 '공주'라는 뜻이에요. 얼굴 양옆에 짧은 머리카락(히메 레이어)을 만들고, 얇은 앞머리(시스루 뱅)와 안쪽으로 말리는 펌을 더한 스타일이에요. 일본 애니메이션 캐릭터 같은 느낌이죠.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 귀여운 일본풍 무드예요. 얼굴 양쪽에 짧은 레이어가 이마와 광대를 가려주면서 동시에 귀여운 느낌을 줘요. 최근 SNS에서 큰 인기를 끌고 있는 트렌드 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "히메컷", "보브펌", "단발펌", "일본풍", "트렌드" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "히메 레이어 부분만 고데기로 안쪽으로 살짝 말아주면 완성도 UP",
+                IsPublished = false
+            },
+
+            // ── 여성 단발 염색 ──
+            new()
+            {
+                Title = "밀크티 베이지 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>이름 그대로 밀크티 색깔이에요! 따뜻한 베이지(살구색)에 우유를 탄 듯한 부드러운 색감이죠. 블리치(탈색)를 한 번 한 뒤에 색을 올려야 이 예쁜 색이 나와요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 고급스러운 느낌이에요. 피부가 환하게 밝아 보이는 효과가 있고, 카페라떼처럼 자연스럽게 색이 빠져도 예뻐서 관리 부담이 적어요. '돈 들인 티 나는' 세련된 컬러예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "밀크티베이지", "단발염색", "블리치컬러", "트렌드컬러", "고급스러운" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "뜨거운 물 대신 미지근한 물로 감으면 색이 더 오래가요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "올리브 베이지 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>올리브(초록빛이 도는 갈색)와 베이지를 섞은 차분한 색이에요. '올리브'라는 색이 생소하실 수 있는데, 쉽게 말하면 노란 끼를 잡아주는 초록빛이 들어간 갈색이에요. 블리치 1회만 해도 예쁜 색이 나와요.</p><h3>어떤 느낌이에요?</h3><p>차분하면서도 세련된 느낌이에요. 특히 피부가 노란 편인 분들에게 효과가 좋은데, 올리브 톤이 피부의 노란 끼를 상쇄시켜서 피부가 맑아 보이게 해줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "올리브베이지", "단발염색", "옐로끼잡기", "피부보정", "세련된컬러" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "컬러 유지를 위해 열기구(고데기/드라이) 사용 시 열 보호 스프레이 필수!",
+                IsPublished = false
+            },
+
+            // ══════════════════════════════════
+            // ── 여성 미디움 펌 ──
+            // ══════════════════════════════════
+            new()
+            {
+                Title = "레이어드 허그 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>쇄골(목과 어깨 사이 뼈) 길이의 머리에 층(레이어드)을 넣고, 끝을 안쪽으로 감기도록 펌한 스타일이에요. '허그'라는 이름처럼 머리카락이 얼굴을 안아주듯 감싸는 거예요.</p><h3>어떤 느낌이에요?</h3><p>여성스럽고 부드러운 느낌이에요. 얼굴 옆으로 C컬이 감싸주니까 얼굴이 작아 보이는 효과도 있어요. 너무 과하지 않아서 회사에 가도, 데이트를 해도 어디서나 잘 어울려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허그펌", "레이어드", "미디움펌", "C컬", "여성스러운" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이 시 롤 브러시로 안쪽 방향으로 감아주면 C컬이 예쁘게 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "쇄골 물결 웨이브",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>쇄골 길이 머리에 잔잔한 물결 모양 웨이브를 넣은 스타일이에요. 바다 물결처럼 부드러운 S자 커브가 반복되는 자연스러운 펌이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 데일리한 느낌이에요. '펌 했어요?'라고 물어볼 정도로 과하지 않은 웨이브라 출근할 때도, 친구 만날 때도 부담 없어요. 묶었을 때도 풀었을 때도 예쁜 라인이 나오는 게 장점이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "물결웨이브", "쇄골기장", "데일리헤어", "자연웨이브", "직장인헤어" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "무스를 축축한 머리에 뿌린 뒤 자연 건조하면 웨이브가 더 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "가르마 빌드 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>가르마(가리마) 부분의 뿌리에 볼륨을 넣어주는 펌이에요. '빌드'는 '쌓아올린다'는 뜻으로, 납작하게 눌린 정수리를 봉긋하게 살려줘요. 여기에 S컬 웨이브까지 더한 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>풍성하고 세련된 느낌이에요. 정수리가 납작해서 머리를 감으면 볼륨이 금방 죽는 분들에게 특히 효과적이에요. 아침에 일어나도 뿌리 볼륨이 살아있어서 별도 세팅이 거의 필요 없어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "빌드펌", "가르마펌", "뿌리볼륨", "S컬", "볼륨업" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "숱적은", "직모" },
+                StylingTip = "드라이 시 가르마 반대 방향으로 먼저 말린 뒤 원래 방향으로 넘기면 볼륨 UP",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "에어 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>공기를 머금은 듯 가볍고 풍성한 결을 만들어주는 펌이에요. 일반 펌보다 낮은 온도(저온)로 시술하기 때문에 머리카락 손상이 적어요. '에어'라는 이름답게 바람이 통하는 듯 가벼운 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>가볍고 자연스러운 느낌이에요. 곱슬처럼 꼬이는 게 아니라 공기처럼 부드러운 볼륨감이 생겨요. 머리가 무겁게 가라앉는 분들에게 '숨통'을 틔워주는 펌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "에어펌", "미디움펌", "저온펌", "가벼운펌", "볼륨" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "숱적은" },
+                StylingTip = "디퓨저(헤어드라이기 끝에 끼우는 둥근 부속)로 말리면 볼륨이 더 살아나요",
+                IsPublished = false
+            },
+
+            // ── 여성 미디움 커트 ──
+            new()
+            {
+                Title = "레이어드 울프 컷",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>윗머리는 짧게, 아래로 갈수록 길게 자르는 층이 많은 커트예요. '울프(Wolf)'는 늑대라는 뜻인데, 머리카락이 자유롭게 흩어지는 모습이 늑대 갈기 같다고 해서 붙은 이름이에요. 80~90년대 '멀렛(숭어 머리)'에서 진화한 현대적 스타일이죠.</p><h3>어떤 느낌이에요?</h3><p>개성 있고 멋스러운 느낌이에요. 그런데 동시에 여성스러움도 있어서, '쿨한 언니' 같은 분위기를 줘요. 왁스로 흩뜨리면 힙하게, 고데기로 정리하면 우아하게 변신 가능한 만능 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "울프컷", "레이어드", "미디움컷", "멀렛", "개성" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "왁스를 손에 살짝 묻혀 층진 부분을 흩뜨리면 멋스러운 질감 완성",
+                IsPublished = false
+            },
+
+            // ── 여성 미디움 염색 ──
+            new()
+            {
+                Title = "로즈 브라운 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>갈색(브라운)에 장미빛(로즈) 핑크를 살짝 섞은 색이에요. 블리치(탈색) 없이도 가능한 컬러라서 모발 손상 걱정이 적어요. 실내에서는 그냥 예쁜 갈색인데, 햇빛 아래에서 은은한 핑크빛이 비치는 게 매력이에요.</p><h3>어떤 느낌이에요?</h3><p>화사하고 여성스러운 느낌이에요. 어두운 톤을 유지하면서도 피부가 밝아 보이는 효과가 있어요. '은은하게 예쁜' 딱 그 느낌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "로즈브라운", "미디움염색", "블리치없이", "화사한컬러", "은은한핑크" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "컬러 전용 샴푸를 사용하면 로즈빛이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "발레야쥬 애쉬 브라운",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>'발레야쥬'는 프랑스어로 '쓸어 넘기다'라는 뜻이에요. 뿌리는 어두운 색을 유지하고, 중간부터 끝으로 갈수록 자연스럽게 밝아지도록 손으로 쓸어 올리듯 염색하는 기법이에요. 여기에 '애쉬(잿빛) 브라운'을 적용한 거예요.</p><h3>어떤 느낌이에요?</h3><p>입체감 있고 세련된 느낌이에요. 한 가지 색으로 밋밋하게 염색하는 것과 달리, 머리카락에 깊이감이 생겨서 훨씬 풍성해 보여요. 머리가 자라도 뿌리가 자연스러워서 관리하기 정말 편해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "발레야쥬", "애쉬브라운", "그라데이션", "입체감", "트렌드염색" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "웨이브를 넣으면 발레야쥬의 입체감이 더 살아나요",
+                IsPublished = false
+            },
+
+            // ══════════════════════════════════
+            // ── 여성 롱 펌 ──
+            // ══════════════════════════════════
+            new()
+            {
+                Title = "히피 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>가슴 아래까지 내려오는 긴 머리에 크고 자유로운 웨이브를 넣는 펌이에요. 1970년대 '히피' 문화에서 이름을 따왔는데, 자연스럽게 풀어헤친 듯한 큰 물결이 포인트예요.</p><h3>어떤 느낌이에요?</h3><p>자유롭고 여유로운 보헤미안 느낌이에요. 해변에서 바람에 머리카락이 흩날리는 것 같은 분위기랄까요. 스타일링에 힘을 뺄수록 더 예뻐지는 신기한 펌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "히피펌", "롱웨이브", "보헤미안", "큰웨이브", "자유로운스타일" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "오일 에센스를 머리 끝에 발라주면 건조함 없이 윤기 있는 웨이브 완성",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "애즈 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 중간부터 끝까지 자연스럽게 떨어지는 부드러운 결을 넣는 펌이에요. S자나 J자(끝만 살짝 말리는) 모양의 컬이 생겨요. '있는 듯 없는 듯' 자연스러운 게 가장 큰 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>'꾸안꾸(꾸민 듯 안 꾸민 듯)의 정석이에요. 아이돌이나 배우들이 자주 하는 스타일인데, 펌을 했다기보다 원래 머리카락이 예쁜 것 같은 자연스러운 결이에요. 손질이 매우 편해서 바쁜 분들에게 인기가 많아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "애즈펌", "자연스러운펌", "롱펌", "S컬", "손질편한펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "젖은 머리에 무스를 뿌리고 자연건조하면 가장 자연스러운 결이 나와요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "바디 웨이브 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>큰 롤(말대)로 전체적으로 크고 부드러운 S자 물결을 만들어주는 펌이에요. '바디(body)'는 볼륨감, 풍성함을 뜻하고, 머리카락 전체에 부드러운 움직임을 줘요.</p><h3>어떤 느낌이에요?</h3><p>우아하고 여성스러운 느낌이에요. 긴 머리가 밋밋하게 쳐지는 게 아니라 부드럽게 출렁이는 거예요. 머리를 내렸을 때도 예쁘고, 묶었을 때도 잔잔한 웨이브가 보여서 어떤 상황에서든 예뻐요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "바디웨이브", "롱펌", "자연웨이브", "S컬", "부드러운펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이 시 머리를 한 줌씩 잡고 돌려 감으며 말리면 웨이브가 더 살아나요",
+                IsPublished = false
+            },
+
+            // ── 여성 롱 커트 ──
+            new()
+            {
+                Title = "글래머 레이어드 컷",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리를 유지하면서 얼굴 주변에 층(레이어)을 넣어 풍성하게 만드는 커트예요. '레이어드'란 머리카락을 여러 길이로 층지게 자르는 기법이에요. 전체를 짧게 자르는 게 아니라 일부만 짧게 쳐내서 입체감을 살려요.</p><h3>어떤 느낌이에요?</h3><p>풍성하고 글래머러스한 느낌이에요. 긴 머리가 밋밋하게 떨어지는 게 아니라, 얼굴 주변에 자연스러운 움직임이 생겨서 훨씬 화려해 보여요. 얼굴형을 가려주는 효과도 뛰어나요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "레이어드컷", "글래머", "롱헤어", "볼륨레이어", "얼굴형보정" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "롤 브러시로 얼굴 주변 레이어를 바깥쪽으로 말려주면 볼륨감 UP",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "페이스 프레이밍 컷",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>얼굴 양옆에만 짧은 머리카락을 만들어서 액자(프레임)처럼 얼굴을 감싸주는 커팅 기법이에요. 뒤에 있는 긴 머리는 그대로 유지하고, 앞쪽에만 짧은 레이어를 넣는 거예요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 세련된 느낌이에요. 긴 머리에 변화를 주고 싶은데 기장을 자르기 싫을 때 딱이에요. 얼굴 양옆의 짧은 머리카락이 광대와 턱선을 자연스럽게 가려서 갸름해 보이는 효과가 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "페이스프레이밍", "롱컷", "얼굴형보정", "레이어", "트렌드" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "앞쪽 프레이밍 레이어만 고데기로 살짝 웨이브를 주면 세련미 UP",
+                IsPublished = false
+            },
+
+            // ── 여성 롱 염색 ──
+            new()
+            {
+                Title = "밀크티 베이지 발레야쥬",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>밀크티 색(따뜻한 살구빛 갈색)을 발레야쥬(뿌리는 어둡게, 끝으로 갈수록 밝게) 기법으로 염색한 거예요. 롱 기장에서 빛에 따라 다양한 색감이 보여서 정말 예뻐요.</p><h3>어떤 느낌이에요?</h3><p>따뜻하고 화사한 느낌이에요. 밝은 색이지만 차갑지 않고 포근한 톤이라 피부가 환해 보이는 효과가 있어요. 색이 빠져도 예쁜 게 큰 장점인데, 밀크티에서 점점 베이지로 빠지면서 또 다른 매력이 생겨요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "밀크티베이지", "발레야쥬", "롱염색", "고명도", "트렌드컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "보라색 샴푸를 주 1회 사용하면 노란 끼를 잡아 더 예쁜 색 유지",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "블루블랙 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>검은색에 파란빛이 살짝 감도는 색이에요. 평소에는 그냥 윤기 있는 검은 머리처럼 보이는데, 햇빛 아래에서 은은한 네이비(남색) 빛이 비치는 게 매력이에요. 블리치(탈색) 없이 바로 가능한 컬러예요.</p><h3>어떤 느낌이에요?</h3><p>차분하고 시크한 느낌이에요. 한국의 전통적인 '검은 머리 아가씨' 이미지에 현대적인 세련미를 더한 거예요. 멀리서 보면 검은색, 가까이서 보면 푸른빛이 도는 신비로운 색감이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "블루블랙", "롱염색", "블리치없이", "시크한컬러", "네이비" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "윤기 스프레이를 뿌려주면 블루빛이 더 아름답게 빛나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "브릿지 하이라이트 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 전체를 염색하는 게 아니라, 앞머리 안쪽에만 포인트로 밝은 색을 넣는 기법이에요. '브릿지(다리)'라는 이름은 가르마 양쪽을 연결하듯 밝은 결이 들어간다는 뜻이에요. 머리를 넘길 때 살짝 보이는 밝은 결이 포인트예요.</p><h3>어떤 느낌이에요?</h3><p>은은하면서도 세련된 느낌이에요. 전체 염색보다 손상이 훨씬 적고, 바람이 불거나 머리를 귀 뒤로 넘길 때 살짝 보이는 밝은 결이 '아는 사람만 아는' 세련된 포인트가 돼요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "브릿지염색", "하이라이트", "포인트염색", "트렌드", "직장인염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "가르마를 바꿔가며 넘기면 하이라이트가 다르게 보여 더 재밌어요",
+                IsPublished = false
+            },
+
+            // ══════════════════════════════════
+            // ── 추가 스타일 ──
+            // ══════════════════════════════════
+
+            // ── 남성 커트 추가 ──
+            new()
+            {
+                Title = "버즈 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>바리깡(클리퍼)으로 머리 전체를 아주 짧게 밀어버리는 커트예요. 군인 머리를 떠올리기 쉽지만, 요즘은 길이와 라인에 변화를 줘서 세련되게 연출해요. '버즈(Buzz)'는 바리깡 소리에서 온 이름이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하고 남성적인 느낌이에요. 두상(머리 모양)이 예쁜 분이라면 정말 멋져 보이고, 세안이나 샤워 후 관리가 거의 필요 없어요. 최근에는 애쉬 톤 염색과 함께해서 패셔너블하게 연출하는 분도 많아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "버즈컷", "짧은머리", "남성커트", "클린룩", "바리깡컷" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "관리가 거의 필요 없어요! 두피 보습제만 발라주면 OK",
+                IsPublished = false
+            },
+
+            // ── 남성 펌 추가 ──
+            new()
+            {
+                Title = "다운펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락이 옆이나 뒤로 뜨는 걸 눌러서 자연스럽게 내려앉게 만드는 펌이에요. 보통 펌은 컬을 만드는 건데, 다운펌은 반대로 '눌러주는' 거예요. 머리카락이 뻣뻣하게 서거나 옆으로 벌어지는 분들에게 꼭 필요한 시술이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하고 정돈된 느낌이에요. 아침에 일어났을 때 머리가 폭탄처럼 터지지 않고, 자연스럽게 눌려있어서 별도 세팅 없이도 단정해 보여요. '펌 했다'는 티가 전혀 나지 않아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "다운펌", "남성펌", "옆머리뜸", "숱많은머리", "단정한스타일" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "굵은모", "뻣뻣한모", "숱많은" },
+                StylingTip = "드라이 시 위에서 아래로 눌러가며 말리면 더 깔끔하게 눌려요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "셋팅펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락에 강한 S컬(물결 모양)을 넣어서, 마치 매일 고데기로 세팅한 것 같은 스타일을 유지해주는 펌이에요. '셋팅(Setting)'이라는 이름처럼 항상 스타일링 된 상태가 유지되는 거예요.</p><h3>어떤 느낌이에요?</h3><p>화려하고 볼륨감 넘치는 느낌이에요. 가르마펌이나 쉐도우펌보다 컬이 뚜렷해서 '확실한 변화'를 원하는 분에게 적합해요. 아이돌 가수들이 무대에서 자주 하는 스타일이기도 해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "셋팅펌", "남성펌", "S컬", "볼륨펌", "아이돌헤어" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "무스를 축축한 머리에 바른 뒤 손으로 쥐어짜듯 말리면 컬이 더 살아나요",
+                IsPublished = false
+            },
+
+            // ── 남성 염색 추가 ──
+            new()
+            {
+                Title = "이너 컬러 염색",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>겉에서는 안 보이는 머리카락 안쪽에만 포인트 색을 넣는 염색이에요. 가만히 있으면 보통 검은 머리인데, 바람이 불거나 머리를 넘기면 안쪽에서 다른 색이 살짝 보여요. '숨겨진 포인트' 같은 거죠.</p><h3>어떤 느낌이에요?</h3><p>겉으로는 단정한데, 움직일 때마다 색이 살짝 보이는 센스 있는 느낌이에요. 빨강, 파랑, 보라 등 과감한 색도 안쪽이니까 부담 없이 도전할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "이너컬러", "남성염색", "포인트염색", "숨은색", "개성염색" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "머리를 귀 뒤로 넘기거나 바람에 날리면 이너 컬러가 자연스럽게 드러나요",
+                IsPublished = false
+            },
+
+            // ── 여성 단발 커트 추가 ──
+            new()
+            {
+                Title = "칼단발 (블런트 밥)",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>말 그대로 칼로 자른 듯 끝이 일자로 딱 떨어지는 단발이에요. 영어로는 '블런트 밥(Blunt Bob)'이라고 해요. 층(레이어) 없이 한 줄로 깔끔하게 자르는데, 원랭스보다 더 짧고 날카로운 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>시크하고 도시적인 느낌이에요. 턱선을 따라 떨어지는 깔끔한 라인이 강한 인상을 줘요. 모델이나 패션 에디터들이 즐겨 하는 스타일로, '내가 유행을 이끈다' 같은 자신감이 느껴지는 커트예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "칼단발", "블런트밥", "시크단발", "일자단발", "턱선단발" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "고데기로 모발 끝을 살짝 안으로 말면 부드러운 칼단발 완성",
+                IsPublished = false
+            },
+
+            // ── 여성 단발 펌 추가 ──
+            new()
+            {
+                Title = "엔드컬 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락 끝부분(엔드)에만 컬을 넣는 펌이에요. 전체를 웨이브지게 하는 게 아니라, 끝 5~10cm 정도만 안쪽으로 살짝 말아주는 거예요. 가장 부담 없고 자연스러운 펌 종류 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>단정하면서도 여성스러운 느낌이에요. 단발 끝이 안으로 살짝 말려 들어가니까 얼굴을 감싸는 효과가 있고, 전체적으로 부드러운 실루엣이 완성돼요. '예쁘다'는 소리를 가장 많이 듣는 펌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "엔드컬", "단발펌", "끝말림", "자연스러운펌", "첫펌추천" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "롤 브러시로 끝부분만 안쪽으로 감아 말리면 컬이 예쁘게 살아나요",
+                IsPublished = false
+            },
+
+            // ── 여성 미디움 커트 추가 ──
+            new()
+            {
+                Title = "쇄골 레이어드 컷",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>쇄골(목과 어깨 사이에 튀어나온 뼈) 길이에 맞춰 자르고, 얼굴 주변에 층(레이어)을 넣은 커트예요. '쇄골 기장'이라고도 부르는데, 너무 길지도 짧지도 않은 딱 좋은 길이예요.</p><h3>어떤 느낌이에요?</h3><p>여성스럽고 균형 잡힌 느낌이에요. 묶을 수도 있고 풀 수도 있는 만능 길이인 데다, 레이어가 얼굴 주변에 자연스러운 움직임을 줘서 밋밋하지 않아요. 봄~가을까지 3계절 내내 예쁜 '국민 기장'이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "쇄골컷", "레이어드컷", "미디움컷", "만능기장", "국민기장" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "앞머리 레이어를 고데기로 바깥쪽으로 살짝 틀어주면 세련미 UP",
+                IsPublished = false
+            },
+
+            // ── 여성 미디움 펌 추가 ──
+            new()
+            {
+                Title = "엘리자벳 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락 끝이 안쪽으로 부드럽게 감기는 펌이에요. 영국 여왕 엘리자베스의 우아한 헤어스타일에서 이름을 따왔어요. 끝이 자연스럽게 안으로 말리면서 얼굴을 감싸주는 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>우아하고 단정한 느낌이에요. 파마한 티가 크게 나지 않으면서도 매일 고데기로 말은 것처럼 깔끔한 라인이 나와요. 아나운서나 여배우들이 자주 하는 스타일이라 '방송인 머리'라고도 불려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "엘리자벳펌", "미디움펌", "안말림", "우아한펌", "아나운서머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이 시 롤 브러시로 안쪽 방향으로 감아주면 우아한 말림 완성",
+                IsPublished = false
+            },
+
+            // ── 여성 미디움 염색 추가 ──
+            new()
+            {
+                Title = "옴브레 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>'옴브레(Ombre)'는 프랑스어로 '그림자'라는 뜻이에요. 뿌리 쪽은 어둡게, 끝으로 갈수록 확실하게 밝아지는 그라데이션 염색이에요. 발레야쥬가 '자연스러운' 그라데이션이라면, 옴브레는 좀 더 '확실한' 색 변화가 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>트렌디하고 자유로운 느낌이에요. 뿌리와 끝의 색 차이가 뚜렷해서 시선을 끄는 스타일이에요. 머리 자체가 하나의 작품처럼 보여서 심플한 옷을 입어도 스타일리시해 보여요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "옴브레", "그라데이션염색", "미디움염색", "트렌드", "외국인스타일" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "웨이브를 넣으면 옴브레의 그라데이션이 더 입체적으로 보여요",
+                IsPublished = false
+            },
+
+            // ── 여성 롱 펌 추가 ──
+            new()
+            {
+                Title = "레이어드 물결 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리에 층(레이어드)을 넣은 뒤, 중간부터 끝까지 물결 웨이브를 넣는 펌이에요. 층이 있어서 웨이브가 더 풍성하고 입체적으로 보이는 게 특징이에요. 단순 웨이브보다 한 단계 업그레이드된 스타일이죠.</p><h3>어떤 느낌이에요?</h3><p>화려하고 볼륨감 넘치는 느낌이에요. 층 덕분에 머리카락이 겹겹이 움직여서 바람이 불면 정말 예쁘게 흩날려요. 사진 찍으면 마치 화보 같은 느낌이 나요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "레이어드펌", "물결펌", "롱펌", "볼륨웨이브", "화보스타일" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "에센스를 머리 중간~끝에 바른 뒤 디퓨저로 말리면 웨이브가 극대화돼요",
+                IsPublished = false
+            },
+
+            // ── 여성 롱 염색 추가 ──
+            new()
+            {
+                Title = "이어링 염색 (귀 뒤 포인트)",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>귀 주변의 머리카락에만 포인트로 색을 넣는 염색이에요. 이름처럼 귀걸이(이어링)를 한 것처럼 귀 뒤쪽에 밝은 색이 들어가요. 머리를 내리면 안 보이다가, 귀 뒤로 넘기면 색이 드러나는 '숨은 포인트' 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>센스 있고 개성 있는 느낌이에요. 전체 머리를 염색하지 않아도 귀 뒤에 숨어있는 색이 은근한 매력을 줘요. 핑크, 보라, 파랑 등 과감한 색도 부담 없이 도전할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "이어링염색", "포인트염색", "귀뒤염색", "숨은컬러", "직장인염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "머리를 귀 뒤로 넘기거나 하프업으로 묶으면 포인트 컬러가 드러나요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (남성 커트) ────────
+            new()
+            {
+                Title = "시저 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>가위로만 다듬어서 완성하는 가장 기본적인 남성 커트예요. 바리깡(클리퍼)을 사용하지 않고 가위로 옆머리와 뒷머리를 자연스럽게 짧게 잘라요. 한국에서 '가위 컷'이라고도 불러요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 부드러운 느낌이에요. 투블록처럼 옆을 확 밀지 않아서 '밀었다'는 티가 나지 않아요. 깔끔하면서도 너무 짧지 않은 걸 원하시는 분에게 딱 맞아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "시저컷", "가위컷", "남자기본커트", "자연스러운남자머리", "단정한머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "왁스 없이도 자연스럽게 멋져요. 살짝 왁스를 쓰면 더 깔끔한 느낌이에요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "포마드 올백 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>앞머리를 이마 위로 쭉 넘겨서 올리는 스타일이에요. '올백'이라는 이름처럼 머리를 뒤로 넘기는 거예요. 옆머리는 짧게 정리하고 윗머리를 길게 남겨서 뒤로 넘기는 구조예요.</p><h3>어떤 느낌이에요?</h3><p>남성미 넘치고 시크한 느낌이에요. 정장에 잘 어울리고, 성숙하고 세련된 이미지를 줘요. 이마를 드러내기 때문에 얼굴이 환해 보이는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "올백", "포마드", "남자올백", "리젠트컷", "시크남" },
+                RecommendedHairTypes = new() { "직모", "굵은모", "뻣뻣한모" },
+                StylingTip = "포마드나 젤을 손바닥에 펴서 앞에서 뒤로 빗어 넘기면 깔끔하게 완성돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (남성 펌) ────────
+            new()
+            {
+                Title = "볼륨 매직 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>곱슬거리거나 뜨는 머리를 자연스럽게 눌러주는 시술이에요. '매직'이라고 하면 완전히 납작하게 펴는 것을 떠올리실 수 있는데, 볼륨 매직은 뿌리 쪽에 자연스러운 볼륨은 살리면서 전체적으로 부드럽게 펴주는 거예요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽게 차분하고 깔끔한 느낌이에요. 아침마다 뜨는 머리 때문에 고생하셨다면, 시술 후에는 감고 말리기만 해도 알아서 차분하게 내려와요. 인위적으로 편 티가 나지 않는 게 포인트예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "볼륨매직", "남자볼륨매직", "남자머리펴기", "곱슬관리", "남자스트레이트" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "드라이기로 위에서 아래로 바람을 내리면서 말리면 가장 깔끔해요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (남성 염색) ────────
+            new()
+            {
+                Title = "브라운 하이라이트",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>전체를 염색하는 게 아니라, 머리카락 일부분만 밝은 브라운 색으로 포인트를 주는 거예요. '하이라이트'란 밝은 선을 군데군데 넣는 기법이에요. 검은 머리 사이사이에 갈색 라인이 자연스럽게 들어가요.</p><h3>어떤 느낌이에요?</h3><p>은은하면서도 세련된 느낌이에요. 전체 염색보다 자연스럽고, 햇빛 아래서 머리카락에 결이 보이면서 입체감이 살아요. '염색했어?' 하고 물어볼 정도로 자연스러운 변화를 줄 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "브라운하이라이트", "남자하이라이트", "자연스러운염색", "은은한남자염색", "입체감염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "왁스로 결을 살려 스타일링하면 하이라이트가 더 잘 보여요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성숏 커트) ────────
+            new()
+            {
+                Title = "빅시 컷",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>픽시(아주 짧은 숏)와 밥(단발)의 중간 길이인 커트예요. '빅시(Bixie)'라는 이름 자체가 밥(Bob) + 픽시(Pixie)를 합친 말이에요. 목 위로 올라오되, 일반 픽시보다는 좀 더 길고 볼륨감이 있어요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 쿨한 느낌이에요. 짧은 머리의 상쾌함과 단발의 여성스러움을 동시에 갖고 있어요. 최근 할리우드 스타들 사이에서도 인기 있는 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "빅시컷", "빅시", "숏밥", "픽시밥", "트렌디숏" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "뒷볼륨을 살리면서 앞머리를 살짝 귀 뒤로 넘기면 세련된 느낌이에요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성숏 펌) ────────
+            new()
+            {
+                Title = "소프트 바디 숏 펌",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>짧은 머리에 부드러운 곡선을 넣어주는 펌이에요. '바디(Body)'라는 건 큰 볼륨감을 말하는데, 꽈배기처럼 꼬는 펌이 아니라 머리카락이 자연스럽게 둥글게 감기는 느낌이에요. 숏컷인데 납작하게 붙어 보이는 게 고민이라면 딱이에요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 여성스러운 느낌이에요. 짧은 머리도 곡선이 들어가면 훨씬 화사하고 풍성해 보여요. 과하지 않은 자연스러운 웨이브라서 어디서든 잘 어울려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "숏펌", "바디펌", "소프트펌", "숏컷펌", "볼륨숏" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "직모", "숱적은" },
+                StylingTip = "무스를 손에 펴서 머리를 쥐어짜듯 잡아주면 웨이브가 더 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "핑거 웨이브 숏",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>손가락(핑거)으로 눌러 만든 것 같은 부드러운 S자 물결무늬가 들어가는 숏 펌이에요. 1920년대 클래식 영화에서 많이 보셨을 그 우아한 웨이브예요. 요즘은 이 빈티지 느낌을 현대적으로 재해석해서 많이 해요.</p><h3>어떤 느낌이에요?</h3><p>우아하고 레트로(복고풍)한 느낌이에요. 클래식하면서도 독특한 매력이 있어요. 남들과 다른 개성 있는 숏 스타일을 원한다면 눈에 확 들어오는 선택이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "핑거웨이브", "빈티지펌", "레트로펌", "클래식웨이브", "숏웨이브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "젤이나 무스를 넉넉히 바르고 빗으로 S자를 잡아주면 웨이브가 선명해져요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성숏 염색) ────────
+            new()
+            {
+                Title = "라벤더 숏 염색",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 전체를 은은한 보라색(라벤더 꽃 색깔)으로 물들이는 염색이에요. 숏컷에 라벤더 컬러를 입히면 짧은 머리가 훨씬 화사하고 눈에 띄게 돼요. 밝기에 따라 은은한 보랏빛부터 선명한 보라까지 다양해요.</p><h3>어떤 느낌이에요?</h3><p>몽환적이고 독특한 느낌이에요. 숏컷의 시크함에 라벤더의 부드러운 색감이 더해져서 '짧지만 여성스럽고 신비로운' 분위기를 만들어줘요. 피부가 밝아 보이는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "라벤더염색", "보라색머리", "숏컷염색", "라벤더컬러", "몽환적컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "컬러 샴푸(보라색)를 일주일에 1~2회 사용하면 색이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "애쉬 그레이 숏 염색",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>회색빛이 감도는 세련된 잿빛 색상이에요. '애쉬(Ash)'는 재를 뜻하는데, 노란기 없이 시원한 톤의 회색이에요. 숏컷에 이 색을 입히면 외국 모델 같은 도시적이고 모던한 느낌이 나요.</p><h3>어떤 느낌이에요?</h3><p>시크하고 도시적인 느낌이에요. 쿨톤(차가운 톤)의 대표 컬러로, 깔끔하고 모던한 이미지를 완성해줘요. 숏컷의 쿨한 느낌과 정말 잘 어울려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "애쉬그레이", "회색염색", "숏컷염색", "쿨톤컬러", "시크컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "탈색 후 염색이라 보라색 샴푸로 누런기를 잡아주면 색이 깨끗하게 유지돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성단발 커트) ────────
+            new()
+            {
+                Title = "레이어드 보브",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>단발(보브)에 층(레이어)을 넣어서 가볍고 움직이는 느낌을 준 커트예요. 일반 단발이 뭉뚝하게 일자로 잘린 거라면, 레이어드 보브는 안쪽은 짧고 바깥은 길게 층이 져 있어서 머리카락이 자연스럽게 겹쳐져요.</p><h3>어떤 느낌이에요?</h3><p>가볍고 발랄한 느낌이에요. 바람이 불면 머리카락이 자연스럽게 흩날리면서 움직임이 예쁘게 보여요. 일반 단발보다 무겁지 않고 얼굴 주변을 부드럽게 감싸줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "레이어드보브", "층단발", "가벼운단발", "레이어드단발", "움직이는단발" },
+                RecommendedHairTypes = new() { "직모", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "안쪽에서 바깥으로 드라이하면서 손으로 결을 잡아주면 자연스러운 곡선이 나와요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "커튼뱅 보브",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>가르마(가리마) 양쪽으로 앞머리가 커튼처럼 자연스럽게 갈라지는 단발이에요. '커튼뱅'이란 커튼이 양쪽으로 열리는 것처럼 앞머리가 중간 가르마를 기준으로 양옆으로 흘러내리는 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 편안한 느낌이에요. 앞머리가 이마를 살짝 가려주면서 얼굴형을 보정해주는 효과가 있어요. 딱 잘라놓은 것 같지 않고 '원래 이렇게 자란 것 같은' 자연스러움이 매력이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "커튼뱅", "커튼뱅단발", "가르마앞머리", "자연스러운앞머리", "얼굴형보정" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "롤브러시로 앞머리를 바깥쪽으로 말아 드라이하면 커튼뱅이 예쁘게 잡혀요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성단발 펌) ────────
+            new()
+            {
+                Title = "바로크 밥 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발에 풍성하고 화려한 볼륨 웨이브를 넣은 펌이에요. '바로크'라는 이름에서 알 수 있듯이 예술적이고 화려한 곡선이 특징이에요. 일반 단발 펌보다 웨이브가 크고 입체적이에요.</p><h3>어떤 느낌이에요?</h3><p>화려하고 럭셔리한 느낌이에요. 단발인데도 볼륨감이 어마어마해서 '머리숱이 정말 많다'는 느낌을 줘요. 고급스러우면서도 트렌디한 분위기를 동시에 연출할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "바로크밥", "풍성한단발", "볼륨단발펌", "화려한단발", "럭셔리펌" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "숱적은", "직모" },
+                StylingTip = "무스를 손에 넉넉히 짜서 머리를 쥐어짜듯 잡으면 볼륨이 살아나요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성단발 염색) ────────
+            new()
+            {
+                Title = "투톤 단발 염색",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 위쪽과 아래쪽을 서로 다른 두 가지 색으로 나눠 염색하는 거예요. 예를 들어 위는 어두운 갈색, 아래는 밝은 베이지처럼요. 단발은 짧기 때문에 투톤이 더 선명하게 보여서 포인트 효과가 커요.</p><h3>어떤 느낌이에요?</h3><p>개성 있고 트렌디한 느낌이에요. 한 가지 색보다 훨씬 입체적으로 보이고, 머리를 넘기거나 묶을 때마다 색이 다르게 보여서 재미있어요. 단순한 단발에 확실한 포인트를 줄 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "투톤염색", "투톤단발", "이중컬러", "단발포인트", "트렌디컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "아래쪽 밝은 부분을 귀 뒤로 넘기면 투톤이 더 잘 보여요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "와인 레드 단발 염색",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>레드 와인 색처럼 깊고 진한 붉은색 염색이에요. 밝은 빨강이 아니라 와인처럼 깊은 보르도 색상이라서 고급스럽고 우아한 느낌이에요. 실내에서는 어두운 갈색으로 보이다가 빛을 받으면 붉은 빛이 은은하게 나와요.</p><h3>어떤 느낌이에요?</h3><p>고급스럽고 따뜻한 느낌이에요. 피부를 밝아 보이게 하는 효과가 있고, 가을/겨울 시즌에 특히 잘 어울려요. 단발의 깔끔함과 와인 레드의 우아함이 만나면 정말 세련돼 보여요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "와인레드", "보르도염색", "레드단발", "고급스러운염색", "가을염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "염색 후 1주일은 뜨거운 물 대신 미지근한 물로 감으면 색 빠짐을 줄일 수 있어요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성미디움 커트) ────────
+            new()
+            {
+                Title = "허쉬 미디 컷",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>'허쉬 컷'의 미디엄 버전이에요. 얼굴 주변에 짧은 층(레이어)을 넣어서 얼굴을 감싸주는 스타일인데, 뒷머리는 어깨~쇄골 정도의 중간 길이로 유지해요. 이름처럼 '쉿(Hush)' 하고 소곤거리고 싶어지는 신비로운 분위기예요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 세련된 느낌이에요. 머리에 움직임이 있어서 미디엄 길이의 밋밋함을 없애줘요. 얼굴 양옆을 가려주기 때문에 얼굴이 작아 보이는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허쉬컷", "허쉬미디", "레이어드미디", "얼굴형보정", "미디엄레이어드" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "드라이할 때 얼굴 주변 짧은 층을 바깥으로 말아주면 페이스 라인이 예뻐요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "이태리 컷",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>이탈리안 스타일에서 영감을 받은 커트로, 상단에 층을 많이 넣어서 위는 풍성하고 아래는 가볍게 떨어지는 스타일이에요. 특징은 머리 꼭대기(크라운) 부분에 짧은 레이어가 들어가서 자연스러운 볼륨이 확 살아나요.</p><h3>어떤 느낌이에요?</h3><p>풍성하고 화려한 느낌이에요. 마치 바람이 불면 머리카락이 가볍게 날리는 것 같은 움직임이 있어요. 빈티지한 매력과 현대적인 세련됨이 공존하는 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "이태리컷", "이탈리안컷", "볼륨레이어드", "풍성한머리", "레이어드컷" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "숱적은", "직모" },
+                StylingTip = "뿌리 쪽을 들어올리며 드라이하면 이태리 컷 특유의 볼륨감이 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "젤리피쉬 컷",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>해파리(젤리피쉬)를 닮은 커트예요. 윗부분은 마치 단발처럼 짧은 보브로 자르고, 아랫부분은 긴 머리카락이 얇게 내려오는 구조예요. 위는 둥글고 아래는 길게 빠지는 모양이 딱 해파리 같아서 이런 이름이 붙었어요.</p><h3>어떤 느낌이에요?</h3><p>독특하고 트렌디한 느낌이에요. 보는 사람이 '저건 뭐야?' 하고 관심을 가질 만큼 시선을 끄는 스타일이에요. 귀엽고 발랄한 느낌과 개성이 동시에 느껴져요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "젤리피쉬컷", "해파리컷", "유니크헤어", "트렌디컷", "개성있는머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "윗부분(보브)에만 고데기로 살짝 안쪽 컬을 넣으면 해파리 실루엣이 더 선명해져요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성미디움 염색) ────────
+            new()
+            {
+                Title = "체리 브라운 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>체리(앵두) 같은 붉은 빛이 살짝 섞인 갈색이에요. 순수한 갈색에 은은한 레드 톤이 더해진 거라서, 실내에서는 따뜻한 갈색으로 보이다가 햇빛 아래에서 붉은 빛이 은은하게 비쳐요.</p><h3>어떤 느낌이에요?</h3><p>따뜻하고 생기 있는 느낌이에요. 그냥 갈색보다 훨씬 화사하고, 피부가 밝아 보이는 효과가 있어요. 너무 튀지 않으면서도 '뭔가 달라졌다'는 느낌을 주는 예쁜 컬러예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "체리브라운", "레드브라운", "따뜻한염색", "웜톤염색", "은은한레드" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "웜톤 립스틱과 함께 매치하면 통일감 있는 스타일링이 완성돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성롱 커트) ────────
+            new()
+            {
+                Title = "V컷 레이어드",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>뒤에서 봤을 때 머리카락 끝이 V자 모양으로 모이는 롱 커트예요. 양 옆에서 중간으로 갈수록 점점 길어지는 구조라서, 뒤에서 보면 알파벳 V처럼 뾰족하게 내려와요. 여기에 레이어(층)까지 더해져서 가볍고 움직이는 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>우아하고 여성스러운 느낌이에요. 긴 머리의 단점인 '무겁고 밋밋한 느낌'을 V자 실루엣과 레이어로 해결해요. 바람에 머리카락이 자연스럽게 날리면 정말 예뻐요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "V컷", "V커트", "레이어드롱", "긴머리커트", "뒤태예쁜머리" },
+                RecommendedHairTypes = new() { "직모", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "고데기로 모발 끝만 살짝 안쪽으로 말면 V라인이 더 예쁘게 정리돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성롱 펌) ────────
+            new()
+            {
+                Title = "볼륨 매직 + C컬",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 전체는 매직(스트레이트)으로 펴서 매끈하게 만들고, 모발 끝에만 C자 모양으로 안쪽 컬을 넣는 거예요. '볼륨 매직'은 뿌리의 자연스러운 볼륨을 살려주고, 끝의 'C컬'이 얼굴을 감싸주는 효과를 줘요.</p><h3>어떤 느낌이에요?</h3><p>단정하고 청순한 느낌이에요. 윤기 있게 쭉 뻗은 머리카락이 끝에서 부드럽게 안으로 말리니까 깔끔하면서도 여성스러워요. '예쁜 생머리'의 정석 같은 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "볼륨매직", "C컬", "매직펌", "생머리", "윤기머리" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "감고 나서 드라이기로 위에서 아래로 바람을 내리면 윤기나는 생머리 느낌이 나요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 (여성롱 염색) ────────
+            new()
+            {
+                Title = "체리 레드 발레야쥬",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>발레야쥬(빗으로 쓸어내리듯 염색하는 기법)로 체리 레드 색상을 입힌 거예요. 뿌리 쪽은 자연스럽게 어둡고, 중간부터 끝으로 갈수록 선명한 체리(앵두) 빨간색이 들어가요.</p><h3>어떤 느낌이에요?</h3><p>대담하고 매력적인 느낌이에요. 긴 머리에 레드 그라데이션이 들어가면 정말 눈에 확 들어와요. 그러면서도 뿌리가 자연스러워서 '잘 관리된 염색' 느낌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "체리레드", "레드발레야쥬", "빨간머리", "과감한염색", "그라데이션" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "레드 전용 컬러 샴푸를 사용하면 선명한 색감이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "블랙빈 (흑갈색) 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>검은콩(블랙빈) 색깔에서 이름을 따온 염색이에요. 순수한 검정보다는 살짝 밝고, 빛을 받으면 은은한 갈색빛이 비치는 어두운 색이에요. 탈색 없이도 가능한 컬러라서 모발 손상 걱정이 적어요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 건강한 느낌이에요. 새카만 검정이 아니라 약간의 갈색기가 있어서 피부가 밝아 보이고 부드러워 보여요. 취업 면접, 직장 등 어디서든 무난하면서도 '관리된 느낌'을 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "블랙빈", "흑갈색", "자연스러운염색", "무탈색염색", "건강한머리" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" },
+                StylingTip = "별도 관리 없이도 자연스러워요. 트리트먼트만 잘 해주면 윤기가 오래가요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (남성 커트) ────────
+            new()
+            {
+                Title = "쉐도우 페이드 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>'페이드(Fade)'란 옆머리와 뒷머리를 아래에서 위로 갈수록 점점 길어지게 그라데이션으로 깎는 기법이에요. '쉐도우 페이드'는 이 그라데이션이 그림자처럼 자연스럽게 이어져서, 밀어 올린 티가 덜 나는 부드러운 버전이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 세련된 느낌이에요. 일반 투블록이 '짧은 부분 vs 긴 부분'으로 경계가 뚜렷한 반면, 쉐도우 페이드는 경계 없이 자연스럽게 이어져서 더 고급스러워 보여요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "쉐도우페이드", "페이드컷", "그라데이션컷", "자연스러운투블록", "남자머리" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "굵은모", "뻣뻣한모" },
+                StylingTip = "윗머리에 매트 왁스를 살짝 발라 자연스럽게 올려주면 깔끔해요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "머쉬룸 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>버섯(머쉬룸) 모양처럼 둥글게 떨어지는 커트예요. 앞머리가 이마를 덮고, 전체적으로 둥근 실루엣이 특징이에요. K-pop 아이돌들이 많이 하는 스타일이라 '아이돌 머리'라고도 불려요.</p><h3>어떤 느낌이에요?</h3><p>소년 같고 귀여운 느낌이에요. 부드러운 인상을 줘서 친근하게 보여요. 동시에 트렌디하고 감각적인 이미지도 갖고 있어서 젊은 층에 인기가 많아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "머쉬룸컷", "버섯머리", "아이돌머리", "소년감성", "둥근커트" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이기로 위에서 아래로 눌러가며 말리면 둥근 실루엣이 예쁘게 나와요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (남성 펌) ────────
+            new()
+            {
+                Title = "리프 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>나뭇잎(리프)처럼 자연스럽게 흩어지는 결을 만드는 펌이에요. 곱슬곱슬하게 꼬이는 펌이 아니라, 머리카락이 살짝 구부러지면서 잎사귀가 떨어지듯 자연스럽게 흐르는 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 편안한 느낌이에요. '이게 펌이야?'라고 할 만큼 자연스러워서 일상에서 부담 없어요. 머리카락에 공기가 들어간 것 같은 가벼운 결이 포인트예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "리프펌", "자연스러운펌", "남자자연펌", "소프트펌", "내추럴웨이브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "왁스를 살짝 바르고 손가락으로 결을 흩어주면 자연스러운 리프 느낌이 나요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성숏 커트) ────────
+            new()
+            {
+                Title = "울프 숏 컷",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>늑대(울프)의 갈기처럼 윗부분은 짧고 뒤쪽 목선은 길게 늘어뜨린 커트예요. 앞은 짧은 밥(단발) 같고, 뒤는 목 아래로 살짝 길게 내려오는 구조예요. 멋진 대비감이 포인트인 개성 있는 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>개성 있고 록(Rock)스러운 느낌이에요. 엣지 있으면서도 여성스러운 매력을 동시에 갖고 있어요. 최근 레트로 트렌드와 함께 다시 인기를 끌고 있는 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "울프컷", "숏울프", "멀렛", "레트로숏", "개성헤어" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "왁스로 윗부분에 볼륨을 주고 목선 쪽은 자연스럽게 흘려주면 울프 느낌이 살아요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성단발 커트) ────────
+            new()
+            {
+                Title = "미니 보브 (턱선 단발)",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>턱선에 딱 맞는 길이로 자른 클래식한 단발이에요. '미니 보브'라는 이름답게 일반 단발보다 조금 짧아서 턱 라인을 따라가요. 끝이 일자로 깔끔하게 떨어지는 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>클래식하고 시크한 느낌이에요. 코코 샤넬이 처음 유행시킨 스타일이라 '샤넬 보브'라고도 불려요. 시대를 초월해서 항상 세련되어 보이는 디자인이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "미니보브", "턱선단발", "샤넬보브", "클래식단발", "시크단발" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "고데기로 끝을 살짝 안쪽으로 말면 단정하고 세련된 보브가 완성돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성단발 펌) ────────
+            new()
+            {
+                Title = "애플 컬 단발 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>사과(애플)처럼 통통하고 둥근 컬이 들어가는 단발 펌이에요. 머리 끝에서부터 동그랗게 안으로 말리는 큰 컬이 특징이에요. 볼 주변을 감싸는 컬이 사과처럼 둥글고 귀여운 실루엣을 만들어줘요.</p><h3>어떤 느낌이에요?</h3><p>귀엽고 사랑스러운 느낌이에요. 단발의 깔끔함에 통통한 컬의 귀여움이 더해져서 밝고 활기찬 이미지를 줘요. 나이보다 어려 보이는 효과가 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "애플컬", "애플컬펌", "둥근단발", "귀여운단발", "동안단발" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이 후 끝부분만 안으로 감아주면 애플 실루엣이 더 선명해져요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성미디움 펌) ────────
+            new()
+            {
+                Title = "태슬 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>술 장식(태슬)처럼 끝부분이 살짝 물결치듯 흔들리는 펌이에요. 전체적으로 큰 웨이브가 들어가는 게 아니라, 모발 중간~끝 부분에만 자연스러운 결이 생겨요. '살짝 감긴 듯 말 듯' 한 느낌이 핵심이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 은은한 느낌이에요. 강한 웨이브가 아니라서 일상에서 부담 없고, 바람에 살짝 흔들리는 모습이 정말 예뻐요. '원래 머릿결이 이런 건가?' 싶을 정도로 자연스러워요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "태슬펌", "자연스러운펌", "끝컬", "은은한웨이브", "물결펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "미스트를 뿌리고 손으로 가볍게 쥐었다 놓으면 결이 자연스럽게 살아나요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성미디움 염색) ────────
+            new()
+            {
+                Title = "베이지 블론드 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>노란끼를 잡은 부드러운 금발이에요. 순수한 금발(블론드)에 베이지(미색) 톤이 섞여서 차갑지 않고 따뜻하면서 부드러운 색이에요. 완전한 금발보다 한 톤 다운된 느낌이라 동양인에게도 잘 어울려요.</p><h3>어떤 느낌이에요?</h3><p>밝고 화사한 느낌이에요. 피부가 환해 보이고 전체적으로 '빛나는' 분위기를 만들어줘요. 외국인 같은 분위기를 내고 싶을 때 좋은 선택이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "베이지블론드", "금발", "블론드염색", "화사한컬러", "밝은염색" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "보라색 샴푸로 일주일에 2회 세정하면 노란끼가 잡히고 깨끗한 색이 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "코코아 브라운 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>코코아(핫초코) 색깔처럼 따뜻하고 부드러운 갈색이에요. 붉은기나 노란기 없이 깊고 진한 초콜릿 느낌의 갈색이라서 누구에게나 잘 어울리는 '만능 컬러'예요. 탈색 없이도 가능해요.</p><h3>어떤 느낌이에요?</h3><p>따뜻하고 포근한 느낌이에요. 검은 머리보다 밝아 보이지만 과하지 않아서 자연스럽고 건강해 보여요. 어떤 피부 톤에도, 어떤 상황에서도 잘 어울리는 무난하면서 예쁜 색이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "코코아브라운", "초콜릿컬러", "무난한갈색", "직장인염색", "자연스러운갈색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" },
+                StylingTip = "따로 관리 없이도 자연스러워요. 컬러 트리트먼트를 쓰면 윤기가 더 오래가요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성롱 커트) ────────
+            new()
+            {
+                Title = "원랭스 롱 컷",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>'원랭스(One-length)'란 머리카락을 같은 길이로 일자로 자르는 거예요. 층(레이어) 없이 모든 머리카락이 같은 선에서 끝나요. 뒷머리부터 앞머리까지 균일한 길이로, 가장 깔끔하고 단정한 긴 머리 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>단정하고 우아한 느낌이에요. 층이 없어서 머릿결이 매끄럽게 흐르고, 건강한 머리카락의 윤기가 잘 보여요. '관리 잘 하는 사람' 이미지를 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "원랭스", "일자롱", "단정한긴머리", "깔끔한롱헤어", "윤기머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "드라이 후 머리끝을 브러시로 가지런히 정리하면 깔끔한 원랭스 라인이 살아요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성롱 펌) ────────
+            new()
+            {
+                Title = "글램 웨이브 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>큰 S자 물결이 규칙적으로 들어가는 화려한 웨이브 펌이에요. '글램(Glam)'이란 '화려한, 매력적인'이라는 뜻으로, 빨간 카펫 위의 할리우드 스타들이 하는 그 우아한 웨이브예요.</p><h3>어떤 느낌이에요?</h3><p>화려하고 여성스러운 느낌이에요. 큰 물결이 어깨 아래로 흐르면서 볼륨감이 어마어마해요. 특별한 날 드레스와 함께하면 완벽한 조합이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "글램웨이브", "할리우드웨이브", "S컬", "화려한펌", "여신머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "40mm 고데기로 큰 컬을 잡고 헤어 오일을 발라주면 윤기 나는 글램 웨이브가 완성돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "허그 펌 (롱)",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>얼굴을 안아주듯(허그) 감싸는 부드러운 C컬이 들어가는 롱 펌이에요. 얼굴 주변 머리카락이 안쪽으로 말려서 볼과 턱선을 자연스럽게 감싸줘요. 끝에서 부드럽게 안으로 들어가는 컬이 포인트예요.</p><h3>어떤 느낌이에요?</h3><p>여성스럽고 부드러운 느낌이에요. 과하지 않은 은은한 컬이라서 어디서든 자연스럽고, 얼굴을 감싸주기 때문에 작아 보이는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허그펌", "C컬롱", "얼굴감싸는펌", "자연스러운롱펌", "소얼효과" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "드라이할 때 롤브러시로 얼굴 쪽으로 감아 말리면 허그 컬이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            // ──────── 추가 스타일 2차 (여성롱 염색) ────────
+            new()
+            {
+                Title = "그라데이션 핑크 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>뿌리 쪽은 자연스러운 어두운 색이고, 아래로 갈수록 점점 핑크(분홍색)로 변하는 염색이에요. 그라데이션(점진적 변화)이라서 갑자기 색이 바뀌는 게 아니라 자연스럽게 핑크로 이어져요.</p><h3>어떤 느낌이에요?</h3><p>로맨틱하고 판타지적인 느낌이에요. 마치 동화 속 공주님 같은 분위기를 줘요. 긴 머리에 핑크 그라데이션이 들어가면 정말 눈에 띄고, 사진 찍으면 아름답게 나와요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "그라데이션핑크", "핑크머리", "핑크염색", "로맨틱컬러", "판타지컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "핑크 컬러 샴푸를 사용하면 세탁할 때마다 빠지는 색을 보충할 수 있어요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "카키 베이지 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>군복 색(카키)과 미색(베이지)을 섞은 듯한 차분한 올리브 톤 컬러예요. 녹색기가 살짝 감도는 갈색이라고 생각하시면 돼요. 요즘 유행하는 '한국형 외국인 느낌' 컬러 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>트렌디하면서도 차분한 느낌이에요. 노란끼를 잡아주는 효과가 있어서 피부가 깨끗해 보이고, 녹색 기운이 자연스럽게 세련된 분위기를 만들어줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "카키베이지", "올리브컬러", "카키브라운", "트렌디컬러", "피부보정컬러" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "올리브 톤 계열의 옷과 매치하면 통일감 있는 스타일링이 완성돼요",
+                IsPublished = false
+            },
+            // ═══════ 3차 대량 추가 ═══════
+            // ──── 남성 커트 ────
+            new()
+            {
+                Title = "콤마 헤어 (쉼표 머리)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>앞머리가 이마 위에서 쉼표(,) 모양으로 자연스럽게 떨어지는 스타일이에요. K-pop 아이돌들이 자주 하는 스타일로, 앞머리 끝이 한쪽으로 살짝 말려 내려오는 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 소년 같은 느낌이에요. 이마를 살짝 가려주면서도 답답하지 않고, 자연스러운 멋이 있어요. 누가 봐도 '센스 있다'고 느끼는 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "콤마헤어", "쉼표머리", "남자앞머리", "아이돌머리", "센스있는머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "고데기로 앞머리 끝만 안쪽으로 살짝 말아주면 쉼표 모양이 만들어져요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "센터파트 (중간 가르마)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>머리를 정중앙에서 양쪽으로 가르는 스타일이에요. '5:5 가르마'라고도 불러요. 이마를 시원하게 드러내면서 양쪽으로 머리카락이 균형 있게 내려와요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 도시적인 느낌이에요. 이마를 드러내기 때문에 자신감 있어 보이고, 최근 남성 트렌드의 중심인 스타일이에요. 깔끔하면서도 자유로운 분위기를 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "센터파트", "중간가르마", "55가르마", "남자가르마", "도시적머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "드라이할 때 앞머리를 양쪽으로 갈라가며 말리고, 왁스로 가볍게 잡아주세요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "테이퍼 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>아래에서 위로 갈수록 머리카락이 점점 길어지도록 다듬는 클래식한 컷이에요. 페이드(그라데이션으로 깎기)와 비슷하지만, 테이퍼는 더 자연스럽고 부드러운 전환이 특징이에요. 구레나룻과 목선이 깔끔하게 정리돼요.</p><h3>어떤 느낌이에요?</h3><p>클래식하고 단정한 느낌이에요. 어떤 상황에서든 어울리는 '만능 커트'예요. 정장에도, 캐주얼에도 잘 맞아서 실패 확률이 거의 없어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "테이퍼컷", "클래식컷", "남자기본", "단정한커트", "만능커트" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "사이드를 뒤로 빗어 넘기면 클래식한 느낌, 앞으로 내리면 캐주얼한 느낌이에요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "울프 컷 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>늑대 갈기처럼 윗부분은 볼륨 있게, 목 뒤쪽은 길게 늘어뜨린 커트예요. '멀렛(Mullet)'의 현대적 버전이라고 할 수 있어요. 위는 짧고 뒤는 긴 독특한 실루엣이 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>반항적이면서도 트렌디한 느낌이에요. 스트릿 패션이나 록 감성과 찰떡이에요. 최근 다시 유행하는 레트로 트렌드의 핵심 스타일 중 하나예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "울프컷", "남자울프", "멀렛", "레트로컷", "개성머리" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "윗부분에 왁스로 볼륨을 잡고 뒷머리는 자연스럽게 흘려주세요",
+                IsPublished = false
+            },
+            // ──── 남성 펌 ────
+            new()
+            {
+                Title = "쉼표 펌 (콤마 펌)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>앞머리에 쉼표(,) 모양의 자연스러운 컬을 넣는 펌이에요. 콤마 헤어를 매일 고데기 없이도 유지할 수 있게 만드는 시술이에요. 앞머리 끝이 안쪽으로 자연스럽게 말려요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 트렌디한 느낌이에요. 마치 원래 머릿결이 이렇게 생긴 것 같은 자연스러움이 포인트예요. 스타일링 없이도 콤마 헤어가 유지돼요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "쉼표펌", "콤마펌", "앞머리펌", "남자부분펌", "자연스러운펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "드라이할 때 앞머리를 손가락에 감아 말리면 컬이 더 잘 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "아이롱 펌 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>아이롱(고데기)으로 만든 듯한 웨이브를 펌으로 고정시키는 시술이에요. 고데기로 일일이 컬을 만드는 수고 없이, 세안 후 자연건조만 해도 멋진 S자 웨이브가 유지돼요.</p><h3>어떤 느낌이에요?</h3><p>정돈된 듯하면서 자연스러운 느낌이에요. 쉐도우 펌이나 가르마 펌보다 결이 좀 더 뚜렷해서 스타일링한 느낌이 나요. 매일 고데기 한 것 같은 효과를 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "아이롱펌", "고데기펌", "남자웨이브", "S컬남자", "결있는머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "왁스를 손에 펴서 머리카락을 쥐어짜듯 잡아주면 웨이브가 선명해져요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "스핀스 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리카락을 얇게 나누어 꽈배기처럼 꼬아서 만든 잔잔한 웨이브 펌이에요. '스핀스(spins)'라는 이름처럼 빙글빙글 돌려서 만든 느낌의 텍스쳐(질감)가 생겨요.</p><h3>어떤 느낌이에요?</h3><p>외국 남자 같은 느낌이에요. 머리카락 한 올 한 올에 자연스러운 꼬임이 있어서 텍스쳐가 풍부하고 입체적이에요. 직모의 밋밋함을 완전히 탈피할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "스핀스펌", "텍스쳐펌", "꼬임펌", "외국인머리", "남자잔펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "무스를 뿌리 쪽부터 바르고 자연건조하면 텍스쳐가 잘 살아나요",
+                IsPublished = false
+            },
+            // ──── 남성 염색 ────
+            new()
+            {
+                Title = "실버 그레이 염색 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>은색에 가까운 밝은 회색 염색이에요. 흰머리처럼 보일 수 있지만, 전혀 다른 느낌이에요. 깨끗하고 차가운 톤의 실버 색이 세련되고 미래지향적인 분위기를 줘요.</p><h3>어떤 느낌이에요?</h3><p>파격적이고 시크한 느낌이에요. 게임이나 애니메이션 캐릭터 같은 판타지적 매력도 있고, 패션쪽에서는 하이엔드한 느낌으로 통해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "실버그레이", "은색머리", "남자은발", "파격염색", "시크컬러" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "보라색 샴푸로 세정하면 노란끼를 잡아 깨끗한 실버가 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "매트 카키 브라운 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>광택 없이 차분한(매트한) 카키+갈색 톤의 염색이에요. 올리브 녹색이 살짝 감도는 갈색이라서 독특하면서도 자연스러워요. 탈색 없이도 가능한 경우가 많아요.</p><h3>어떤 느낌이에요?</h3><p>트렌디하면서 차분한 느낌이에요. 일반 갈색보다 세련되고, 피부의 노란끼를 잡아줘서 피부가 깨끗해 보이는 효과가 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "카키브라운", "매트염색", "남자자연염색", "올리브컬러", "무탈색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "왁스로 결을 살리면 카키 톤이 더 잘 보여요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "블론드 금발 (남성)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>밝은 금색으로 전체를 밝게 탈색/염색하는 거예요. 동양인의 검은 머리에서 완전 금발로 바꾸면 이미지가 확 달라져요. 손흥민 선수나 K-pop 스타들이 자주 시도하는 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>확실한 존재감과 파격적인 느낌이에요. 어디를 가든 눈에 띄고, 젊고 에너지 넘치는 이미지를 줘요. 개성과 자신감을 표현하기에 최고예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "금발", "남자블론드", "밝은머리", "탈색", "파격변신" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "뿌리가 올라오면 정기적으로 리터치하고, 보라색 샴푸로 노란끼를 관리하세요",
+                IsPublished = false
+            },
+            // ──── 여성숏 커트 ────
+            new()
+            {
+                Title = "보이쉬 크롭 컷",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>남성 크롭 컷에서 영감을 받은 아주 짧은 여성 숏컷이에요. 이마 위 앞머리를 짧게 내리고, 옆과 뒤를 바짝 정리한 스타일이에요. 말 그대로 '보이쉬(소년 같은)' 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>쿨하고 자유로운 느낌이에요. 긴 머리의 부담에서 완전히 해방된 상쾌함이 있어요. 짧은 머리만이 줄 수 있는 얼굴 라인의 아름다움을 극대화해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "보이쉬컷", "크롭숏", "초숏", "쿨한숏", "여자크롭" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "왁스를 살짝 바르고 손으로 흩어주면 자연스러운 보이쉬 느낌이 나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "투블록 여성 숏",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>남성 투블록을 여성 버전으로 재해석한 스타일이에요. 귀 밑이나 뒷머리 아래쪽을 짧게 밀고 윗부분은 길게 남겨서, 머리를 내리면 안 보이지만 올리면 숨겨진 짧은 부분이 드러나요.</p><h3>어떤 느낌이에요?</h3><p>개성 있으면서 실용적인 느낌이에요. 더운 여름에는 목이 시원하고, 머리를 내리면 보통 숏컷처럼 보여서 TPO에 맞게 활용할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "투블록여성", "숏투블록", "숨은포인트", "여자투블록", "시원한숏" },
+                RecommendedHairTypes = new() { "숱많은", "굵은모", "뻣뻣한모", "직모" },
+                StylingTip = "윗머리를 한쪽으로 넘기면 투블록 부분이 살짝 보여서 포인트가 돼요",
+                IsPublished = false
+            },
+            // ──── 여성숏 펌 ────
+            new()
+            {
+                Title = "볼륨 매직 숏",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>짧은 머리의 곱슬이나 뜨는 부분을 자연스럽게 눌러주는 볼륨 매직이에요. 숏컷인데 머리가 뜨거나 퍼져서 고민이라면, 뿌리 볼륨은 살리면서 전체적으로 차분하게 잡아줘요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하고 정돈된 느낌이에요. 숏컷이 예쁘려면 실루엣이 중요한데, 볼륨 매직으로 두상에 딱 맞는 깔끔한 라인을 만들어줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "숏볼륨매직", "숏매직", "곱슬숏", "차분한숏", "깔끔한숏" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "감고 나서 드라이기로 두상을 따라 위에서 아래로 말리면 깔끔해요",
+                IsPublished = false
+            },
+            // ──── 여성숏 염색 ────
+            new()
+            {
+                Title = "오렌지 브라운 숏 염색",
+                Category = StyleCategory.여성숏,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>주황색과 갈색 사이의 따뜻한 컬러예요. 완전 오렌지가 아니라 갈색에 주황빛이 감도는 색이라서 화사하면서도 부담이 없어요. 숏컷에 입히면 얼굴이 확 환해져요.</p><h3>어떤 느낌이에요?</h3><p>활기차고 건강한 느낌이에요. 따뜻한 톤이라 피부가 생기 있어 보이고, 숏컷의 쿨한 느낌에 따뜻함을 더해줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "오렌지브라운", "숏컷염색", "따뜻한컬러", "웜톤염색", "화사한숏" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모" },
+                StylingTip = "웜톤 계열 립과 매치하면 통일감 있는 스타일링이 돼요",
+                IsPublished = false
+            },
+            // ──── 여성단발 커트 ────
+            new()
+            {
+                Title = "A라인 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>뒤에서 앞으로 갈수록 점점 길어지는 단발이에요. 뒤는 짧고 앞은 긴 구조라서 옆에서 보면 알파벳 A처럼 사선이 생겨요. 턱선을 따라 앞쪽이 길게 내려오는 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 도시적인 느낌이에요. 일반 일자 단발보다 역동적이고 스타일리시해 보여요. 얼굴을 갸름하게 보이게 하는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "A라인단발", "앞긴단발", "사선단발", "갸름해보이는", "세련된단발" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "앞머리를 안쪽으로 살짝 말아 드라이하면 A라인이 더 예뻐요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "시스루뱅 보브",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>'시스루(See-through)'는 '비쳐 보이는'이라는 뜻이에요. 앞머리를 얇고 가볍게 자르면 이마가 살짝 비쳐 보여요. 이런 앞머리와 단발을 조합한 스타일이에요. 두꺼운 앞머리와 달리 가볍고 여리여리해요.</p><h3>어떤 느낌이에요?</h3><p>여리여리하고 청순한 느낌이에요. 이마가 살짝 비치면서 답답하지 않고, 부드러운 인상을 줘요. 한국 여배우들이 자주 하는 '국민 앞머리' 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "시스루뱅", "시스루앞머리", "얇은앞머리", "여리여리", "청순단발" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "롤브러시로 앞머리를 말아 드라이하면 시스루가 예쁘게 갈라져요",
+                IsPublished = false
+            },
+            // ──── 여성단발 펌 ────
+            new()
+            {
+                Title = "C컬 단발 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발 끝에 알파벳 C자 모양으로 안쪽으로 부드럽게 말리는 펌이에요. S컬처럼 물결이 여러 번 생기는 게 아니라, 끝에서 한 번만 부드럽게 감겨요. 가장 기본적이고 실패 없는 단발 펌이에요.</p><h3>어떤 느낌이에요?</h3><p>단정하고 여성스러운 느낌이에요. 단발이 바깥으로 뒤집어지는 것(일명 '치킨 머리')을 방지하고, 항상 안쪽으로 말리게 해줘서 깔끔해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "C컬", "C컬단발", "안쪽컬", "기본단발펌", "뒤집힘방지" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "드라이할 때 롤브러시로 끝만 안쪽으로 감아주면 C컬이 더 오래가요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "물결 단발 펌",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발에 잔잔한 물결(웨이브)을 넣어주는 펌이에요. C컬이 끝만 한 번 말리는 거라면, 물결 펌은 중간부터 끝까지 여러 번 출렁이는 웨이브가 들어가요.</p><h3>어떤 느낌이에요?</h3><p>자유롭고 자연스러운 느낌이에요. 마치 바닷바람에 머리가 살랑살랑 움직이는 것 같은 분위기예요. 펌을 했지만 '인위적'이라는 느낌이 전혀 없어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "물결단발", "웨이브단발", "잔웨이브", "자연스러운펌", "살랑단발" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "에센스를 바르고 디퓨저(바람분산 헤드)로 말리면 물결이 선명하게 살아나요",
+                IsPublished = false
+            },
+            // ──── 여성단발 염색 ────
+            new()
+            {
+                Title = "허니 브라운 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>꿀(허니) 색깔처럼 따뜻하고 황금빛이 도는 갈색이에요. 밝은 갈색 계열인데 노란기가 예쁘게 섞여서 빛을 받으면 반짝반짝 빛나요.</p><h3>어떤 느낌이에요?</h3><p>화사하고 건강한 느낌이에요. 단발에 허니 브라운을 입히면 피부가 환해 보이고 활기찬 이미지를 줘요. 봄/여름에 특히 잘 어울리는 컬러예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허니브라운", "꿀갈색", "화사한단발", "웜톤컬러", "봄염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "골드 톤 악세서리와 함께 매치하면 더 화사해 보여요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "블루 블랙 단발",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>검은색에 파란빛이 감도는 신비한 색이에요. 실내에서는 그냥 검은 머리처럼 보이지만, 빛을 받으면 은은한 파란 광택이 나요. 까마귀 깃털 색깔이라고 생각하시면 돼요.</p><h3>어떤 느낌이에요?</h3><p>신비롭고 시크한 느낌이에요. 순수 검정보다 훨씬 고급스럽고, 머릿결이 건강해 보이는 효과도 있어요. 파란 광택이 머리카락에 윤기를 더해줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "블루블랙", "검정염색", "파란광택", "신비로운컬러", "쿨톤염색" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬", "굵은모", "뻣뻣한모" },
+                StylingTip = "윤기 에센스를 발라주면 블루 광택이 더 잘 보여요",
+                IsPublished = false
+            },
+            // ──── 여성미디움 커트 ────
+            new()
+            {
+                Title = "보헤미안 레이어드",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>자유로운 보헤미안(집시) 느낌의 층(레이어드) 커트예요. 레이어가 많이 들어가서 머리카락이 바람에 날리는 것처럼 자유롭게 움직여요. 정돈된 느낌보다는 '있는 그대로' 자연스러운 게 매력이에요.</p><h3>어떤 느낌이에요?</h3><p>자유롭고 예술적인 느낌이에요. 이 스타일은 '완벽하게 정돈된 아름다움'이 아니라 '자연스러운 아름다움'을 추구해요. 바람이 불면 머리카락이 아름답게 흩날려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "보헤미안", "레이어드컷", "자유로운머리", "히피감성", "바람에날리는" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "솔트 스프레이를 뿌리면 바닷가 느낌의 자연스러운 텍스쳐가 나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "시스루뱅 미디엄",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>미디엄(쇄골) 길이에 시스루(비치는) 앞머리를 더한 스타일이에요. 앞머리가 얇아서 이마가 살짝 비치고, 전체 길이는 쇄골 근처라서 묶을 수도 있어요. '팔방미인' 같은 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>청순하면서도 실용적인 느낌이에요. 앞머리가 있어서 어려 보이고, 길이가 적당해서 묶거나 풀거나 다양하게 활용할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "시스루뱅미디", "시스루앞머리", "쇄골컷", "동안머리", "팔방미인" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "앞머리를 롤브러시로 안쪽으로 말아 드라이하면 시스루가 예쁘게 갈라져요",
+                IsPublished = false
+            },
+            // ──── 여성미디움 펌 ────
+            new()
+            {
+                Title = "디지털 펌 (미디엄)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>디지털 기기(열)를 이용해 만드는 펌이에요. 일반 콜드펌(약물만)과 달리 열을 가해서 더 뚜렷하고 탄력 있는 컬을 만들어요. 마른 상태에서도 웨이브가 잘 살아있는 게 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>정돈되고 뚜렷한 느낌이에요. 콜드펌보다 컬이 선명해서 '확실히 펌 한' 느낌이 나요. 머리를 말린 상태에서 가장 예뻐요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "디지털펌", "열펌", "뚜렷한컬", "탄력웨이브", "미디엄펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이기로 80% 말린 후 에센스를 바르고 디퓨저로 마무리하면 컬이 예뻐요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "S컬 미디엄 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>알파벳 S자 모양의 물결이 반복되는 미디엄 펌이에요. C컬이 한 번 감기는 거라면, S컬은 안-밖-안으로 여러 번 출렁여요. 가장 인기 있는 여성 펌 스타일 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>여성스럽고 화사한 느낌이에요. 물결처럼 출렁이는 웨이브가 볼륨감을 주면서 얼굴을 부드럽게 감싸줘요. '제대로 펌 한' 느낌을 주는 스타일이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "S컬", "S컬펌", "물결펌", "화사한펌", "볼륨펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "무스를 바른 후 머리를 쥐어짜듯 잡아주면 S컬이 선명하게 살아나요",
+                IsPublished = false
+            },
+            // ──── 여성미디움 염색 ────
+            new()
+            {
+                Title = "핑크 브라운 미디엄",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>갈색에 핑크(분홍) 기운이 살짝 감도는 컬러예요. 순수한 핑크가 아니라 갈색이 베이스라서 은은한 분홍빛이에요. 실내에서는 갈색, 햇빛에서는 핑크빛이 비쳐요.</p><h3>어떤 느낌이에요?</h3><p>로맨틱하고 사랑스러운 느낌이에요. 피부가 핑크빛으로 밝아 보이는 효과가 있고, 여성스러운 분위기를 확 높여줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "핑크브라운", "로맨틱컬러", "핑크빛갈색", "쿨톤염색", "사랑스러운컬러" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모" },
+                StylingTip = "핑크 계열 컬러 트리트먼트를 사용하면 색이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "하이라이트 미디엄 염색",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>전체 염색이 아니라 머리카락 중 일부만 밝게 염색해서 입체감을 주는 기법이에요. 어두운 베이스 위에 밝은 선이 군데군데 들어가서 머리카락에 '결'이 보여요.</p><h3>어떤 느낌이에요?</h3><p>세련되고 입체적인 느낌이에요. 같은 갈색이라도 하이라이트가 있으면 훨씬 풍성하고 고급스러워 보여요. 외국 모델들의 머리에서 자주 볼 수 있는 기법이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "하이라이트", "입체감염색", "부분염색", "결있는염색", "고급염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "고데기로 웨이브를 잡으면 하이라이트의 밝은 부분이 더 잘 보여요",
+                IsPublished = false
+            },
+            // ──── 여성롱 커트 ────
+            new()
+            {
+                Title = "롱 울프 컷",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리에 울프(늑대) 컷을 적용한 거예요. 얼굴 주변과 윗부분에 짧은 레이어가 많이 들어가고, 아래로 갈수록 길게 빠지는 구조예요. 숏 울프보다 길어서 다양한 스타일링이 가능해요.</p><h3>어떤 느낌이에요?</h3><p>자유롭고 록시크(Rock-chic)한 느낌이에요. 층이 많아서 머리카락이 바람에 자유롭게 움직이고, 엣지 있으면서도 여성스러운 매력을 줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "롱울프", "울프컷롱", "레이어드롱", "록시크", "자유로운긴머리" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "숱많은" },
+                StylingTip = "얼굴 주변 짧은 층에 고데기로 바깥 컬을 넣으면 울프 느낌이 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "U컷 레이어드",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>뒤에서 봤을 때 머리카락 끝이 U자 모양의 부드러운 곡선을 그리는 롱 커트예요. V컷이 뾰족하게 모이는 거라면, U컷은 둥글게 곡선을 이루어요. 레이어(층)가 들어가서 가벼운 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 자연스러운 느낌이에요. V컷보다 더 부드럽고 여성스러운 실루엣이에요. 긴 머리의 클래식한 아름다움을 가장 잘 표현하는 커트 중 하나예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "U컷", "U커트", "둥근롱", "부드러운롱", "자연스러운긴머리" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "끝을 롤브러시로 안쪽으로 가볍게 말면 U라인이 더 부드러워요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "시스루뱅 롱",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리에 얇은 시스루(비치는) 앞머리를 더한 스타일이에요. 한국 여자 아이돌, 여배우들이 가장 많이 하는 조합 중 하나예요. 앞머리가 이마를 살짝 가려주면서 롱 헤어의 여성스러움을 극대화해요.</p><h3>어떤 느낌이에요?</h3><p>청순하고 여성스러운 느낌이에요. 한국적 아름다움의 대표 스타일이라 할 수 있어요. 어려 보이는 효과가 있고, 누구에게나 잘 어울려요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "시스루뱅롱", "롱시스루", "여신머리", "청순머리", "한국미인" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "앞머리를 말아 드라이하고 끝에 에센스로 윤기를 줘요",
+                IsPublished = false
+            },
+            // ──── 여성롱 펌 ────
+            new()
+            {
+                Title = "디지털 펌 (롱)",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>열을 이용해서 긴 머리에 탄력 있는 큰 웨이브를 만드는 펌이에요. 콜드펌보다 컬이 오래가고, 마른 상태에서 웨이브가 더 예쁘게 보여요. 긴 머리에 가장 인기 있는 펌 종류 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>화려하고 볼륨감 넘치는 느낌이에요. 긴 머리카락이 큰 물결로 출렁이면서 풍성한 볼륨을 만들어요. '여신 웨이브'라는 별명이 있을 정도로 여성스러워요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "디지털펌", "여신웨이브", "열펌롱", "탄력펌", "볼륨롱" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "에센스를 바르고 디퓨저로 말리면 탄력 있는 컬이 최대한 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "워터 웨이브 펌",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>물결(워터)처럼 자연스럽고 느슨한 웨이브를 만드는 펌이에요. 콜드펌의 한 종류로, 젖은 상태에서 웨이브가 가장 예쁘게 보여요. 마치 수영 후 자연건조한 것 같은 '웨트 룩(wet look)'이 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 이국적인 느낌이에요. 해변에서 바닷물에 젖은 머리처럼 자유롭고 섹시한 분위기를 줘요. 꾸미지 않은 듯한 아름다움이 매력이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "워터웨이브", "물결펌", "웨트룩", "자연스러운펌", "비치웨이브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "젤이나 무스를 바르고 자연건조하면 웨트한 물결 느낌이 최대로 살아나요",
+                IsPublished = false
+            },
+            // ──── 여성롱 염색 ────
+            new()
+            {
+                Title = "섀도우 루트 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>'섀도우 루트(Shadow Root)'란 뿌리(Root) 쪽을 일부러 어둡게 남겨두는 염색 기법이에요. 뿌리는 어둡고 중간~끝으로 갈수록 점점 밝아져요. 뿌리가 자라도 티가 잘 안 나서 유지가 쉬워요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 세련된 느낌이에요. 뿌리부터 끝까지 같은 색인 것보다 훨씬 입체적이고 고급스러워 보여요. '관리 잘 된 염색'의 정석이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "섀도우루트", "뿌리염색", "그라데이션", "유지좋은염색", "고급염색" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "뿌리가 자라도 자연스러워서 특별한 관리가 필요 없어요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "허니 블론드 롱",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>꿀 색깔처럼 따뜻한 황금빛 금발이에요. 순수한 금발(플래티넘)보다 따뜻하고 부드러운 톤이라서 동양인에게도 비교적 잘 어울려요. 긴 머리에 입히면 마치 햇빛에 반짝이는 것 같아요.</p><h3>어떤 느낌이에요?</h3><p>화사하고 글래머러스한 느낌이에요. 긴 머리가 허니 블론드로 빛나면 어딜 가든 시선을 끌어요. 봄/여름에 특히 빛나는 컬러예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "허니블론드", "금발롱", "황금빛머리", "웜블론드", "화사한롱" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "보라색 샴푸로 노란끼를 잡고, 열보호제를 꼭 사용해 손상을 방지하세요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "투톤 롱 염색",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.염색,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리를 위아래 두 가지 색으로 나눠 염색하는 거예요. 위는 어두운 색, 아래는 밝은 색이 일반적이에요. 긴 머리라서 두 색의 대비가 더 크고 역동적으로 보여요.</p><h3>어떤 느낌이에요?</h3><p>대담하고 아티스틱한 느낌이에요. 머리를 묶거나 땋으면 두 색이 섞여서 또 다른 패턴이 만들어져요. 다양한 스타일링을 즐길 수 있는 재미있는 컬러예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "투톤롱", "이중컬러", "대비염색", "아티스틱", "개성염색" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬" },
+                StylingTip = "땋기 머리(브레이드)를 하면 두 색이 섞여서 정말 예뻐요",
+                IsPublished = false
+            },
+            // ──── 빠진 인기 스타일 추가 ────
+            new()
+            {
+                Title = "가일 펌",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>중간 굵기의 롤로 만든 자연스러운 웨이브 펌이에요. 이름의 유래는 '가일(Gayle)'이라는 미용 도구 브랜드에서 왔어요. 고데기로 말아놓은 것 같은 자연스럽고 탄력 있는 S자 물결이 특징이에요. 요즘 한국에서 가장 인기 있는 여성 펌 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>세련되면서도 자연스러운 느낌이에요. 너무 과하지도, 너무 약하지도 않은 딱 좋은 웨이브예요. '매일 고데기로 말아 놓은 것 같은 완벽한 컬'이 스타일링 없이도 유지돼요. 여성스러우면서 일상에서 부담 없어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "가일펌", "가일웨이브", "인기펌", "자연스러운웨이브", "고데기펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "에센스를 바르고 손으로 컬을 감아 쥐었다 놓으면 웨이브가 더 선명해져요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "가일 펌 (롱)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리에 가일 펌을 적용한 버전이에요. 미디엄 가일 펌과 같은 원리로, 중간 굵기 롤을 사용해 탄력 있는 S자 웨이브를 만들어요. 긴 머리라서 웨이브가 더 길게 이어져 풍성하고 화려한 느낌이에요.</p><h3>어떤 느낌이에요?</h3><p>여성스럽고 풍성한 느낌이에요. 긴 머리카락이 큰 물결로 출렁이면서 볼륨감이 대단해요. 고데기로 정성껏 말아놓은 것 같은 완성도 높은 웨이브가 매일 유지돼요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "가일펌롱", "롱가일", "풍성한롱펌", "롱웨이브", "가일웨이브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "디퓨저로 말리면 컬이 더 탄력 있게 살아나고, 에센스로 윤기를 더하세요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "댄디 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>'댄디(Dandy)'란 '멋쟁이'라는 뜻이에요. 옆머리와 뒷머리를 짧게 정리하고, 윗머리를 한쪽으로 자연스럽게 넘기는 남성 기본 커트예요. 가르마를 7:3이나 8:2로 넣어서 단정하게 넘기는 스타일이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하고 신사적인 느낌이에요. 한국 직장인, 공무원, 면접 준비생이 가장 많이 하는 스타일이에요. 어디서든 호감을 주고, 나이에 상관없이 잘 어울려요. '가장 무난하면서 가장 깔끔한 남자 머리'예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "댄디컷", "남자기본", "직장인머리", "깔끔한커트", "73가르마" },
+                RecommendedHairTypes = new() { "직모", "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모" },
+                StylingTip = "왁스를 소량 잡아 가르마 방향으로 빗어 넘기면 깔끔한 댄디 스타일 완성이에요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "시스루 댄디 컷",
+                Category = StyleCategory.남성,
+                Service = ServiceType.커트,
+                Description = "<h3>쉽게 말하면?</h3><p>기본 댄디 컷에 '시스루(See-through)' 앞머리를 더한 스타일이에요. 일반 댄디 컷은 앞머리를 옆으로 넘기는데, 시스루 댄디는 앞머리를 얇게 내려서 이마가 살짝 비쳐 보여요. 댄디의 단정함에 부드러운 느낌이 더해져요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 다정한 느낌이에요. 기존 댄디 컷이 '딱딱한 직장인' 느낌이라면, 시스루 댄디는 '부드러운 옆집 오빠' 느낌이에요. 이마를 살짝 가려줘서 어려 보이는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "시스루댄디", "시스루남자", "부드러운댄디", "남자시스루", "소프트댄디" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모" },
+                StylingTip = "앞머리를 드라이기로 아래로 눌러 말리고, 끝만 살짝 왁스로 잡으면 자연스러운 시스루가 돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "아이롱 펌 (여성 미디엄)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>고데기(아이롱)로 말아놓은 것 같은 깔끔한 컬을 펌으로 고정시키는 시술이에요. 열을 이용해 만드는 펌이라 마른 상태에서 컬이 가장 예쁘게 살아나요. 가일 펌과 비슷하지만, 아이롱 펌은 좀 더 정돈되고 균일한 컬이 특징이에요.</p><h3>어떤 느낌이에요?</h3><p>정돈되고 세련된 느낌이에요. 마치 미용실에서 방금 고데기로 완벽하게 말아놓은 것 같은 깔끔한 웨이브가 매일 유지돼요. 자연스러움보다 '완성된 느낌'을 원한다면 딱이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "아이롱펌", "여성아이롱", "고데기펌", "정돈된웨이브", "열펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이 후 에센스를 바르고 손가락에 감아 컬을 정리하면 깔끔해져요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "아이롱 펌 (여성 롱)",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리에 고데기(아이롱)로 만든 듯한 균일한 웨이브를 펌으로 고정시키는 시술이에요. 긴 머리에 적용하면 큰 물결이 길게 이어져서 정말 화려하고 풍성해 보여요.</p><h3>어떤 느낌이에요?</h3><p>화려하고 글래머러스한 느낌이에요. '오늘 고데기 했어?'라는 질문을 매일 받을 정도로 완성도 높은 웨이브가 유지돼요. 특별한 날이 아니어도 매일 특별해 보여요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "아이롱펌롱", "롱아이롱", "고데기펌롱", "화려한롱펌", "정돈된웨이브" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "에센스를 넉넉히 바르고 디퓨저로 말리면 탄력 있는 컬이 하루 종일 유지돼요",
+                IsPublished = false
+            },
+            // ──── 기본 인기 스타일 보충 ────
+            new()
+            {
+                Title = "뿌리 펌",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>머리 뿌리(두피 근처) 부분에만 볼륨을 넣는 부분 펌이에요. 전체 머리에 웨이브를 넣는 게 아니라, 머리가 시작되는 뿌리 쪽만 살짝 들어올려서 자연스러운 볼륨을 만들어요. 한국 미용실에서 가장 많이 하는 시술 중 하나예요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 풍성한 느낌이에요. '머리숱이 많아 보이는' 효과가 있고, 머리 꼭대기가 납작하게 눌려보이는 고민을 해결해줘요. 웨이브는 없이 볼륨만 살리는 거라 어떤 스타일과도 조합할 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "뿌리펌", "볼륨뿌리", "정수리볼륨", "뿌리볼륨펌", "가르마볼륨" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "드라이할 때 뿌리를 반대 방향으로 들어올리며 말리면 볼륨이 더 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "매직 스트레이트",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>곱슬머리나 웨이브를 완전히 펴서 매끄러운 생머리(직모)로 만드는 시술이에요. '매직'이라고도 불러요. 곱슬이 심한 분도 거울 같은 윤기 나는 쭉 뻗은 생머리로 바꿀 수 있어요.</p><h3>어떤 느낌이에요?</h3><p>매끄럽고 청순한 느낌이에요. 윤기 있는 긴 생머리는 동양적 아름다움의 상징이에요. 비 오는 날에도 푸석거리지 않고 매끈하게 유지돼요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "매직스트레이트", "매직", "생머리", "곱슬펴기", "스트레이트" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "시술 후 2~3일은 머리를 묶거나 접지 마세요. 드라이기로 위에서 아래로 말려주면 끝!",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "셋팅 펌 (여성 미디엄)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>얼굴 주변과 전체적으로 자연스러운 결을 잡아주는 기본 펌이에요. '셋팅(Setting)'이라는 이름처럼 머리카락의 기본 틀을 잡아주는 시술이에요. 스타일링 없이도 기본적인 볼륨과 결이 유지돼요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 편한 느낌이에요. 강한 웨이브가 아니라 은은하게 결이 잡혀서 '원래 이런 머릿결인가?' 싶을 정도예요. 가장 무난하고 실패 없는 여성 펌이에요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "셋팅펌", "기본펌", "자연스러운펌", "여자셋팅", "무난한펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "반곱슬", "곱슬", "숱적은" },
+                StylingTip = "무스를 바르고 자연건조하면 은은한 결이 예쁘게 살아나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "볼륨 매직 (여성 미디엄)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>뿌리의 볼륨은 살리면서 전체적으로 부드럽게 펴주는 시술이에요. 일반 매직(스트레이트)이 완전히 납작하게 펴는 거라면, 볼륨 매직은 자연스러운 뿌리 볼륨을 유지하면서 매끄럽게 만들어요. 가장 자연스러운 '생머리 시술'이에요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 깔끔한 느낌이에요. 인위적으로 편 티가 나지 않고, '원래 생머리인 사람'처럼 보여요. 아침에 감고 말리기만 해도 차분하게 내려와요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "볼륨매직", "여성볼매", "자연스러운생머리", "뿌리볼륨", "차분한머리" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "드라이기를 위에서 아래로 빗으며 말리면 가장 매끄러운 결이 나와요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "투펌 (투블록 + 펌)",
+                Category = StyleCategory.남성,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>투블록 커트에 펌을 더한 스타일이에요. '투펌'이라는 이름 자체가 '투블록 + 펌'의 줄임말이에요. 옆머리와 뒷머리는 투블록으로 짧게, 윗머리에는 자연스러운 웨이브나 볼륨을 넣어요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 스타일리시한 느낌이에요. 투블록만 하면 밋밋할 수 있는데, 위에 펌이 더해지면서 입체감과 움직임이 생겨요. 한국 남성들이 가장 많이 하는 조합 중 하나예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "투펌", "투블록펌", "남자인기펌", "투블록웨이브", "기본남자펌" },
+                RecommendedHairTypes = new() { "직모", "가는모", "부드러운모", "숱적은" },
+                StylingTip = "왁스를 뿌리부터 바르고 손가락으로 흩어주면 자연스러운 투펌 느낌이 나요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "매직 스트레이트 (단발)",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발에 매직 스트레이트를 적용해서 반듯하고 매끈한 직모 단발을 만드는 시술이에요. 곱슬기가 있는 분이 깔끔한 단발을 하려면 거의 필수인 시술이에요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하고 모던한 느낌이에요. 한 올 한 올이 반듯하게 떨어지는 단발은 정말 세련돼 보여요. '칼단발'이나 '블런트 밥'의 깔끔함을 극대화시켜줘요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "단발매직", "매직단발", "깔끔한단발", "직모단발", "반듯한단발" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "시술 후 2~3일은 묶지 말고, 드라이는 위에서 아래로 자연스럽게 해주세요",
+                IsPublished = false
+            },
+            // ──── 매직류 보충 ────
+            new()
+            {
+                Title = "볼륨 매직 (여성 롱)",
+                Category = StyleCategory.여성롱,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>긴 머리의 곱슬기를 잡으면서 뿌리 볼륨은 살리는 시술이에요. 볼륨 매직 + C컬과 달리, 끝에 컬을 넣지 않고 전체적으로 자연스럽게 펴줘요. '원래 생머리인 사람'처럼 보이는 게 목표예요.</p><h3>어떤 느낌이에요?</h3><p>자연스럽고 건강한 느낌이에요. 뿌리가 살아있어서 매직처럼 납작하지 않고, 그렇다고 곱슬기가 나오지도 않는 딱 중간의 완벽한 생머리예요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "볼륨매직롱", "볼매롱", "자연생머리", "긴머리매직", "뿌리볼륨" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "빗으로 위에서 아래로 쭉 빗어가며 드라이하면 매끄러운 생머리가 완성돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "볼륨 매직 (단발)",
+                Category = StyleCategory.여성단발,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>단발의 곱슬기를 잡으면서 뿌리 볼륨은 유지하는 볼륨 매직이에요. 단발은 길이가 짧아서 곱슬기가 더 잘 드러나는데, 볼륨 매직으로 차분하게 잡아주면 깔끔한 단발 라인이 살아나요.</p><h3>어떤 느낌이에요?</h3><p>깔끔하면서도 자연스러운 느낌이에요. 단발인데 뿌리가 살아있어서 납작하지 않고, 끝이 자연스럽게 안으로 들어가요. 매일 아침 고데기 없이도 단정해요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "단발볼매", "볼륨매직단발", "단발곱슬", "깔끔한단발", "차분한단발" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "롤브러시로 끝만 살짝 안쪽으로 말아 드라이하면 단발 라인이 예뻐요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "매직 셋팅 (매직 + 끝 셋팅)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>매직(스트레이트)으로 전체를 매끈하게 펴고, 끝 부분에만 셋팅 펌으로 자연스러운 결을 넣는 시술이에요. 볼륨 매직 + C컬과 비슷하지만, 셋팅이 들어가서 좀 더 자연스러운 S자 결이 생겨요.</p><h3>어떤 느낌이에요?</h3><p>매끈하면서도 끝에 살아있는 느낌이에요. 뿌리~중간까지는 쭉 펴져서 깔끔하고, 끝에서 부드러운 물결이 있어서 밋밋하지 않아요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "매직셋팅", "매직+셋팅", "스트레이트셋팅", "끝결", "하이브리드펌" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "숱많은", "굵은모", "뻣뻣한모" },
+                StylingTip = "윗부분은 빗으로 매끄럽게, 끝부분은 손가락으로 컬을 잡아주세요",
+                IsPublished = false
+            },
+            // ──── 손상모/클리닉 시술 ────
+            new()
+            {
+                Title = "케라틴 트리트먼트",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>케라틴(머리카락의 주성분인 단백질)을 머리에 직접 보충해주는 시술이에요. 펌이나 염색으로 손상된 머리카락에 영양을 채워 넣어서 다시 건강하고 윤기 있게 만들어줘요. 엄밀히 말하면 '펌'보다는 '트리트먼트'에 가까워요.</p><h3>어떤 느낌이에요?</h3><p>매끄럽고 윤기 나는 느낌이에요. 빗질하면 실크처럼 부드럽게 빠지고, 푸석했던 머릿결이 다시 살아나요. 곱슬기도 어느 정도 잡혀서 차분해지는 효과도 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "케라틴", "트리트먼트", "모발클리닉", "손상모관리", "윤기머리" },
+                RecommendedHairTypes = new() { "반곱슬", "곱슬", "가는모", "부드러운모", "굵은모", "뻣뻣한모", "숱많은", "숱적은" },
+                StylingTip = "황산염(설페이트) 없는 샴푸를 사용하면 케라틴이 더 오래 유지돼요",
+                IsPublished = false
+            },
+            new()
+            {
+                Title = "클리닉 펌 (산성 펌)",
+                Category = StyleCategory.여성미디움,
+                Service = ServiceType.펌,
+                Description = "<h3>쉽게 말하면?</h3><p>손상된 머리에도 할 수 있는 약산성 펌이에요. 일반 펌 약은 알칼리성이라 머리를 많이 손상시키는데, 클리닉 펌은 산성 약을 써서 손상을 최소화해요. 이미 탈색이나 반복 시술로 약해진 머리에도 웨이브를 넣을 수 있어요.</p><h3>어떤 느낌이에요?</h3><p>부드럽고 건강한 느낌이에요. 일반 펌보다 컬이 좀 더 부드럽고, 시술 후에도 머릿결이 거칠어지지 않아요. 손상이 적어서 머릿결을 유지하면서 웨이브를 즐길 수 있어요.</p>",
+                ImageUrls = new(),
+                Hashtags = new() { "클리닉펌", "산성펌", "손상모펌", "탈색후펌", "약산성시술" },
+                RecommendedHairTypes = new() { "가는모", "부드러운모", "반곱슬", "곱슬", "숱적은" },
+                StylingTip = "시술 후 단백질 트리트먼트를 주 1회 사용하면 컬도 오래가고 머릿결도 좋아요",
+                IsPublished = false
+            }
+        };
+    }
+}

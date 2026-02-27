@@ -27,10 +27,11 @@ public class SimpleAuthService : IAuthService
     {
         var hash = ComputeSha256(password);
 
+        // 상수 시간 비교로 타이밍 공격 방지
         string? role = null;
-        if (string.Equals(hash, _adminPasswordHash, StringComparison.OrdinalIgnoreCase))
+        if (FixedTimeEquals(hash, _adminPasswordHash))
             role = "Admin";
-        else if (string.Equals(hash, _viewerPasswordHash, StringComparison.OrdinalIgnoreCase))
+        else if (FixedTimeEquals(hash, _viewerPasswordHash))
             role = "Viewer";
 
         if (role == null)
@@ -92,6 +93,16 @@ public class SimpleAuthService : IAuthService
         {
             return null;
         }
+    }
+
+    /// <summary>상수 시간 문자열 비교 (타이밍 공격 방지)</summary>
+    private static bool FixedTimeEquals(string a, string b)
+    {
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+            return false;
+        var aBytes = Encoding.UTF8.GetBytes(a);
+        var bBytes = Encoding.UTF8.GetBytes(b);
+        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
 
     private static string ComputeSha256(string input)
