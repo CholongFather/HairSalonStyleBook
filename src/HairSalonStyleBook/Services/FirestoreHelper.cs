@@ -12,6 +12,9 @@ public static class FirestoreHelper
     public static int GetInt(Dictionary<string, FirestoreValue> fields, string key, int fallback = 0)
         => fields.TryGetValue(key, out var v) && int.TryParse(v.IntegerValue, out var n) ? n : fallback;
 
+    public static long GetLong(Dictionary<string, FirestoreValue> fields, string key, long fallback = 0)
+        => fields.TryGetValue(key, out var v) && long.TryParse(v.IntegerValue, out var n) ? n : fallback;
+
     public static bool GetBool(Dictionary<string, FirestoreValue> fields, string key, bool fallback = false)
         => fields.TryGetValue(key, out var v) && v.BooleanValue.HasValue ? v.BooleanValue.Value : fallback;
 

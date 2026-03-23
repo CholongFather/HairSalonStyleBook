@@ -63,6 +63,9 @@
         <button class="admin-tab @(_adminTab == 3 ? "active" : "")" @onclick="OpenSecurityTab">
             <i class="bi bi-shield-lock"></i> 보안
         </button>
+        <button class="admin-tab" @onclick='() => Nav.NavigateTo("admin/revenue")'>
+            <i class="bi bi-graph-up-arrow"></i> 매출
+        </button>
         @if (_shopConfig.CalendarEnabled)
         {
             <button class="admin-tab" @onclick="GoToCalendarEditor">

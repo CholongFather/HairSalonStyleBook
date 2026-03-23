@@ -27,5 +27,6 @@ builder.Services.AddScoped<IGalleryService, FirestoreGalleryService>();
 builder.Services.AddScoped<ILoginSecurityService, FirestoreLoginSecurityService>();
 builder.Services.AddScoped<ICalendarDecoService, FirestoreCalendarDecoService>();
 builder.Services.AddScoped<IBeforeAfterService, FirestoreBeforeAfterService>();
+builder.Services.AddScoped<IRevenueService, FirestoreRevenueService>();
 
 await builder.Build().RunAsync();

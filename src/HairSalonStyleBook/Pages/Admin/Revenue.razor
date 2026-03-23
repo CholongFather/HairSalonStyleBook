@@ -1,0 +1,372 @@
+@page "/admin/revenue"
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>매출 관리 - 늘~오던 헤어살롱</PageTitle>
+
+<div class="container rev-page">
+    <!-- 뒤로가기 -->
+    <div class="rev-back-row">
+        <a href="admin" class="rev-back-link"><i class="bi bi-arrow-left"></i> 대시보드</a>
+    </div>
+
+    <!-- 헤더 -->
+    <div class="rev-header">
+        <h2 class="rev-title"><i class="bi bi-graph-up-arrow"></i> 매출 관리</h2>
+        <div class="rev-year-nav">
+            <button class="btn btn-sm btn-salon-outline" @onclick="PrevYear">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="rev-year-label">@(_selectedYear)년</span>
+            <button class="btn btn-sm btn-salon-outline" @onclick="NextYear"
+                    disabled="@(_selectedYear >= DateTime.Now.Year)">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <!-- 연간 요약 카드 -->
+        <div class="rev-summary">
+            <div class="rev-summary-card">
+                <span class="rev-summary-label">연간 합계</span>
+                <span class="rev-summary-value">@(_yearTotal.ToString("N0"))원</span>
+            </div>
+            <div class="rev-summary-card">
+                <span class="rev-summary-label">카드</span>
+                <span class="rev-summary-value text-primary">@(_yearCard.ToString("N0"))원</span>
+            </div>
+            <div class="rev-summary-card">
+                <span class="rev-summary-label">현금</span>
+                <span class="rev-summary-value text-success">@(_yearCash.ToString("N0"))원</span>
+            </div>
+            <div class="rev-summary-card">
+                <span class="rev-summary-label">전년 합계</span>
+                <span class="rev-summary-value text-secondary">@(_prevYearTotal.ToString("N0"))원</span>
+            </div>
+        </div>
+
+        <!-- 차트 -->
+        <div class="rev-chart-container">
+            <canvas id="revenueChart"></canvas>
+        </div>
+
+        <!-- 월별 테이블 -->
+        <div class="table-responsive">
+            <table class="table rev-table">
+                <thead>
+                    <tr>
+                        <th>월</th>
+                        <th class="text-end">카드</th>
+                        <th class="text-end">현금</th>
+                        <th class="text-end">합계</th>
+                        <th class="text-end">전년비</th>
+                        <th>메모</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var month = m;
+                        var item = _revenues.FirstOrDefault(r => r.Month == month);
+                        var yoy = GetYoYChange(month);
+                        var yoyClass = GetYoYClass(month);
+                        <tr class="@(item != null ? "" : "rev-empty-row")">
+                            <td class="fw-semibold">@(month)월</td>
+                            <td class="text-end">@(item?.CardAmount.ToString("N0") ?? "-")</td>
+                            <td class="text-end">@(item?.CashAmount.ToString("N0") ?? "-")</td>
+                            <td class="text-end fw-bold">@(item?.TotalAmount.ToString("N0") ?? "-")</td>
+                            <td class="text-end @yoyClass">@yoy</td>
+                            <td class="rev-memo text-truncate" style="max-width:120px">@(item?.Memo ?? "")</td>
+                            <td>
+                                <button class="btn btn-sm btn-salon-outline"
+                                        @onclick="() => OpenEditModal(month, item)">
+                                    <i class="bi @(item != null ? "bi-pencil" : "bi-plus")"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="rev-total-row">
+                        <td class="fw-bold">합계</td>
+                        <td class="text-end fw-bold">@(_yearCard.ToString("N0"))</td>
+                        <td class="text-end fw-bold">@(_yearCash.ToString("N0"))</td>
+                        <td class="text-end fw-bold">@(_yearTotal.ToString("N0"))</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+
+    @* 편집 모달 *@
+    @if (_editing)
+    {
+        <div class="rev-modal-overlay" @onclick="CancelEdit">
+            <div class="rev-modal" @onclick:stopPropagation="true">
+                <div class="rev-modal-header">
+                    <h5>@(_selectedYear)년 @(_editMonth)월 매출</h5>
+                    <button class="btn-close" @onclick="CancelEdit"></button>
+                </div>
+                <div class="rev-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">카드 금액 (원)</label>
+                        <input type="number" class="form-control" @bind="_editItem.CardAmount"
+                               min="0" step="10000" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">현금 금액 (원)</label>
+                        <input type="number" class="form-control" @bind="_editItem.CashAmount"
+                               min="0" step="10000" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">메모 <span class="text-secondary fw-normal">(선택)</span></label>
+                        <textarea class="form-control" rows="2" @bind="_editItem.Memo"
+                                  placeholder="비고 사항 입력"></textarea>
+                    </div>
+                    <div class="rev-modal-preview">
+                        <span class="text-secondary">합계:</span>
+                        <strong>@((_editItem.CardAmount + _editItem.CashAmount).ToString("N0"))원</strong>
+                    </div>
+                </div>
+                <div class="rev-modal-footer">
+                    @if (_existingItem != null)
+                    {
+                        <button class="btn btn-outline-danger me-auto" @onclick="DeleteRevenue"
+                                disabled="@_saving">
+                            <i class="bi bi-trash"></i> 삭제
+                        </button>
+                    }
+                    <button class="btn btn-secondary" @onclick="CancelEdit" disabled="@_saving">취소</button>
+                    <button class="btn btn-salon" @onclick="SaveRevenue" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast -->
+@if (!string.IsNullOrEmpty(_toastMessage))
+{
+    <div class="admin-toast @(_toastVisible ? "show" : "")">
+        <i class="bi bi-check-circle-fill"></i> @_toastMessage
+    </div>
+}
+
+<style>
+    .rev-page {
+        max-width: 900px;
+        padding-top: 1rem;
+        padding-bottom: 3rem;
+    }
+
+    .rev-back-row {
+        margin-bottom: 0.5rem;
+    }
+
+    .rev-back-link {
+        color: var(--salon-accent, #7BA383);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .rev-back-link:hover {
+        text-decoration: underline;
+    }
+
+    .rev-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.2rem;
+    }
+
+    .rev-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .rev-year-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .rev-year-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    /* 요약 카드 */
+    .rev-summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .rev-summary-card {
+        background: var(--salon-card-bg, #fff);
+        border: 1px solid var(--salon-border, #e9e5e0);
+        border-radius: 10px;
+        padding: 0.8rem;
+        text-align: center;
+    }
+
+    .rev-summary-label {
+        display: block;
+        font-size: 0.75rem;
+        color: #888;
+        margin-bottom: 0.2rem;
+    }
+
+    .rev-summary-value {
+        display: block;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    /* 차트 */
+    .rev-chart-container {
+        background: var(--salon-card-bg, #fff);
+        border: 1px solid var(--salon-border, #e9e5e0);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        height: 300px;
+    }
+
+    /* 테이블 */
+    .rev-table {
+        font-size: 0.88rem;
+    }
+
+    .rev-table thead th {
+        background: var(--salon-card-bg, #f8f7f5);
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: #666;
+        border-bottom: 2px solid var(--salon-border, #e9e5e0);
+    }
+
+    .rev-table tbody td {
+        vertical-align: middle;
+        padding: 0.5rem;
+    }
+
+    .rev-empty-row td {
+        color: #bbb;
+    }
+
+    .rev-total-row {
+        background: var(--salon-card-bg, #f8f7f5);
+        border-top: 2px solid var(--salon-border, #e9e5e0);
+    }
+
+    .rev-memo {
+        color: #888;
+        font-size: 0.82rem;
+    }
+
+    .rev-up {
+        color: #d9534f;
+        font-weight: 600;
+    }
+
+    .rev-down {
+        color: #5bc0de;
+        font-weight: 600;
+    }
+
+    /* 모달 */
+    .rev-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+    }
+
+    .rev-modal {
+        background: #fff;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 420px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .rev-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .rev-modal-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .rev-modal-body {
+        padding: 1.2rem;
+    }
+
+    .rev-modal-preview {
+        background: #f8f7f5;
+        border-radius: 8px;
+        padding: 0.7rem 1rem;
+        text-align: center;
+        font-size: 1.05rem;
+    }
+
+    .rev-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 0.8rem 1.2rem;
+        border-top: 1px solid #eee;
+    }
+
+    @@media (max-width: 576px) {
+        .rev-summary {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .rev-chart-container {
+            height: 220px;
+        }
+
+        .rev-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .rev-table {
+            font-size: 0.8rem;
+        }
+    }
+</style>
