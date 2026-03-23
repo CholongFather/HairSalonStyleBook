@@ -14,7 +14,8 @@
     <div class="rev-header">
         <h2 class="rev-title"><i class="bi bi-graph-up-arrow"></i> 매출 관리</h2>
         <div class="rev-year-nav">
-            <button class="btn btn-sm btn-salon-outline" @onclick="PrevYear">
+            <button class="btn btn-sm btn-salon-outline" @onclick="PrevYear"
+                    disabled="@(_selectedYear <= MinYear)">
                 <i class="bi bi-chevron-left"></i>
             </button>
             <span class="rev-year-label">@(_selectedYear)년</span>

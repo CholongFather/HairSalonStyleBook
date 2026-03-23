@@ -16,10 +16,16 @@ public partial class Revenue : IAsyncDisposable
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
     // --- 상태 ---
+    private const int MinYear = 2024; // 2024년 11월 오픈
     private bool _loading = true;
     private int _selectedYear = DateTime.Now.Year;
+
+    // 선택 연도 테이블용
     private List<MonthlyRevenue> _revenues = new();
+    // 전년 (테이블 전년비용)
     private List<MonthlyRevenue> _prevYearRevenues = new();
+    // 전체 데이터 (차트용)
+    private List<MonthlyRevenue> _allRevenues = new();
 
     // --- 연간 요약 ---
     private long _yearTotal, _yearCard, _yearCash;
@@ -60,13 +66,16 @@ public partial class Revenue : IAsyncDisposable
 
         try
         {
-            // 올해 + 작년 데이터 병렬 로드
-            var currentTask = RevenueService.GetByYearAsync(_selectedYear);
-            var prevTask = RevenueService.GetByYearAsync(_selectedYear - 1);
-            await Task.WhenAll(currentTask, prevTask);
+            // 전체 데이터 한 번에 로드
+            _allRevenues = await RevenueService.GetAllAsync();
 
-            _revenues = currentTask.Result;
-            _prevYearRevenues = prevTask.Result;
+            // 선택 연도 + 전년 필터
+            _revenues = _allRevenues
+                .Where(r => r.Year == _selectedYear)
+                .OrderBy(r => r.Month).ToList();
+            _prevYearRevenues = _allRevenues
+                .Where(r => r.Year == _selectedYear - 1)
+                .OrderBy(r => r.Month).ToList();
 
             // 연간 요약
             _yearCard = _revenues.Sum(r => r.CardAmount);
@@ -91,21 +100,35 @@ public partial class Revenue : IAsyncDisposable
         try
         {
             var labels = Enumerable.Range(1, 12).Select(m => $"{m}월").ToArray();
-            var currentData = new long[12];
-            var prevData = new long[12];
 
-            foreach (var r in _revenues)
-                if (r.Month >= 1 && r.Month <= 12)
-                    currentData[r.Month - 1] = r.TotalAmount;
+            // 데이터가 있는 연도만 추출 (오름차순)
+            var years = _allRevenues
+                .Select(r => r.Year)
+                .Distinct()
+                .OrderBy(y => y)
+                .ToList();
 
-            foreach (var r in _prevYearRevenues)
-                if (r.Month >= 1 && r.Month <= 12)
-                    prevData[r.Month - 1] = r.TotalAmount;
+            if (years.Count == 0)
+            {
+                // 데이터 없으면 빈 차트
+                await JS.InvokeVoidAsync("revenueChart.render",
+                    "revenueChart", labels, Array.Empty<object>());
+                return;
+            }
+
+            // 연도별 datasets 구성
+            var datasets = years.Select(year =>
+            {
+                var data = new long[12];
+                foreach (var r in _allRevenues.Where(r => r.Year == year))
+                    if (r.Month >= 1 && r.Month <= 12)
+                        data[r.Month - 1] = r.TotalAmount;
+
+                return new { label = $"{year}년", data };
+            }).ToArray();
 
             await JS.InvokeVoidAsync("revenueChart.render",
-                "revenueChart", labels,
-                currentData, prevData,
-                $"{_selectedYear}년", $"{_selectedYear - 1}년");
+                "revenueChart", labels, datasets);
         }
         catch (Exception ex)
         {
@@ -115,6 +138,7 @@ public partial class Revenue : IAsyncDisposable
 
     private async Task PrevYear()
     {
+        if (_selectedYear <= MinYear) return;
         _selectedYear--;
         await LoadData();
     }

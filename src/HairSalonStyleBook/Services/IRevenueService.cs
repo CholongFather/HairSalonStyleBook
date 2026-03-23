@@ -7,6 +7,9 @@ namespace HairSalonStyleBook.Services;
 /// </summary>
 public interface IRevenueService
 {
+    /// <summary>전체 매출 데이터 조회</summary>
+    Task<List<MonthlyRevenue>> GetAllAsync();
+
     /// <summary>특정 연도의 월별 매출 조회</summary>
     Task<List<MonthlyRevenue>> GetByYearAsync(int year);
 

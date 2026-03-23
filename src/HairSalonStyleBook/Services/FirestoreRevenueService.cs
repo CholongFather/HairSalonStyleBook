@@ -32,6 +32,8 @@ public class FirestoreRevenueService : IRevenueService
         _baseUrl = $"https://firestore.googleapis.com/v1/projects/{projectId}/databases/(default)/documents";
     }
 
+    public async Task<List<MonthlyRevenue>> GetAllAsync() => await GetAllCachedAsync();
+
     public async Task<List<MonthlyRevenue>> GetByYearAsync(int year)
     {
         var all = await GetAllCachedAsync();
