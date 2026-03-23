@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "HairSalonStyleBook",
   "resources": {
-    "hash": "sha256-4gFGolYez+Vb4EGyg88qTkICmcMUjQSJu1nYon2lsoE=",
+    "hash": "sha256-5fpldgjLCDEXG3s/OGJ3sfuTXYkh1ZfvHiNcg3zijtk=",
     "fingerprinting": {
       "Microsoft.AspNetCore.Authorization.ct9mlc5dyk.wasm": "Microsoft.AspNetCore.Authorization.wasm",
       "Microsoft.AspNetCore.Components.yw6wrn3h5h.wasm": "Microsoft.AspNetCore.Components.wasm",
@@ -52,7 +52,7 @@
       "System.Text.RegularExpressions.20lhebztig.wasm": "System.Text.RegularExpressions.wasm",
       "System.dqfxtvioy0.wasm": "System.wasm",
       "System.Private.CoreLib.z4lazs8hjv.wasm": "System.Private.CoreLib.wasm",
-      "HairSalonStyleBook.od4njoz0jh.wasm": "HairSalonStyleBook.wasm",
+      "HairSalonStyleBook.51uj65ezc1.wasm": "HairSalonStyleBook.wasm",
       "dotnet.js": "dotnet.js",
       "dotnet.native.l1ds2rhypd.js": "dotnet.native.js",
       "dotnet.native.etgrtk5jba.wasm": "dotnet.native.wasm",
@@ -127,7 +127,7 @@
       "System.Text.Json.u0qd4bpx9g.wasm": "sha256-/iTNyI7FQVNj/wO0uRy24UkcTST9+1T+ivCdj9/8Ehg=",
       "System.Text.RegularExpressions.20lhebztig.wasm": "sha256-ks4WEJwYpa0DTchHQbsKdvaUPhnAmGIgNuma3p/+CcI=",
       "System.dqfxtvioy0.wasm": "sha256-5QZAjy4n7513fYxCXSXTsAkUmRsLiZ8m621Ot4k7FB0=",
-      "HairSalonStyleBook.od4njoz0jh.wasm": "sha256-7PgsNECMru8wtYbfVP7G7BkMEGB3FtqEvMbZLp4O6S4="
+      "HairSalonStyleBook.51uj65ezc1.wasm": "sha256-N0ddwz+rT3jZkxmPBu1tiNSai69yR8ALwi4pcigZGEo="
     }
   },
   "cacheBootResources": true,
