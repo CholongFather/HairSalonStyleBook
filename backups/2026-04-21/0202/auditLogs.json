@@ -3,20 +3,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/812afb234b74",
       "fields": {
-        "details": {
-          "stringValue": "카드 1원, 현금 1원"
-        },
-        "timestamp": {
-          "timestampValue": "2026-03-23T02:35:28.995Z"
+        "targetTitle": {
+          "stringValue": "2024년 11월 매출"
         },
         "targetId": {
           "stringValue": "2024-11"
         },
-        "targetTitle": {
-          "stringValue": "2024년 11월 매출"
+        "details": {
+          "stringValue": "카드 1원, 현금 1원"
         },
         "action": {
           "stringValue": "Create"
+        },
+        "timestamp": {
+          "timestampValue": "2026-03-23T02:35:28.995Z"
         }
       },
       "createTime": "2026-03-23T02:35:29.027954Z",
@@ -25,14 +25,14 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/9425605a9c01",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-03-23T02:35:21.011Z"
+        },
         "targetTitle": {
           "stringValue": "2026년 1월 매출"
         },
         "action": {
           "stringValue": "Create"
-        },
-        "timestamp": {
-          "timestampValue": "2026-03-23T02:35:21.011Z"
         },
         "details": {
           "stringValue": "카드 1원, 현금 1원"
@@ -47,20 +47,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/1cbe811db689",
       "fields": {
-        "targetTitle": {
-          "stringValue": "이미지 최적화"
-        },
         "action": {
           "stringValue": "ImageOptimize"
-        },
-        "timestamp": {
-          "timestampValue": "2026-03-23T02:21:30.470Z"
         },
         "details": {
           "stringValue": "총 70건 중 0건 성공, 70건 실패"
         },
         "targetId": {
           "stringValue": "batch"
+        },
+        "targetTitle": {
+          "stringValue": "이미지 최적화"
+        },
+        "timestamp": {
+          "timestampValue": "2026-03-23T02:21:30.470Z"
         }
       },
       "createTime": "2026-03-23T02:21:30.497704Z",
@@ -69,8 +69,8 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ad50900cf43a",
       "fields": {
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-23T10:22:26.219Z"
         },
         "targetTitle": {
           "stringValue": "매장설정"
@@ -78,11 +78,11 @@
         "targetId": {
           "stringValue": "shop"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-23T10:22:26.219Z"
-        },
         "details": {
           "stringValue": "매장 설정 변경: 다꾸캘린더: 활성"
+        },
+        "action": {
+          "stringValue": "Update"
         }
       },
       "createTime": "2026-02-23T10:22:26.292455Z",
@@ -91,20 +91,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/df9ef2143b87",
       "fields": {
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-20T06:32:26.393Z"
         },
         "targetTitle": {
           "stringValue": "매장설정"
         },
-        "targetId": {
-          "stringValue": "shop"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-20T06:32:26.393Z"
-        },
         "details": {
           "stringValue": "매장 설정 저장"
+        },
+        "action": {
+          "stringValue": "Update"
+        },
+        "targetId": {
+          "stringValue": "shop"
         }
       },
       "createTime": "2026-02-20T06:32:26.426385Z",
@@ -113,20 +113,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/b9ab3cda290b",
       "fields": {
-        "targetId": {
-          "stringValue": "shop"
+        "targetTitle": {
+          "stringValue": "매장설정"
         },
         "details": {
           "stringValue": "매장 설정 저장"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-20T04:54:05.738Z"
-        },
         "action": {
           "stringValue": "Update"
         },
-        "targetTitle": {
-          "stringValue": "매장설정"
+        "targetId": {
+          "stringValue": "shop"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-20T04:54:05.738Z"
         }
       },
       "createTime": "2026-02-20T04:54:05.778966Z",
@@ -141,14 +141,14 @@
         "details": {
           "stringValue": "매장 설정 저장"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-20T04:53:41.568Z"
-        },
         "action": {
           "stringValue": "Update"
         },
         "targetTitle": {
           "stringValue": "매장설정"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-20T04:53:41.568Z"
         }
       },
       "createTime": "2026-02-20T04:53:41.603820Z",
@@ -157,20 +157,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/b444e8f1ab9b",
       "fields": {
-        "targetTitle": {
-          "stringValue": "매장설정"
+        "details": {
+          "stringValue": "매장 설정 저장"
         },
         "action": {
           "stringValue": "Update"
         },
-        "details": {
-          "stringValue": "매장 설정 저장"
+        "targetId": {
+          "stringValue": "shop"
+        },
+        "targetTitle": {
+          "stringValue": "매장설정"
         },
         "timestamp": {
           "timestampValue": "2026-02-20T04:45:38.125Z"
-        },
-        "targetId": {
-          "stringValue": "shop"
         }
       },
       "createTime": "2026-02-20T04:45:38.156034Z",
@@ -179,20 +179,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/07c44ba382e6",
       "fields": {
-        "timestamp": {
-          "timestampValue": "2026-02-20T04:45:13.321Z"
-        },
-        "details": {
-          "stringValue": "매장 설정 저장"
+        "targetTitle": {
+          "stringValue": "매장설정"
         },
         "targetId": {
           "stringValue": "shop"
         },
-        "targetTitle": {
-          "stringValue": "매장설정"
-        },
         "action": {
           "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "매장 설정 저장"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-20T04:45:13.321Z"
         }
       },
       "createTime": "2026-02-20T04:45:13.354102Z",
@@ -207,14 +207,14 @@
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:33.765Z"
-        },
         "action": {
           "stringValue": "Publish"
         },
         "targetTitle": {
           "stringValue": "투블록 텍스쳐 컷"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:33.765Z"
         }
       },
       "createTime": "2026-02-13T07:15:33.802074Z",
@@ -223,8 +223,8 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/286f12003f19",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:33.354Z"
         },
         "targetTitle": {
           "stringValue": "댄디 리젠트 컷"
@@ -232,11 +232,11 @@
         "targetId": {
           "stringValue": "2f97538763f5"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:33.354Z"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
         }
       },
       "createTime": "2026-02-13T07:15:33.394453Z",
@@ -245,20 +245,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/d166529d79e4",
       "fields": {
-        "targetId": {
-          "stringValue": "ea7efb33fe19"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:32.997Z"
+        },
+        "targetTitle": {
+          "stringValue": "크롭 페이드 컷"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:32.997Z"
-        },
         "action": {
           "stringValue": "Publish"
         },
-        "targetTitle": {
-          "stringValue": "크롭 페이드 컷"
+        "targetId": {
+          "stringValue": "ea7efb33fe19"
         }
       },
       "createTime": "2026-02-13T07:15:33.037303Z",
@@ -270,17 +270,17 @@
         "targetTitle": {
           "stringValue": "내추럴 가르마 펌"
         },
-        "action": {
-          "stringValue": "Publish"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:32.637Z"
+        "action": {
+          "stringValue": "Publish"
         },
         "targetId": {
           "stringValue": "dc15c3fb91b0"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:32.637Z"
         }
       },
       "createTime": "2026-02-13T07:15:32.674328Z",
@@ -289,8 +289,8 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/8f75f3c096af",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:31.854Z"
         },
         "targetTitle": {
           "stringValue": "쉐도우 펌"
@@ -301,8 +301,8 @@
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:31.854Z"
+        "action": {
+          "stringValue": "Publish"
         }
       },
       "createTime": "2026-02-13T07:15:31.906164Z",
@@ -311,20 +311,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/373df1fe2254",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:31.463Z"
         },
         "targetTitle": {
           "stringValue": "스왈로 펌"
         },
-        "targetId": {
-          "stringValue": "a6859d194d83"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:31.463Z"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "a6859d194d83"
         }
       },
       "createTime": "2026-02-13T07:15:31.504645Z",
@@ -333,20 +333,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/de8b671e28b1",
       "fields": {
-        "targetId": {
-          "stringValue": "68e13763cd79"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:31.092Z"
         },
         "action": {
           "stringValue": "Publish"
         },
+        "targetId": {
+          "stringValue": "68e13763cd79"
+        },
         "targetTitle": {
           "stringValue": "애쉬 그레이 투톤"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:31.092Z"
         }
       },
       "createTime": "2026-02-13T07:15:31.128555Z",
@@ -355,20 +355,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/6c21e7a680d3",
       "fields": {
-        "targetTitle": {
-          "stringValue": "내추럴 브라운 염색"
-        },
         "action": {
           "stringValue": "Publish"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:30.741Z"
-        },
         "targetId": {
           "stringValue": "0e195c013f6f"
+        },
+        "targetTitle": {
+          "stringValue": "내추럴 브라운 염색"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:30.741Z"
         }
       },
       "createTime": "2026-02-13T07:15:30.778274Z",
@@ -377,20 +377,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/52844af1e603",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
-        },
         "targetTitle": {
           "stringValue": "픽시 레이어드 컷"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
         },
         "targetId": {
           "stringValue": "f3ab22e02ea7"
         },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:30.319Z"
-        },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
         }
       },
       "createTime": "2026-02-13T07:15:30.357593Z",
@@ -399,20 +399,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/fc72910f86e0",
       "fields": {
-        "details": {
-          "stringValue": "게시 상태 → 게시"
-        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:29.901Z"
         },
         "targetId": {
           "stringValue": "d1edcfef0515"
         },
-        "targetTitle": {
-          "stringValue": "시스루 뱅 숏보브"
+        "details": {
+          "stringValue": "게시 상태 → 게시"
         },
         "action": {
           "stringValue": "Publish"
+        },
+        "targetTitle": {
+          "stringValue": "시스루 뱅 숏보브"
         }
       },
       "createTime": "2026-02-13T07:15:29.939336Z",
@@ -421,20 +421,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ed575acba68b",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
-        },
-        "targetTitle": {
-          "stringValue": "버즈 컷"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:29.549Z"
         },
         "targetId": {
           "stringValue": "438f05a9896b"
         },
+        "action": {
+          "stringValue": "Publish"
+        },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:29.549Z"
+        "targetTitle": {
+          "stringValue": "버즈 컷"
         }
       },
       "createTime": "2026-02-13T07:15:29.605953Z",
@@ -443,11 +443,11 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/1e48580637c4",
       "fields": {
+        "targetTitle": {
+          "stringValue": "다운펌"
+        },
         "targetId": {
           "stringValue": "2ca4971ce0bb"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:29.074Z"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
@@ -455,8 +455,8 @@
         "action": {
           "stringValue": "Publish"
         },
-        "targetTitle": {
-          "stringValue": "다운펌"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:29.074Z"
         }
       },
       "createTime": "2026-02-13T07:15:29.110307Z",
@@ -465,11 +465,11 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/68c606691c7e",
       "fields": {
-        "targetId": {
-          "stringValue": "6f0f514b3bd2"
-        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:28.728Z"
+        },
+        "targetId": {
+          "stringValue": "6f0f514b3bd2"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
@@ -487,20 +487,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ce5a3d22192d",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
-        },
         "targetTitle": {
           "stringValue": "이너 컬러 염색"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
         },
         "targetId": {
           "stringValue": "25ec6bec3c81"
         },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:27.319Z"
-        },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
         }
       },
       "createTime": "2026-02-13T07:15:27.372692Z",
@@ -512,17 +512,17 @@
         "targetId": {
           "stringValue": "d03ff7b34bed"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:26.962Z"
+        "action": {
+          "stringValue": "Publish"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "action": {
-          "stringValue": "Publish"
-        },
         "targetTitle": {
           "stringValue": "시저 컷"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:26.962Z"
         }
       },
       "createTime": "2026-02-13T07:15:27.025582Z",
@@ -534,14 +534,14 @@
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:26.606Z"
         },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
+        "targetTitle": {
+          "stringValue": "포마드 올백 컷"
         },
         "targetId": {
           "stringValue": "09c3937dc3e8"
         },
-        "targetTitle": {
-          "stringValue": "포마드 올백 컷"
+        "details": {
+          "stringValue": "게시 상태 → 게시"
         },
         "action": {
           "stringValue": "Publish"
@@ -553,20 +553,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/d31cda982b74",
       "fields": {
-        "targetTitle": {
-          "stringValue": "볼륨 매직 (남성)"
-        },
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:26.209Z"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:26.209Z"
+        "action": {
+          "stringValue": "Publish"
         },
         "targetId": {
           "stringValue": "d9c5e628325c"
+        },
+        "targetTitle": {
+          "stringValue": "볼륨 매직 (남성)"
         }
       },
       "createTime": "2026-02-13T07:15:26.249272Z",
@@ -575,20 +575,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/48026f93cfae",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:25.799Z"
         },
         "targetTitle": {
           "stringValue": "브라운 하이라이트"
         },
-        "targetId": {
-          "stringValue": "74a65a1f16c1"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:25.799Z"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "74a65a1f16c1"
         }
       },
       "createTime": "2026-02-13T07:15:25.835982Z",
@@ -597,20 +597,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/aa5df0641140",
       "fields": {
-        "targetTitle": {
-          "stringValue": "쉐도우 페이드 컷"
-        },
-        "action": {
-          "stringValue": "Publish"
+        "targetId": {
+          "stringValue": "c29dc27b8e82"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetTitle": {
+          "stringValue": "쉐도우 페이드 컷"
+        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:25.487Z"
-        },
-        "targetId": {
-          "stringValue": "c29dc27b8e82"
         }
       },
       "createTime": "2026-02-13T07:15:25.526379Z",
@@ -625,14 +625,14 @@
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
+        "action": {
+          "stringValue": "Publish"
+        },
         "targetId": {
           "stringValue": "978267bef103"
         },
         "targetTitle": {
           "stringValue": "머쉬룸 컷"
-        },
-        "action": {
-          "stringValue": "Publish"
         }
       },
       "createTime": "2026-02-13T07:15:25.117071Z",
@@ -641,20 +641,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/998763aa77bb",
       "fields": {
-        "details": {
-          "stringValue": "게시 상태 → 게시"
-        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:24.691Z"
-        },
-        "targetId": {
-          "stringValue": "f603fa4dff77"
         },
         "targetTitle": {
           "stringValue": "리프 펌"
         },
         "action": {
           "stringValue": "Publish"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
+        "targetId": {
+          "stringValue": "f603fa4dff77"
         }
       },
       "createTime": "2026-02-13T07:15:24.728575Z",
@@ -663,11 +663,11 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/535942cdaf93",
       "fields": {
+        "targetTitle": {
+          "stringValue": "콤마 헤어 (쉼표 머리)"
+        },
         "targetId": {
           "stringValue": "55b6f74fe0e5"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:24.364Z"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
@@ -675,8 +675,8 @@
         "action": {
           "stringValue": "Publish"
         },
-        "targetTitle": {
-          "stringValue": "콤마 헤어 (쉼표 머리)"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:24.364Z"
         }
       },
       "createTime": "2026-02-13T07:15:24.402496Z",
@@ -685,20 +685,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/570003692b11",
       "fields": {
-        "targetTitle": {
-          "stringValue": "센터파트 (중간 가르마)"
-        },
         "action": {
           "stringValue": "Publish"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:23.192Z"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
         "targetId": {
           "stringValue": "b3cb806d046c"
+        },
+        "targetTitle": {
+          "stringValue": "센터파트 (중간 가르마)"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:23.192Z"
         }
       },
       "createTime": "2026-02-13T07:15:23.248483Z",
@@ -707,17 +707,17 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/3082983d5ce4",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
-        },
         "targetTitle": {
           "stringValue": "테이퍼 컷"
         },
-        "targetId": {
-          "stringValue": "ea4effad6dc3"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "ea4effad6dc3"
         },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:22.871Z"
@@ -729,20 +729,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/d1cb0a51ecec",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:22.562Z"
         },
         "targetTitle": {
           "stringValue": "쉼표 펌 (콤마 펌)"
         },
-        "targetId": {
-          "stringValue": "51daf8ef1678"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:22.562Z"
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "51daf8ef1678"
         }
       },
       "createTime": "2026-02-13T07:15:22.622636Z",
@@ -751,20 +751,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ca1b4ad231bf",
       "fields": {
+        "targetTitle": {
+          "stringValue": "아이롱 펌 (남성)"
+        },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:21.650Z"
+        "action": {
+          "stringValue": "Publish"
         },
         "targetId": {
           "stringValue": "03f23a33be40"
         },
-        "targetTitle": {
-          "stringValue": "아이롱 펌 (남성)"
-        },
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:21.650Z"
         }
       },
       "createTime": "2026-02-13T07:15:21.695210Z",
@@ -776,17 +776,17 @@
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:21.344Z"
         },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
-        },
-        "targetId": {
-          "stringValue": "6e0f650fac03"
-        },
         "targetTitle": {
           "stringValue": "스핀스 펌"
         },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
         "action": {
           "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "6e0f650fac03"
         }
       },
       "createTime": "2026-02-13T07:15:21.382668Z",
@@ -795,17 +795,17 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/fe52c9e1ba67",
       "fields": {
-        "targetId": {
-          "stringValue": "e1affa7f264f"
-        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:20.491Z"
+        },
+        "action": {
+          "stringValue": "Publish"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "action": {
-          "stringValue": "Publish"
+        "targetId": {
+          "stringValue": "e1affa7f264f"
         },
         "targetTitle": {
           "stringValue": "실버 그레이 염색 (남성)"
@@ -817,20 +817,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/6f892a43d52d",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:19.717Z"
+        },
+        "targetTitle": {
+          "stringValue": "매트 카키 브라운 (남성)"
+        },
         "targetId": {
           "stringValue": "ca254446ba89"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:19.717Z"
-        },
         "action": {
           "stringValue": "Publish"
-        },
-        "targetTitle": {
-          "stringValue": "매트 카키 브라운 (남성)"
         }
       },
       "createTime": "2026-02-13T07:15:19.780109Z",
@@ -839,20 +839,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/58c4f97a4bf1",
       "fields": {
+        "targetTitle": {
+          "stringValue": "블론드 금발 (남성)"
+        },
         "targetId": {
           "stringValue": "bdf98fba9c49"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:19.368Z"
-        },
         "action": {
           "stringValue": "Publish"
         },
-        "targetTitle": {
-          "stringValue": "블론드 금발 (남성)"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:19.368Z"
         }
       },
       "createTime": "2026-02-13T07:15:19.420420Z",
@@ -864,17 +864,17 @@
         "targetTitle": {
           "stringValue": "시스루 댄디 컷"
         },
+        "targetId": {
+          "stringValue": "5919aad4ae80"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
         "action": {
           "stringValue": "Publish"
         },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:18.956Z"
-        },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
-        },
-        "targetId": {
-          "stringValue": "5919aad4ae80"
         }
       },
       "createTime": "2026-02-13T07:15:19.017886Z",
@@ -883,20 +883,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/dd9080a55a3e",
       "fields": {
-        "targetTitle": {
-          "stringValue": "댄디 컷"
-        },
-        "action": {
-          "stringValue": "Publish"
-        },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
-        },
         "timestamp": {
           "timestampValue": "2026-02-13T07:15:18.565Z"
         },
         "targetId": {
           "stringValue": "4ed2ae8b1bc7"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetTitle": {
+          "stringValue": "댄디 컷"
         }
       },
       "createTime": "2026-02-13T07:15:18.604148Z",
@@ -905,17 +905,17 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/a2588fcf58a6",
       "fields": {
-        "targetId": {
-          "stringValue": "4494807baca6"
+        "timestamp": {
+          "timestampValue": "2026-02-13T07:15:18.254Z"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-13T07:15:18.254Z"
-        },
         "action": {
           "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "4494807baca6"
         },
         "targetTitle": {
           "stringValue": "투펌 (투블록 + 펌)"
@@ -927,20 +927,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/17ca8486fae9",
       "fields": {
+        "targetTitle": {
+          "stringValue": ""
+        },
+        "targetId": {
+          "stringValue": ""
+        },
+        "action": {
+          "stringValue": "Seed"
+        },
         "details": {
           "stringValue": "데이터 초기화: 132건 생성"
         },
         "timestamp": {
           "timestampValue": "2026-02-13T06:48:17.966Z"
-        },
-        "targetId": {
-          "stringValue": ""
-        },
-        "targetTitle": {
-          "stringValue": ""
-        },
-        "action": {
-          "stringValue": "Seed"
         }
       },
       "createTime": "2026-02-13T06:48:18.000393Z",
@@ -949,20 +949,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/beea0605bd3c",
       "fields": {
+        "targetTitle": {
+          "stringValue": ""
+        },
         "action": {
           "stringValue": "Seed"
         },
-        "targetTitle": {
-          "stringValue": ""
+        "details": {
+          "stringValue": "데이터 초기화: 132건 생성"
         },
         "targetId": {
           "stringValue": ""
         },
         "timestamp": {
           "timestampValue": "2026-02-13T01:17:01.314Z"
-        },
-        "details": {
-          "stringValue": "데이터 초기화: 132건 생성"
         }
       },
       "createTime": "2026-02-13T01:17:01.330676Z",
@@ -971,20 +971,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/f08d4664c0aa",
       "fields": {
-        "targetId": {
-          "stringValue": "a7f30cc447ef"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T16:10:24.022Z"
         },
-        "details": {
-          "stringValue": "게시 상태 → 비게시"
+        "targetTitle": {
+          "stringValue": "투펌 (투블록 + 펌)"
+        },
+        "targetId": {
+          "stringValue": "a7f30cc447ef"
         },
         "action": {
           "stringValue": "Publish"
         },
-        "targetTitle": {
-          "stringValue": "투펌 (투블록 + 펌)"
+        "details": {
+          "stringValue": "게시 상태 → 비게시"
         }
       },
       "createTime": "2026-02-12T16:10:24.074621Z",
@@ -993,20 +993,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/2ae254a0764d",
       "fields": {
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
-        },
-        "action": {
-          "stringValue": "Publish"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T16:10:22.973Z"
         },
         "details": {
           "stringValue": "게시 상태 → 비게시"
         },
+        "action": {
+          "stringValue": "Publish"
+        },
         "targetId": {
           "stringValue": "30f8c300ab35"
+        },
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
         }
       },
       "createTime": "2026-02-12T16:10:23.022008Z",
@@ -1015,20 +1015,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/8dbe5fe9f1f0",
       "fields": {
-        "timestamp": {
-          "timestampValue": "2026-02-12T12:24:56.454Z"
-        },
-        "details": {
-          "stringValue": "스타일 '콤마 헤어 (쉼표 머리)' 수정"
+        "targetTitle": {
+          "stringValue": "콤마 헤어 (쉼표 머리)"
         },
         "targetId": {
           "stringValue": "5042057cd6a3"
         },
-        "targetTitle": {
-          "stringValue": "콤마 헤어 (쉼표 머리)"
+        "details": {
+          "stringValue": "스타일 '콤마 헤어 (쉼표 머리)' 수정"
         },
         "action": {
           "stringValue": "Update"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:24:56.454Z"
         }
       },
       "createTime": "2026-02-12T12:24:56.540565Z",
@@ -1037,20 +1037,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/305797329f36",
       "fields": {
+        "targetId": {
+          "stringValue": "1576eb62afc3"
+        },
         "action": {
           "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "스타일 '쉐도우 페이드 컷' 수정"
         },
         "targetTitle": {
           "stringValue": "쉐도우 페이드 컷"
         },
-        "targetId": {
-          "stringValue": "1576eb62afc3"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T12:24:52.744Z"
-        },
-        "details": {
-          "stringValue": "스타일 '쉐도우 페이드 컷' 수정"
         }
       },
       "createTime": "2026-02-12T12:24:52.840991Z",
@@ -1059,20 +1059,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/0b590bd0ea4a",
       "fields": {
-        "action": {
-          "stringValue": "Update"
-        },
-        "targetTitle": {
-          "stringValue": "머쉬룸 컷"
-        },
-        "targetId": {
-          "stringValue": "373ad8517868"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T12:24:49.010Z"
         },
         "details": {
           "stringValue": "스타일 '머쉬룸 컷' 수정"
+        },
+        "action": {
+          "stringValue": "Update"
+        },
+        "targetId": {
+          "stringValue": "373ad8517868"
+        },
+        "targetTitle": {
+          "stringValue": "머쉬룸 컷"
         }
       },
       "createTime": "2026-02-12T12:24:49.087019Z",
@@ -1084,6 +1084,9 @@
         "timestamp": {
           "timestampValue": "2026-02-12T12:24:35.069Z"
         },
+        "action": {
+          "stringValue": "Update"
+        },
         "details": {
           "stringValue": "스타일 '투블록 텍스쳐 컷' 수정"
         },
@@ -1092,9 +1095,6 @@
         },
         "targetTitle": {
           "stringValue": "투블록 텍스쳐 컷"
-        },
-        "action": {
-          "stringValue": "Update"
         }
       },
       "createTime": "2026-02-12T12:24:35.159613Z",
@@ -1103,20 +1103,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/4c241a3bb322",
       "fields": {
-        "targetId": {
-          "stringValue": "25cf9aa7bb5f"
+        "targetTitle": {
+          "stringValue": "시저 컷"
         },
         "details": {
           "stringValue": "스타일 '시저 컷' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T12:24:25.561Z"
-        },
         "action": {
           "stringValue": "Update"
         },
-        "targetTitle": {
-          "stringValue": "시저 컷"
+        "targetId": {
+          "stringValue": "25cf9aa7bb5f"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:24:25.561Z"
         }
       },
       "createTime": "2026-02-12T12:24:25.645051Z",
@@ -1125,20 +1125,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/34b827407375",
       "fields": {
+        "targetTitle": {
+          "stringValue": "포마드 올백 컷"
+        },
+        "action": {
+          "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "스타일 '포마드 올백 컷' 수정"
+        },
         "targetId": {
           "stringValue": "ed0e92e39c03"
         },
         "timestamp": {
           "timestampValue": "2026-02-12T12:24:22.171Z"
-        },
-        "details": {
-          "stringValue": "스타일 '포마드 올백 컷' 수정"
-        },
-        "action": {
-          "stringValue": "Update"
-        },
-        "targetTitle": {
-          "stringValue": "포마드 올백 컷"
         }
       },
       "createTime": "2026-02-12T12:24:22.245110Z",
@@ -1150,17 +1150,17 @@
         "targetTitle": {
           "stringValue": "버즈 컷"
         },
-        "action": {
-          "stringValue": "Update"
-        },
         "details": {
           "stringValue": "스타일 '버즈 컷' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T12:24:18.779Z"
+        "action": {
+          "stringValue": "Update"
         },
         "targetId": {
           "stringValue": "90d6544077f7"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:24:18.779Z"
         }
       },
       "createTime": "2026-02-12T12:24:18.874852Z",
@@ -1169,20 +1169,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/f64c6129449c",
       "fields": {
+        "targetId": {
+          "stringValue": "d3c769f5f7c7"
+        },
         "details": {
           "stringValue": "스타일 '크롭 페이드 컷' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T12:24:15.046Z"
-        },
-        "targetId": {
-          "stringValue": "d3c769f5f7c7"
+        "action": {
+          "stringValue": "Update"
         },
         "targetTitle": {
           "stringValue": "크롭 페이드 컷"
         },
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-12T12:24:15.046Z"
         }
       },
       "createTime": "2026-02-12T12:24:15.125113Z",
@@ -1191,20 +1191,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/db43a587bd01",
       "fields": {
+        "targetId": {
+          "stringValue": "c2e79348f635"
+        },
         "action": {
           "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "스타일 '댄디 리젠트 컷' 수정"
         },
         "targetTitle": {
           "stringValue": "댄디 리젠트 컷"
         },
-        "targetId": {
-          "stringValue": "c2e79348f635"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T12:24:11.042Z"
-        },
-        "details": {
-          "stringValue": "스타일 '댄디 리젠트 컷' 수정"
         }
       },
       "createTime": "2026-02-12T12:24:11.118499Z",
@@ -1213,20 +1213,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/5d40a88b35eb",
       "fields": {
-        "targetTitle": {
-          "stringValue": "머쉬룸 컷"
-        },
-        "action": {
-          "stringValue": "Update"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T11:44:06.268Z"
         },
         "details": {
           "stringValue": "스타일 '머쉬룸 컷' 수정"
         },
+        "action": {
+          "stringValue": "Update"
+        },
         "targetId": {
           "stringValue": "373ad8517868"
+        },
+        "targetTitle": {
+          "stringValue": "머쉬룸 컷"
         }
       },
       "createTime": "2026-02-12T11:44:06.345710Z",
@@ -1235,20 +1235,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/3387c5a9d2ab",
       "fields": {
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:57.916Z"
         },
         "targetTitle": {
           "stringValue": "쉐도우 페이드 컷"
         },
-        "targetId": {
-          "stringValue": "1576eb62afc3"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:57.916Z"
+        "action": {
+          "stringValue": "Update"
         },
         "details": {
           "stringValue": "스타일 '쉐도우 페이드 컷' 수정"
+        },
+        "targetId": {
+          "stringValue": "1576eb62afc3"
         }
       },
       "createTime": "2026-02-12T11:43:57.983350Z",
@@ -1257,20 +1257,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ac2e2f5d7210",
       "fields": {
-        "targetTitle": {
-          "stringValue": "포마드 올백 컷"
-        },
         "action": {
           "stringValue": "Update"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:50.417Z"
         },
         "details": {
           "stringValue": "스타일 '포마드 올백 컷' 수정"
         },
         "targetId": {
           "stringValue": "ed0e92e39c03"
+        },
+        "targetTitle": {
+          "stringValue": "포마드 올백 컷"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:50.417Z"
         }
       },
       "createTime": "2026-02-12T11:43:50.483864Z",
@@ -1279,20 +1279,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/e50db8ddbb41",
       "fields": {
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:43.409Z"
+        "targetId": {
+          "stringValue": "25cf9aa7bb5f"
         },
         "details": {
           "stringValue": "스타일 '시저 컷' 수정"
         },
-        "targetId": {
-          "stringValue": "25cf9aa7bb5f"
+        "action": {
+          "stringValue": "Update"
         },
         "targetTitle": {
           "stringValue": "시저 컷"
         },
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:43.409Z"
         }
       },
       "createTime": "2026-02-12T11:43:43.483027Z",
@@ -1301,17 +1301,17 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/ff9481552a7d",
       "fields": {
-        "action": {
-          "stringValue": "Update"
-        },
-        "targetTitle": {
-          "stringValue": "버즈 컷"
-        },
         "targetId": {
           "stringValue": "90d6544077f7"
         },
+        "action": {
+          "stringValue": "Update"
+        },
         "details": {
           "stringValue": "스타일 '버즈 컷' 수정"
+        },
+        "targetTitle": {
+          "stringValue": "버즈 컷"
         },
         "timestamp": {
           "timestampValue": "2026-02-12T11:43:36.170Z"
@@ -1323,8 +1323,8 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/a1916aa48a8c",
       "fields": {
-        "action": {
-          "stringValue": "Update"
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:27.916Z"
         },
         "targetTitle": {
           "stringValue": "버즈 컷"
@@ -1332,11 +1332,11 @@
         "targetId": {
           "stringValue": "90d6544077f7"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:27.916Z"
-        },
         "details": {
           "stringValue": "스타일 '버즈 컷' 수정"
+        },
+        "action": {
+          "stringValue": "Update"
         }
       },
       "createTime": "2026-02-12T11:43:28.026425Z",
@@ -1345,20 +1345,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/8c0173688f01",
       "fields": {
-        "targetId": {
-          "stringValue": "d3c769f5f7c7"
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:19.736Z"
+        },
+        "targetTitle": {
+          "stringValue": "크롭 페이드 컷"
         },
         "details": {
           "stringValue": "스타일 '크롭 페이드 컷' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:19.736Z"
-        },
         "action": {
           "stringValue": "Update"
         },
-        "targetTitle": {
-          "stringValue": "크롭 페이드 컷"
+        "targetId": {
+          "stringValue": "d3c769f5f7c7"
         }
       },
       "createTime": "2026-02-12T11:43:19.802857Z",
@@ -1367,20 +1367,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/1be29d5e79f3",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:43:09.711Z"
+        },
         "targetTitle": {
           "stringValue": "댄디 리젠트 컷"
         },
-        "action": {
-          "stringValue": "Update"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:43:09.711Z"
+        "targetId": {
+          "stringValue": "c2e79348f635"
         },
         "details": {
           "stringValue": "스타일 '댄디 리젠트 컷' 수정"
         },
-        "targetId": {
-          "stringValue": "c2e79348f635"
+        "action": {
+          "stringValue": "Update"
         }
       },
       "createTime": "2026-02-12T11:43:09.778512Z",
@@ -1389,20 +1389,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/8ac8663b04cd",
       "fields": {
-        "action": {
-          "stringValue": "Update"
-        },
-        "targetTitle": {
-          "stringValue": "투블록 텍스쳐 컷"
-        },
-        "targetId": {
-          "stringValue": "75b6acd0bda8"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T11:19:05.676Z"
         },
         "details": {
           "stringValue": "스타일 '투블록 텍스쳐 컷' 수정"
+        },
+        "action": {
+          "stringValue": "Update"
+        },
+        "targetId": {
+          "stringValue": "75b6acd0bda8"
+        },
+        "targetTitle": {
+          "stringValue": "투블록 텍스쳐 컷"
         }
       },
       "createTime": "2026-02-12T11:19:05.767261Z",
@@ -1411,20 +1411,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/91c5b8c3ca59",
       "fields": {
-        "timestamp": {
-          "timestampValue": "2026-02-12T11:18:48.462Z"
-        },
-        "details": {
-          "stringValue": "스타일 '크롭 페이드 컷' 수정"
+        "targetTitle": {
+          "stringValue": "크롭 페이드 컷"
         },
         "targetId": {
           "stringValue": "d3c769f5f7c7"
         },
-        "targetTitle": {
-          "stringValue": "크롭 페이드 컷"
+        "details": {
+          "stringValue": "스타일 '크롭 페이드 컷' 수정"
         },
         "action": {
           "stringValue": "Update"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T11:18:48.462Z"
         }
       },
       "createTime": "2026-02-12T11:18:48.545127Z",
@@ -1433,20 +1433,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/faf4ab5b5b57",
       "fields": {
-        "action": {
-          "stringValue": "Update"
-        },
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
-        },
-        "targetId": {
-          "stringValue": "30f8c300ab35"
+        "timestamp": {
+          "timestampValue": "2026-02-12T08:30:46.026Z"
         },
         "details": {
           "stringValue": "스타일 '복구 매직 (손상모 매직)' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T08:30:46.026Z"
+        "action": {
+          "stringValue": "Update"
+        },
+        "targetId": {
+          "stringValue": "30f8c300ab35"
+        },
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
         }
       },
       "createTime": "2026-02-12T08:30:46.099049Z",
@@ -1455,20 +1455,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/60f8720ac18b",
       "fields": {
-        "timestamp": {
-          "timestampValue": "2026-02-12T07:47:23.583Z"
-        },
-        "details": {
-          "stringValue": "게시 상태 → 게시"
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
         },
         "targetId": {
           "stringValue": "30f8c300ab35"
         },
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
+        "details": {
+          "stringValue": "게시 상태 → 게시"
         },
         "action": {
           "stringValue": "Publish"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T07:47:23.583Z"
         }
       },
       "createTime": "2026-02-12T07:47:23.641208Z",
@@ -1477,20 +1477,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/5397bcaef644",
       "fields": {
-        "action": {
-          "stringValue": "Seed"
+        "timestamp": {
+          "timestampValue": "2026-02-12T07:47:15.109Z"
         },
         "targetTitle": {
           "stringValue": ""
         },
-        "targetId": {
-          "stringValue": ""
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T07:47:15.109Z"
-        },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성"
+        },
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
         }
       },
       "createTime": "2026-02-12T07:47:15.169751Z",
@@ -1499,20 +1499,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/5bfb65f4ff05",
       "fields": {
-        "targetTitle": {
-          "stringValue": ""
+        "details": {
+          "stringValue": "데이터 초기화: 133건 생성"
         },
         "action": {
           "stringValue": "Seed"
         },
-        "details": {
-          "stringValue": "데이터 초기화: 133건 생성"
+        "targetId": {
+          "stringValue": ""
+        },
+        "targetTitle": {
+          "stringValue": ""
         },
         "timestamp": {
           "timestampValue": "2026-02-12T07:40:31.929Z"
-        },
-        "targetId": {
-          "stringValue": ""
         }
       },
       "createTime": "2026-02-12T07:40:31.987120Z",
@@ -1521,20 +1521,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/cf1f4f769b1a",
       "fields": {
-        "details": {
-          "stringValue": "데이터 초기화: 133건 생성"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T07:32:37.302Z"
-        },
-        "targetId": {
-          "stringValue": ""
         },
         "targetTitle": {
           "stringValue": ""
         },
+        "details": {
+          "stringValue": "데이터 초기화: 133건 생성"
+        },
         "action": {
           "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
         }
       },
       "createTime": "2026-02-12T07:32:37.363789Z",
@@ -1543,20 +1543,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/28177ed5cc51",
       "fields": {
-        "targetTitle": {
-          "stringValue": "클리닉 펌 (산성 펌)"
-        },
         "action": {
           "stringValue": "Update"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T07:20:19.291Z"
         },
         "details": {
           "stringValue": "스타일 '클리닉 펌 (산성 펌)' 수정"
         },
         "targetId": {
           "stringValue": "7cf64e7e7db2"
+        },
+        "targetTitle": {
+          "stringValue": "클리닉 펌 (산성 펌)"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T07:20:19.291Z"
         }
       },
       "createTime": "2026-02-12T07:20:19.354430Z",
@@ -1565,20 +1565,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/4a9567922eab",
       "fields": {
-        "action": {
-          "stringValue": "Seed"
+        "timestamp": {
+          "timestampValue": "2026-02-12T07:02:47.871Z"
         },
         "targetTitle": {
-          "stringValue": ""
-        },
-        "targetId": {
           "stringValue": ""
         },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T07:02:47.871Z"
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
         }
       },
       "createTime": "2026-02-12T07:02:47.920535Z",
@@ -1587,20 +1587,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/592dde4223c5",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:35:21.369Z"
+        },
         "targetTitle": {
           "stringValue": ""
         },
-        "action": {
-          "stringValue": "Seed"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:35:21.369Z"
+        "targetId": {
+          "stringValue": ""
         },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
         },
-        "targetId": {
-          "stringValue": ""
+        "action": {
+          "stringValue": "Seed"
         }
       },
       "createTime": "2026-02-12T06:35:21.411564Z",
@@ -1618,11 +1618,11 @@
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:24:54.726Z"
-        },
         "targetId": {
           "stringValue": "c8af8bb8e063"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:24:54.726Z"
         }
       },
       "createTime": "2026-02-12T06:24:54.789434Z",
@@ -1631,20 +1631,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/f1cbfe55fbd2",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
-        },
         "targetTitle": {
           "stringValue": "클리닉 펌 (산성 펌)"
         },
         "targetId": {
           "stringValue": "f3d34281ef3b"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:24:54.257Z"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:24:54.257Z"
         }
       },
       "createTime": "2026-02-12T06:24:54.322671Z",
@@ -1653,20 +1653,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/c213f1ef2496",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:24:53.997Z"
+        },
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
+        },
         "targetId": {
           "stringValue": "9b58dd495bf3"
         },
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:24:53.997Z"
-        },
         "action": {
           "stringValue": "Publish"
-        },
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
         }
       },
       "createTime": "2026-02-12T06:24:54.087549Z",
@@ -1681,14 +1681,14 @@
         "details": {
           "stringValue": "게시 상태 → 비게시"
         },
+        "action": {
+          "stringValue": "Publish"
+        },
         "targetId": {
           "stringValue": "f3d34281ef3b"
         },
         "targetTitle": {
           "stringValue": "클리닉 펌 (산성 펌)"
-        },
-        "action": {
-          "stringValue": "Publish"
         }
       },
       "createTime": "2026-02-12T06:16:26.891804Z",
@@ -1697,8 +1697,11 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/959c1faa5793",
       "fields": {
-        "targetTitle": {
-          "stringValue": "클리닉 펌 (산성 펌)"
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:16:26.554Z"
+        },
+        "targetId": {
+          "stringValue": "f3d34281ef3b"
         },
         "action": {
           "stringValue": "Publish"
@@ -1706,11 +1709,8 @@
         "details": {
           "stringValue": "게시 상태 → 게시"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:16:26.554Z"
-        },
-        "targetId": {
-          "stringValue": "f3d34281ef3b"
+        "targetTitle": {
+          "stringValue": "클리닉 펌 (산성 펌)"
         }
       },
       "createTime": "2026-02-12T06:16:26.620110Z",
@@ -1722,17 +1722,17 @@
         "timestamp": {
           "timestampValue": "2026-02-12T06:16:25.902Z"
         },
-        "details": {
-          "stringValue": "게시 상태 → 비게시"
-        },
         "targetId": {
           "stringValue": "9b58dd495bf3"
         },
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
-        },
         "action": {
           "stringValue": "Publish"
+        },
+        "details": {
+          "stringValue": "게시 상태 → 비게시"
+        },
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
         }
       },
       "createTime": "2026-02-12T06:16:25.948026Z",
@@ -1741,20 +1741,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/46541ea98738",
       "fields": {
-        "action": {
-          "stringValue": "Publish"
+        "timestamp": {
+          "timestampValue": "2026-02-12T06:16:25.314Z"
         },
         "targetTitle": {
           "stringValue": "복구 매직 (손상모 매직)"
         },
-        "targetId": {
-          "stringValue": "9b58dd495bf3"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T06:16:25.314Z"
-        },
         "details": {
           "stringValue": "게시 상태 → 게시"
+        },
+        "action": {
+          "stringValue": "Publish"
+        },
+        "targetId": {
+          "stringValue": "9b58dd495bf3"
         }
       },
       "createTime": "2026-02-12T06:16:25.393322Z",
@@ -1763,9 +1763,6 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/5c7369fc1f0a",
       "fields": {
-        "targetId": {
-          "stringValue": ""
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T06:02:48.209Z"
         },
@@ -1774,6 +1771,9 @@
         },
         "action": {
           "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
         },
         "targetTitle": {
           "stringValue": ""
@@ -1785,20 +1785,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/56657bab91d5",
       "fields": {
-        "targetId": {
-          "stringValue": ""
-        },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T05:08:44.219Z"
         },
         "action": {
           "stringValue": "Seed"
         },
+        "targetId": {
+          "stringValue": ""
+        },
         "targetTitle": {
           "stringValue": ""
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-12T05:08:44.219Z"
         }
       },
       "createTime": "2026-02-12T05:08:44.266660Z",
@@ -1807,20 +1807,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/bec44fb8cb1d",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-12T04:30:39.301Z"
+        },
         "targetTitle": {
           "stringValue": ""
         },
-        "action": {
-          "stringValue": "Seed"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-12T04:30:39.301Z"
+        "targetId": {
+          "stringValue": ""
         },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
         },
-        "targetId": {
-          "stringValue": ""
+        "action": {
+          "stringValue": "Seed"
         }
       },
       "createTime": "2026-02-12T04:30:39.343805Z",
@@ -1829,19 +1829,19 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/d66e347368ae",
       "fields": {
-        "targetTitle": {
-          "stringValue": ""
-        },
-        "action": {
-          "stringValue": "Seed"
-        },
-        "details": {
-          "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
-        },
         "timestamp": {
           "timestampValue": "2026-02-12T03:05:14.896Z"
         },
         "targetId": {
+          "stringValue": ""
+        },
+        "details": {
+          "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
+        },
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetTitle": {
           "stringValue": ""
         }
       },
@@ -1854,14 +1854,14 @@
         "action": {
           "stringValue": "Update"
         },
-        "targetTitle": {
-          "stringValue": "복구 매직 (손상모 매직)"
+        "details": {
+          "stringValue": "스타일 '복구 매직 (손상모 매직)' 수정"
         },
         "targetId": {
           "stringValue": "acdf647e7579"
         },
-        "details": {
-          "stringValue": "스타일 '복구 매직 (손상모 매직)' 수정"
+        "targetTitle": {
+          "stringValue": "복구 매직 (손상모 매직)"
         },
         "timestamp": {
           "timestampValue": "2026-02-11T14:05:37.276Z"
@@ -1873,20 +1873,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/6d9ff6446822",
       "fields": {
-        "action": {
-          "stringValue": "Update"
-        },
         "targetTitle": {
           "stringValue": "복구 매직 (손상모 매직)"
         },
         "targetId": {
           "stringValue": "acdf647e7579"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-11T11:03:06.504Z"
-        },
         "details": {
           "stringValue": "스타일 '복구 매직 (손상모 매직)' 수정"
+        },
+        "action": {
+          "stringValue": "Update"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-11T11:03:06.504Z"
         }
       },
       "createTime": "2026-02-11T11:03:06.567900Z",
@@ -1895,20 +1895,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/27a19a9d2c29",
       "fields": {
-        "action": {
-          "stringValue": "Seed"
-        },
-        "targetTitle": {
-          "stringValue": ""
-        },
-        "targetId": {
-          "stringValue": ""
+        "timestamp": {
+          "timestampValue": "2026-02-11T10:15:12.440Z"
         },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성 + 해시태그 보강"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-11T10:15:12.440Z"
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
+        },
+        "targetTitle": {
+          "stringValue": ""
         }
       },
       "createTime": "2026-02-11T10:15:12.148531Z",
@@ -1917,20 +1917,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/cf6701b8b561",
       "fields": {
-        "targetTitle": {
+        "targetId": {
           "stringValue": ""
-        },
-        "action": {
-          "stringValue": "Seed"
         },
         "details": {
           "stringValue": "데이터 초기화: 133건 생성 + 연관링크 + 해시태그 보강"
         },
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetTitle": {
+          "stringValue": ""
+        },
         "timestamp": {
           "timestampValue": "2026-02-11T09:25:12.629Z"
-        },
-        "targetId": {
-          "stringValue": ""
         }
       },
       "createTime": "2026-02-11T09:25:12.683924Z",
@@ -1939,20 +1939,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/6ca3ebe52965",
       "fields": {
+        "targetId": {
+          "stringValue": ""
+        },
+        "details": {
+          "stringValue": "데이터 초기화: 기존 삭제 후 133건 생성"
+        },
         "action": {
           "stringValue": "Seed"
         },
         "targetTitle": {
           "stringValue": ""
         },
-        "targetId": {
-          "stringValue": ""
-        },
         "timestamp": {
           "timestampValue": "2026-02-11T08:24:06.265Z"
-        },
-        "details": {
-          "stringValue": "데이터 초기화: 기존 삭제 후 133건 생성"
         }
       },
       "createTime": "2026-02-11T08:24:06.302550Z",
@@ -1961,20 +1961,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/d92af185518f",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-10T11:32:55.878Z"
+        },
         "targetTitle": {
           "stringValue": ""
         },
-        "action": {
-          "stringValue": "Seed"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-10T11:32:55.878Z"
+        "targetId": {
+          "stringValue": ""
         },
         "details": {
           "stringValue": "데이터 초기화: 기존 삭제 후 133건 생성"
         },
-        "targetId": {
-          "stringValue": ""
+        "action": {
+          "stringValue": "Seed"
         }
       },
       "createTime": "2026-02-10T11:32:55.895605Z",
@@ -1983,19 +1983,19 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/76689efe9719",
       "fields": {
-        "targetId": {
-          "stringValue": ""
-        },
         "timestamp": {
           "timestampValue": "2026-02-10T10:54:00.313Z"
         },
-        "details": {
-          "stringValue": "데이터 초기화: 기존 삭제 후 81건 생성"
+        "targetTitle": {
+          "stringValue": ""
         },
         "action": {
           "stringValue": "Seed"
         },
-        "targetTitle": {
+        "details": {
+          "stringValue": "데이터 초기화: 기존 삭제 후 81건 생성"
+        },
+        "targetId": {
           "stringValue": ""
         }
       },
@@ -2005,20 +2005,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/df7246f29c65",
       "fields": {
-        "action": {
-          "stringValue": "Seed"
-        },
         "targetTitle": {
           "stringValue": ""
         },
         "targetId": {
           "stringValue": ""
         },
-        "timestamp": {
-          "timestampValue": "2026-02-10T10:46:32.446Z"
-        },
         "details": {
           "stringValue": "데이터 초기화: 기존 삭제 후 34건 생성"
+        },
+        "action": {
+          "stringValue": "Seed"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-10T10:46:32.446Z"
         }
       },
       "createTime": "2026-02-10T10:46:32.218102Z",
@@ -2027,20 +2027,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/99144aa285fc",
       "fields": {
-        "action": {
-          "stringValue": "Seed"
-        },
-        "targetTitle": {
-          "stringValue": ""
-        },
-        "targetId": {
-          "stringValue": ""
+        "timestamp": {
+          "timestampValue": "2026-02-10T10:44:02.981Z"
         },
         "details": {
           "stringValue": "데이터 초기화: 기존 삭제 후 34건 생성"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-10T10:44:02.981Z"
+        "action": {
+          "stringValue": "Seed"
+        },
+        "targetId": {
+          "stringValue": ""
+        },
+        "targetTitle": {
+          "stringValue": ""
         }
       },
       "createTime": "2026-02-10T10:44:03.001941Z",
@@ -2052,17 +2052,17 @@
         "timestamp": {
           "timestampValue": "2026-02-10T09:47:03.353Z"
         },
-        "details": {
-          "stringValue": "스타일 '브릿지 하이라이트 염색' 수정"
-        },
-        "targetId": {
-          "stringValue": "70758de60ac6"
-        },
         "targetTitle": {
           "stringValue": "브릿지 하이라이트 염색"
         },
         "action": {
           "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "스타일 '브릿지 하이라이트 염색' 수정"
+        },
+        "targetId": {
+          "stringValue": "70758de60ac6"
         }
       },
       "createTime": "2026-02-10T09:47:03.378434Z",
@@ -2071,11 +2071,11 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/405ae7a4209b",
       "fields": {
-        "targetId": {
-          "stringValue": "70758de60ac6"
-        },
         "timestamp": {
           "timestampValue": "2026-02-10T09:46:57.194Z"
+        },
+        "targetId": {
+          "stringValue": "70758de60ac6"
         },
         "details": {
           "stringValue": "스타일 '브릿지 하이라이트 염색' 수정"
@@ -2093,20 +2093,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/416b326ea644",
       "fields": {
-        "targetId": {
-          "stringValue": "8e16d08c2192"
+        "timestamp": {
+          "timestampValue": "2026-02-10T09:46:31.446Z"
+        },
+        "targetTitle": {
+          "stringValue": "글래머 레이어드 컷"
         },
         "details": {
           "stringValue": "스타일 '글래머 레이어드 컷' 수정"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-10T09:46:31.446Z"
-        },
         "action": {
           "stringValue": "Update"
         },
-        "targetTitle": {
-          "stringValue": "글래머 레이어드 컷"
+        "targetId": {
+          "stringValue": "8e16d08c2192"
         }
       },
       "createTime": "2026-02-10T09:46:31.507829Z",
@@ -2115,20 +2115,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/93f3a06880ea",
       "fields": {
-        "targetId": {
-          "stringValue": ""
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-10T09:02:22.385Z"
-        },
         "details": {
           "stringValue": "데이터 초기화: 기존 삭제 후 34건 생성"
         },
         "action": {
           "stringValue": "Seed"
         },
+        "targetId": {
+          "stringValue": ""
+        },
         "targetTitle": {
           "stringValue": ""
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-10T09:02:22.385Z"
         }
       },
       "createTime": "2026-02-10T09:02:22.408034Z",
@@ -2137,17 +2137,17 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/8fdea727c08b",
       "fields": {
-        "details": {
-          "stringValue": "스타일 '댄디컷' 수정"
-        },
         "timestamp": {
           "timestampValue": "2026-02-10T06:59:28.940Z"
+        },
+        "targetTitle": {
+          "stringValue": "댄디컷"
         },
         "targetId": {
           "stringValue": "7c5649ad5e0e"
         },
-        "targetTitle": {
-          "stringValue": "댄디컷"
+        "details": {
+          "stringValue": "스타일 '댄디컷' 수정"
         },
         "action": {
           "stringValue": "Update"
@@ -2159,20 +2159,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/bed043184748",
       "fields": {
-        "details": {
-          "stringValue": "스타일 '댄디컷' 수정"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-10T06:58:14.848Z"
-        },
-        "targetId": {
-          "stringValue": "7c5649ad5e0e"
-        },
         "targetTitle": {
           "stringValue": "댄디컷"
         },
         "action": {
           "stringValue": "Update"
+        },
+        "details": {
+          "stringValue": "스타일 '댄디컷' 수정"
+        },
+        "targetId": {
+          "stringValue": "7c5649ad5e0e"
+        },
+        "timestamp": {
+          "timestampValue": "2026-02-10T06:58:14.848Z"
         }
       },
       "createTime": "2026-02-10T06:58:14.888053Z",
@@ -2181,20 +2181,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/9026390fcaa2",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-10T05:54:41.464Z"
+        },
+        "targetId": {
+          "stringValue": "7c5649ad5e0e"
+        },
+        "details": {
+          "stringValue": "스타일 '댄디컷' 수정"
+        },
         "action": {
           "stringValue": "Update"
         },
         "targetTitle": {
           "stringValue": "댄디컷"
-        },
-        "targetId": {
-          "stringValue": "7c5649ad5e0e"
-        },
-        "timestamp": {
-          "timestampValue": "2026-02-10T05:54:41.464Z"
-        },
-        "details": {
-          "stringValue": "스타일 '댄디컷' 수정"
         }
       },
       "createTime": "2026-02-10T05:54:41.517722Z",
@@ -2203,20 +2203,20 @@
     {
       "name": "projects/always-hair-salon/databases/(default)/documents/auditLogs/db5479b7cb1d",
       "fields": {
+        "timestamp": {
+          "timestampValue": "2026-02-10T05:21:44.057Z"
+        },
         "details": {
           "stringValue": "스타일 '댄디컷' 생성"
         },
-        "timestamp": {
-          "timestampValue": "2026-02-10T05:21:44.057Z"
+        "action": {
+          "stringValue": "Create"
         },
         "targetId": {
           "stringValue": "7c5649ad5e0e"
         },
         "targetTitle": {
           "stringValue": "댄디컷"
-        },
-        "action": {
-          "stringValue": "Create"
         }
       },
       "createTime": "2026-02-10T05:21:44.158113Z",
