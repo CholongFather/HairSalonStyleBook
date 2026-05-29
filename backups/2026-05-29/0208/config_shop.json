@@ -1,50 +1,26 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "naverPlaceId": {
-      "stringValue": "1883331965"
-    },
-    "accountHolder": {
-      "stringValue": "정*경"
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "naverPayEnabled": {
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
-    "kakaoPayUrl": {
+    "kakaoChannelUrl": {
       "stringValue": ""
     },
     "snsNaverReviewEnabled": {
       "booleanValue": true
     },
-    "calendarEnabled": {
-      "booleanValue": true
+    "accountHolder": {
+      "stringValue": "정*경"
     },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "naverPayUrl": {
+    "kakaoPayUrl": {
       "stringValue": ""
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
     },
     "snsInstagramEnabled": {
       "booleanValue": true
     },
-    "kakaoPayEnabled": {
+    "snsKakaoEnabled": {
       "booleanValue": false
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
     },
     "wifiName24G": {
       "stringValue": "U+NetAFC8"
@@ -52,11 +28,35 @@
     "naverSearchKeyword": {
       "stringValue": "산척동 미용실"
     },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
     "accountNumber": {
       "stringValue": "1002-065-659896"
     },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
     "bankName": {
       "stringValue": "우리은행"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "naverPayEnabled": {
+      "booleanValue": false
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
