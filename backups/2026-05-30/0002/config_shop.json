@@ -1,35 +1,32 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
     "wifiPassword": {
       "stringValue": "DE01K7#0E5"
-    },
-    "accountHolder": {
-      "stringValue": "정*경"
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
     },
     "naverPlaceId": {
       "stringValue": "1883331965"
     },
-    "snsKakaoEnabled": {
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
     },
     "kakaoPayUrl": {
       "stringValue": ""
@@ -37,23 +34,26 @@
     "naverPayEnabled": {
       "booleanValue": false
     },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
     },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
     },
     "bankName": {
       "stringValue": "우리은행"
     },
-    "naverPayUrl": {
-      "stringValue": ""
-    },
     "snsInstagramEnabled": {
       "booleanValue": true
     },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
+    "kakaoChannelUrl": {
+      "stringValue": ""
     },
     "instagramUrl": {
       "stringValue": "https://www.instagram.com/a.k89979"
