@@ -4,23 +4,32 @@
     "wifiPassword": {
       "stringValue": "DE01K7#0E5"
     },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
     "kakaoChannelUrl": {
       "stringValue": ""
     },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "naverPayEnabled": {
-      "booleanValue": false
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
     },
     "bankName": {
       "stringValue": "우리은행"
     },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "naverPayEnabled": {
+      "booleanValue": false
+    },
     "snsInstagramEnabled": {
       "booleanValue": true
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
     },
     "calendarEnabled": {
       "booleanValue": true
@@ -28,35 +37,26 @@
     "naverPayUrl": {
       "stringValue": ""
     },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
+    "kakaoPayEnabled": {
+      "booleanValue": false
     },
     "instagramUrl": {
       "stringValue": "https://www.instagram.com/a.k89979"
     },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
+    "kakaoPayUrl": {
+      "stringValue": ""
     },
-    "snsKakaoEnabled": {
-      "booleanValue": false
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
     },
     "wifiName5G": {
       "stringValue": "U+NetAFC8_5G"
     },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
-    },
-    "accountHolder": {
-      "stringValue": "정*경"
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
