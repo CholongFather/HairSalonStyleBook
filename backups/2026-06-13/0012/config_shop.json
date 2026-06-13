@@ -1,46 +1,40 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "naverPayUrl": {
-      "stringValue": ""
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
     "wifiPassword": {
       "stringValue": "DE01K7#0E5"
     },
     "kakaoChannelUrl": {
       "stringValue": ""
     },
-    "naverPayEnabled": {
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
     "snsKakaoEnabled": {
       "booleanValue": false
     },
-    "snsInstagramEnabled": {
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "snsNaverPlaceEnabled": {
       "booleanValue": true
     },
     "bankName": {
@@ -49,14 +43,20 @@
     "naverPlaceId": {
       "stringValue": "1883331965"
     },
-    "kakaoPayEnabled": {
-      "booleanValue": false
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
     },
     "accountHolder": {
       "stringValue": "정*경"
     },
-    "kakaoPayUrl": {
-      "stringValue": ""
+    "naverPayEnabled": {
+      "booleanValue": false
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
