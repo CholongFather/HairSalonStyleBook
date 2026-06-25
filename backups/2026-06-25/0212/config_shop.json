@@ -1,20 +1,14 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
-    },
     "bankName": {
       "stringValue": "우리은행"
     },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
     },
     "snsNaverReviewEnabled": {
       "booleanValue": true
@@ -22,41 +16,47 @@
     "naverPlaceId": {
       "stringValue": "1883331965"
     },
-    "snsInstagramEnabled": {
-      "booleanValue": true
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
     "naverSearchKeyword": {
       "stringValue": "산척동 미용실"
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "accountHolder": {
-      "stringValue": "정*경"
     },
     "kakaoPayEnabled": {
       "booleanValue": false
     },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
     },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
+    "naverPayEnabled": {
+      "booleanValue": false
     },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
     },
-    "naverPayUrl": {
-      "stringValue": ""
+    "snsInstagramEnabled": {
+      "booleanValue": true
     },
     "kakaoChannelUrl": {
       "stringValue": ""
     },
-    "naverPayEnabled": {
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "snsKakaoEnabled": {
       "booleanValue": false
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
