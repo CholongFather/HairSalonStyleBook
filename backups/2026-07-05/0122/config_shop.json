@@ -1,8 +1,8 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
+    "bankName": {
+      "stringValue": "우리은행"
     },
     "naverSearchKeyword": {
       "stringValue": "산척동 미용실"
@@ -10,50 +10,50 @@
     "naverPayEnabled": {
       "booleanValue": false
     },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
     "snsNaverReviewEnabled": {
       "booleanValue": true
     },
     "snsInstagramEnabled": {
       "booleanValue": true
     },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
     "kakaoPayUrl": {
       "stringValue": ""
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
+    },
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
     },
     "kakaoPayEnabled": {
       "booleanValue": false
     },
     "accountHolder": {
       "stringValue": "정*경"
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
-    },
-    "naverPayUrl": {
-      "stringValue": ""
-    },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "calendarEnabled": {
-      "booleanValue": true
     },
     "naverPlaceId": {
       "stringValue": "1883331965"
