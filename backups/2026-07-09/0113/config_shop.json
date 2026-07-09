@@ -1,62 +1,62 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
+    "kakaoPayEnabled": {
+      "booleanValue": false
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "naverPayUrl": {
+      "stringValue": ""
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
+    },
     "wifiName24G": {
       "stringValue": "U+NetAFC8"
     },
-    "snsInstagramEnabled": {
+    "naverPayEnabled": {
+      "booleanValue": false
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "snsNaverReviewEnabled": {
       "booleanValue": true
     },
-    "naverPayEnabled": {
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "snsKakaoEnabled": {
       "booleanValue": false
     },
     "accountHolder": {
       "stringValue": "정*경"
     },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "snsNaverReviewEnabled": {
+    "snsInstagramEnabled": {
       "booleanValue": true
-    },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
-    },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
-    },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "naverPayUrl": {
-      "stringValue": ""
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
