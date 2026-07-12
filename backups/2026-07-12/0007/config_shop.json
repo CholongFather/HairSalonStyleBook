@@ -1,53 +1,47 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
     "naverPayUrl": {
       "stringValue": ""
-    },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "snsInstagramEnabled": {
-      "booleanValue": true
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
     },
     "wifiPassword": {
       "stringValue": "DE01K7#0E5"
     },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "kakaoPayEnabled": {
+      "booleanValue": false
     },
     "accountNumber": {
       "stringValue": "1002-065-659896"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
     },
     "instagramUrl": {
       "stringValue": "https://www.instagram.com/a.k89979"
@@ -55,8 +49,14 @@
     "naverPayEnabled": {
       "booleanValue": false
     },
-    "accountHolder": {
-      "stringValue": "정*경"
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
