@@ -1,14 +1,11 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "kakaoPayEnabled": {
+    "naverPayEnabled": {
       "booleanValue": false
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
     },
     "snsKakaoEnabled": {
       "booleanValue": false
@@ -16,31 +13,16 @@
     "accountNumber": {
       "stringValue": "1002-065-659896"
     },
-    "accountHolder": {
-      "stringValue": "정*경"
+    "kakaoPayEnabled": {
+      "booleanValue": false
     },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
     },
     "snsNaverPlaceEnabled": {
       "booleanValue": true
     },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "naverPayUrl": {
+    "kakaoChannelUrl": {
       "stringValue": ""
     },
     "instagramUrl": {
@@ -49,14 +31,32 @@
     "wifiName5G": {
       "stringValue": "U+NetAFC8_5G"
     },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
+    "naverPayUrl": {
+      "stringValue": ""
     },
     "snsInstagramEnabled": {
       "booleanValue": true
     },
-    "naverPayEnabled": {
-      "booleanValue": false
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
