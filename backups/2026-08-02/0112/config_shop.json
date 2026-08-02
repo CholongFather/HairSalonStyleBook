@@ -1,16 +1,46 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "accountHolder": {
-      "stringValue": "정*경"
+    "naverPayUrl": {
+      "stringValue": ""
     },
     "bankName": {
       "stringValue": "우리은행"
     },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
     },
     "naverPayEnabled": {
+      "booleanValue": false
+    },
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
     "snsInstagramEnabled": {
@@ -19,44 +49,14 @@
     "kakaoChannelUrl": {
       "stringValue": ""
     },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "naverPayUrl": {
-      "stringValue": ""
-    },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
     "wifiName5G": {
       "stringValue": "U+NetAFC8_5G"
     },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
     "accountNumber": {
       "stringValue": "1002-065-659896"
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
