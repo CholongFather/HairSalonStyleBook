@@ -1,47 +1,44 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "naverPayUrl": {
-      "stringValue": ""
-    },
     "snsKakaoEnabled": {
       "booleanValue": false
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "snsInstagramEnabled": {
-      "booleanValue": true
     },
     "kakaoPayUrl": {
       "stringValue": ""
     },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
     },
     "accountNumber": {
       "stringValue": "1002-065-659896"
     },
+    "kakaoPayEnabled": {
+      "booleanValue": false
+    },
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
+    },
     "naverPayEnabled": {
       "booleanValue": false
     },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
     },
     "accountHolder": {
       "stringValue": "정*경"
@@ -49,14 +46,17 @@
     "naverSearchKeyword": {
       "stringValue": "산척동 미용실"
     },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
     },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
     },
-    "snsNaverPlaceEnabled": {
+    "snsNaverReviewEnabled": {
       "booleanValue": true
+    },
+    "naverPayUrl": {
+      "stringValue": ""
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
