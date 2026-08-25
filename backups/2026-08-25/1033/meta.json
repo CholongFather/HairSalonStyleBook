@@ -1,0 +1,4 @@
+{
+  "timestamp": "2026-08-25T10:33:34Z",
+  "collections": ["styles", "auditLogs", "loginAttempts", "config_shop", "config_blockedDevices"]
+}
