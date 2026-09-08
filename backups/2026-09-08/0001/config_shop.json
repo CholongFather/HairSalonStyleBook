@@ -1,10 +1,7 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "naverPayEnabled": {
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
     "naverPlaceId": {
@@ -13,11 +10,32 @@
     "naverPayUrl": {
       "stringValue": ""
     },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "snsInstagramEnabled": {
+      "booleanValue": true
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "snsNaverPlaceEnabled": {
+      "booleanValue": true
+    },
     "wifiPassword": {
       "stringValue": "DE01K7#0E5"
     },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "kakaoChannelUrl": {
+      "stringValue": ""
     },
     "bankName": {
       "stringValue": "우리은행"
@@ -25,38 +43,20 @@
     "snsKakaoEnabled": {
       "booleanValue": false
     },
-    "calendarEnabled": {
-      "booleanValue": true
+    "naverPayEnabled": {
+      "booleanValue": false
     },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
     },
     "accountHolder": {
       "stringValue": "정*경"
     },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
-    },
     "wifiName24G": {
       "stringValue": "U+NetAFC8"
     },
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "snsInstagramEnabled": {
-      "booleanValue": true
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
