@@ -1,16 +1,25 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
+    "kakaoChannelUrl": {
+      "stringValue": ""
     },
     "bankName": {
       "stringValue": "우리은행"
     },
-    "snsNaverPlaceEnabled": {
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "kakaoPayEnabled": {
+      "booleanValue": false
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "snsInstagramEnabled": {
       "booleanValue": true
     },
     "kakaoPayUrl": {
@@ -19,8 +28,11 @@
     "accountHolder": {
       "stringValue": "정*경"
     },
-    "snsKakaoEnabled": {
-      "booleanValue": false
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
     },
     "calendarEnabled": {
       "booleanValue": true
@@ -28,35 +40,23 @@
     "wifiName5G": {
       "stringValue": "U+NetAFC8_5G"
     },
-    "kakaoChannelUrl": {
+    "naverPayUrl": {
       "stringValue": ""
     },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "snsNaverReviewEnabled": {
+    "snsNaverPlaceEnabled": {
       "booleanValue": true
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "kakaoPayEnabled": {
-      "booleanValue": false
     },
     "naverPayEnabled": {
       "booleanValue": false
     },
-    "naverPayUrl": {
-      "stringValue": ""
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
     },
-    "snsInstagramEnabled": {
-      "booleanValue": true
+    "snsKakaoEnabled": {
+      "booleanValue": false
     },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
