@@ -1,0 +1,10 @@
+{
+  "name": "projects/always-hair-salon/databases/(default)/documents/config/blockedDevices",
+  "fields": {
+    "devices": {
+      "arrayValue": {}
+    }
+  },
+  "createTime": "2026-02-13T02:31:40.342781Z",
+  "updateTime": "2026-02-13T02:32:14.616153Z"
+}
