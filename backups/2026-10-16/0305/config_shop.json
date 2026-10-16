@@ -1,26 +1,14 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "calendarEnabled": {
-      "booleanValue": true
-    },
-    "snsNaverPlaceEnabled": {
-      "booleanValue": true
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
     "naverSearchKeyword": {
       "stringValue": "산척동 미용실"
     },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "accountNumber": {
-      "stringValue": "1002-065-659896"
-    },
-    "naverPayEnabled": {
+    "snsKakaoEnabled": {
       "booleanValue": false
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
     },
     "wifiName24G": {
       "stringValue": "U+NetAFC8"
@@ -28,35 +16,47 @@
     "snsInstagramEnabled": {
       "booleanValue": true
     },
-    "naverPayUrl": {
-      "stringValue": ""
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
-    "kakaoPayUrl": {
-      "stringValue": ""
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
     "kakaoChannelUrl": {
       "stringValue": ""
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
     },
     "kakaoPayEnabled": {
       "booleanValue": false
     },
-    "snsNaverReviewEnabled": {
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "snsNaverPlaceEnabled": {
       "booleanValue": true
     },
-    "snsKakaoEnabled": {
-      "booleanValue": false
-    },
-    "accountHolder": {
-      "stringValue": "정*경"
+    "naverPayUrl": {
+      "stringValue": ""
     },
     "naverPlaceId": {
       "stringValue": "1883331965"
+    },
+    "naverPayEnabled": {
+      "booleanValue": false
+    },
+    "accountNumber": {
+      "stringValue": "1002-065-659896"
+    },
+    "calendarEnabled": {
+      "booleanValue": true
+    },
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
+    },
+    "accountHolder": {
+      "stringValue": "정*경"
     }
   },
   "createTime": "2026-02-11T14:07:24.228539Z",
