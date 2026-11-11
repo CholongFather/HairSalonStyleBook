@@ -1,61 +1,61 @@
 {
   "name": "projects/always-hair-salon/databases/(default)/documents/config/shop",
   "fields": {
-    "snsNaverReviewEnabled": {
-      "booleanValue": true
-    },
-    "kakaoChannelUrl": {
-      "stringValue": ""
-    },
-    "wifiPassword": {
-      "stringValue": "DE01K7#0E5"
-    },
     "accountNumber": {
       "stringValue": "1002-065-659896"
     },
-    "bankName": {
-      "stringValue": "우리은행"
-    },
-    "naverPlaceId": {
-      "stringValue": "1883331965"
-    },
-    "naverSearchKeyword": {
-      "stringValue": "산척동 미용실"
-    },
-    "snsInstagramEnabled": {
-      "booleanValue": true
-    },
-    "wifiName5G": {
-      "stringValue": "U+NetAFC8_5G"
-    },
-    "instagramUrl": {
-      "stringValue": "https://www.instagram.com/a.k89979"
-    },
-    "snsKakaoEnabled": {
+    "naverPayEnabled": {
       "booleanValue": false
-    },
-    "wifiName24G": {
-      "stringValue": "U+NetAFC8"
     },
     "accountHolder": {
       "stringValue": "정*경"
     },
-    "naverPayUrl": {
+    "wifiPassword": {
+      "stringValue": "DE01K7#0E5"
+    },
+    "kakaoChannelUrl": {
       "stringValue": ""
+    },
+    "naverPlaceId": {
+      "stringValue": "1883331965"
+    },
+    "wifiName5G": {
+      "stringValue": "U+NetAFC8_5G"
+    },
+    "naverSearchKeyword": {
+      "stringValue": "산척동 미용실"
+    },
+    "snsKakaoEnabled": {
+      "booleanValue": false
+    },
+    "kakaoPayUrl": {
+      "stringValue": ""
+    },
+    "snsNaverReviewEnabled": {
+      "booleanValue": true
     },
     "calendarEnabled": {
       "booleanValue": true
     },
-    "naverPayEnabled": {
+    "wifiName24G": {
+      "stringValue": "U+NetAFC8"
+    },
+    "bankName": {
+      "stringValue": "우리은행"
+    },
+    "kakaoPayEnabled": {
       "booleanValue": false
     },
     "snsNaverPlaceEnabled": {
       "booleanValue": true
     },
-    "kakaoPayEnabled": {
-      "booleanValue": false
+    "snsInstagramEnabled": {
+      "booleanValue": true
     },
-    "kakaoPayUrl": {
+    "instagramUrl": {
+      "stringValue": "https://www.instagram.com/a.k89979"
+    },
+    "naverPayUrl": {
       "stringValue": ""
     }
   },
